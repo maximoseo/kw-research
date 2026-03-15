@@ -1,7 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { Download, History, Loader2, RefreshCcw, Search, TableProperties, UploadCloud } from 'lucide-react';
+import {
+  AlertTriangle,
+  Download,
+  History,
+  Loader2,
+  Radar,
+  RefreshCcw,
+  Search,
+  Sparkles,
+  TableProperties,
+  UploadCloud,
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +21,7 @@ import { useToast } from '@/components/Toast';
 import { createResearchFormSchema, type CreateResearchFormInput } from '@/lib/validation';
 import type { ResearchRunDetail, ResearchRunSummary } from '@/lib/research';
 import { cn, formatDateTime, formatRelative } from '@/lib/utils';
+import ResearchProcessTracker from './ResearchProcessTracker';
 
 function fetchRuns() {
   return fetch('/api/runs').then(async (response) => {
@@ -29,6 +41,66 @@ function fetchRun(runId: string) {
     }
     return payload.run as ResearchRunDetail;
   });
+}
+
+type CompetitorSuggestion = {
+  name: string;
+  url: string;
+  domain: string;
+  snippet: string;
+  whyRelevant: string;
+  themes: string[];
+  alreadyIncluded: boolean;
+};
+
+type CompetitorDiscoveryState =
+  | {
+      status: 'idle';
+      suggestions: CompetitorSuggestion[];
+      message?: string;
+      addedCount?: number;
+      siteSummary?: { businessSummary: string; offerings: string[] };
+      evidence?: { sitemapUrlCount: number; pageEvidenceCount: number };
+    }
+  | {
+      status: 'success' | 'empty' | 'error';
+      suggestions: CompetitorSuggestion[];
+      message?: string;
+      addedCount?: number;
+      siteSummary?: { businessSummary: string; offerings: string[] };
+      evidence?: { sitemapUrlCount: number; pageEvidenceCount: number };
+    };
+
+function parseCompetitorUrlText(value: string) {
+  return value
+    .split(/\r?\n|,/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function normalizeCompetitorUrl(value: string) {
+  try {
+    const url = new URL(value);
+    url.hash = '';
+    const normalizedPath = url.pathname.replace(/\/+$/, '') || '/';
+    return `${url.origin}${normalizedPath}${url.search}`;
+  } catch {
+    return value.trim();
+  }
+}
+
+function mergeCompetitorUrls(existingValue: string, incomingUrls: string[]) {
+  const merged = new Map<string, string>();
+
+  [...parseCompetitorUrlText(existingValue), ...incomingUrls].forEach((url) => {
+    const key = normalizeCompetitorUrl(url);
+    if (!key || merged.has(key)) {
+      return;
+    }
+    merged.set(key, url);
+  });
+
+  return [...merged.values()];
 }
 
 const defaultValues: CreateResearchFormInput = {
@@ -55,7 +127,12 @@ export default function ResearchDashboard({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<'preview' | 'logs' | 'summary'>('preview');
   const [isPending, startTransition] = useTransition();
+  const [isDiscoveringCompetitors, startCompetitorDiscovery] = useTransition();
   const [hasMounted, setHasMounted] = useState(false);
+  const [competitorDiscovery, setCompetitorDiscovery] = useState<CompetitorDiscoveryState>({
+    status: 'idle',
+    suggestions: [],
+  });
   const runsQuery = useQuery({
     queryKey: ['runs'],
     queryFn: fetchRuns,
@@ -89,6 +166,7 @@ export default function ResearchDashboard({
     resolver: zodResolver(createResearchFormSchema),
     defaultValues,
   });
+  const selectedLanguage = form.watch('language');
 
   const previewRows = useMemo(() => runQuery.data?.rows.slice(0, 50) || [], [runQuery.data?.rows]);
   const greeting = hasMounted
@@ -138,11 +216,102 @@ export default function ResearchDashboard({
         market: values.market,
         brandName: values.brandName,
       });
+      setCompetitorDiscovery({
+        status: 'idle',
+        suggestions: [],
+      });
       setUploadedFile(null);
       await queryClient.invalidateQueries({ queryKey: ['runs'] });
       await queryClient.invalidateQueries({ queryKey: ['run', result.runId] });
     });
   });
+
+  const handleAutoFindCompetitors = async () => {
+    const valid = await form.trigger([
+      'homepageUrl',
+      'aboutUrl',
+      'sitemapUrl',
+      'brandName',
+      'language',
+      'market',
+    ]);
+
+    if (!valid) {
+      addToast('Complete the site and market fields before auto-discovering competitors.', 'warning');
+      return;
+    }
+
+    startCompetitorDiscovery(async () => {
+      try {
+        const values = form.getValues();
+        const response = await fetch('/api/competitors/discover', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            homepageUrl: values.homepageUrl,
+            aboutUrl: values.aboutUrl,
+            sitemapUrl: values.sitemapUrl,
+            brandName: values.brandName,
+            language: values.language,
+            market: values.market,
+            competitorUrls: values.competitorUrls,
+          }),
+        });
+
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          const message = result?.error || 'Unable to discover competitors automatically.';
+          setCompetitorDiscovery({
+            status: 'error',
+            suggestions: [],
+            message,
+          });
+          addToast(message, 'error');
+          return;
+        }
+
+        const mergedUrls = mergeCompetitorUrls(
+          values.competitorUrls,
+          (result?.competitors || []).map((competitor: CompetitorSuggestion) => competitor.url),
+        );
+
+        form.setValue('competitorUrls', mergedUrls.join('\n'), {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+
+        const nextState: CompetitorDiscoveryState = {
+          status: result?.competitors?.length ? 'success' : 'empty',
+          suggestions: result?.competitors || [],
+          message: result?.competitors?.length
+            ? result.addedCount > 0
+              ? `Added ${result.addedCount} auto-found competitor${result.addedCount === 1 ? '' : 's'} to the list below.`
+              : 'All discovered competitors were already in your list. Review them below before running the research.'
+            : 'No high-confidence competitors were found automatically. You can continue with manual URLs.',
+          addedCount: result?.addedCount || 0,
+          siteSummary: result?.siteSummary,
+          evidence: result?.evidence,
+        };
+        setCompetitorDiscovery(nextState);
+        addToast(
+          nextState.status === 'success'
+            ? nextState.message || 'Competitor discovery finished.'
+            : 'No relevant competitors were found automatically.',
+          nextState.status === 'success' ? 'success' : 'info',
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to discover competitors automatically.';
+        setCompetitorDiscovery({
+          status: 'error',
+          suggestions: [],
+          message,
+        });
+        addToast(message, 'error');
+      }
+    });
+  };
 
   const selectedRun = runQuery.data;
 
@@ -239,7 +408,7 @@ export default function ResearchDashboard({
           <form
             onSubmit={handleSubmit}
             className="mt-6 space-y-5"
-            dir={form.watch('language') === 'Hebrew' ? 'rtl' : 'ltr'}
+            dir={selectedLanguage === 'Hebrew' ? 'rtl' : 'ltr'}
           >
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Homepage URL" error={form.formState.errors.homepageUrl?.message}>
@@ -282,11 +451,172 @@ export default function ResearchDashboard({
             </div>
 
             <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined}>
-              <textarea
-                className="field-textarea"
-                placeholder="https://competitor-one.com, https://competitor-two.com"
-                {...form.register('competitorUrls')}
-              />
+              <div className="rounded-[24px] border border-border/70 bg-surface-raised/45 p-4 sm:p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-2xl">
+                    <p className="text-sm font-medium text-text-primary">Manual list or automatic discovery</p>
+                    <p className="mt-2 text-sm leading-6 text-text-secondary">
+                      Paste competitor homepages yourself, or let the app analyze the target site and
+                      prefill high-confidence competitors for review.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    icon={<Radar className="h-4 w-4" />}
+                    loading={isDiscoveringCompetitors}
+                    onClick={handleAutoFindCompetitors}
+                    className="w-full sm:w-auto"
+                  >
+                    Find Competitors Automatically
+                  </Button>
+                </div>
+
+                {isDiscoveringCompetitors ? (
+                  <div className="mt-4 rounded-[22px] border border-accent/20 bg-accent/[0.08] px-4 py-4">
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl border border-accent/20 bg-accent/[0.14] text-accent">
+                        <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-text-primary">Analyzing the target site</p>
+                        <p className="mt-1 text-sm leading-6 text-text-secondary">
+                          Reviewing the website, extracting market signals, and searching for relevant competitors.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {!isDiscoveringCompetitors && competitorDiscovery.status !== 'idle' ? (
+                  <div
+                    className={cn(
+                      'mt-4 rounded-[22px] border px-4 py-4',
+                      competitorDiscovery.status === 'error' && 'border-destructive/20 bg-destructive/[0.08]',
+                      competitorDiscovery.status === 'empty' && 'border-warning/20 bg-warning/[0.08]',
+                      competitorDiscovery.status === 'success' && 'border-accent/20 bg-accent/[0.08]',
+                    )}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={cn(
+                            'mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl border',
+                            competitorDiscovery.status === 'error' && 'border-destructive/20 bg-destructive/[0.12] text-destructive',
+                            competitorDiscovery.status === 'empty' && 'border-warning/20 bg-warning/[0.12] text-warning',
+                            competitorDiscovery.status === 'success' && 'border-accent/20 bg-accent/[0.14] text-accent',
+                          )}
+                        >
+                          {competitorDiscovery.status === 'error' ? (
+                            <AlertTriangle className="h-4.5 w-4.5" />
+                          ) : competitorDiscovery.status === 'empty' ? (
+                            <Search className="h-4.5 w-4.5" />
+                          ) : (
+                            <Sparkles className="h-4.5 w-4.5" />
+                          )}
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-text-primary">
+                            {competitorDiscovery.status === 'success'
+                              ? 'Competitor suggestions ready'
+                              : competitorDiscovery.status === 'empty'
+                                ? 'No strong matches found'
+                                : 'Automatic discovery failed'}
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-text-secondary">
+                            {competitorDiscovery.message}
+                          </p>
+                        </div>
+                      </div>
+                      {competitorDiscovery.evidence ? (
+                        <span className="toolbar-chip self-start border-border/60">
+                          {competitorDiscovery.evidence.pageEvidenceCount} pages checked · {competitorDiscovery.evidence.sitemapUrlCount} sitemap URLs
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {competitorDiscovery.siteSummary ? (
+                      <div className="mt-4 rounded-[20px] border border-border/60 bg-background/45 px-4 py-3">
+                        <p className="text-sm leading-6 text-text-secondary">
+                          {competitorDiscovery.siteSummary.businessSummary}
+                        </p>
+                        {competitorDiscovery.siteSummary.offerings.length ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {competitorDiscovery.siteSummary.offerings.map((offering) => (
+                              <span
+                                key={offering}
+                                className="rounded-full border border-border/60 bg-surface px-3 py-1 text-xs font-medium text-text-secondary"
+                              >
+                                {offering}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {competitorDiscovery.suggestions.length ? (
+                      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        {competitorDiscovery.suggestions.map((competitor) => (
+                          <div
+                            key={competitor.url}
+                            className="rounded-[20px] border border-border/60 bg-background/45 px-4 py-4"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-text-primary">{competitor.name || competitor.domain}</p>
+                                <p className="mt-1 text-xs uppercase tracking-[0.18em] text-text-muted">{competitor.domain}</p>
+                              </div>
+                              <span
+                                className={cn(
+                                  'rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]',
+                                  competitor.alreadyIncluded
+                                    ? 'border-border/60 text-text-muted'
+                                    : 'border-success/20 bg-success/[0.08] text-success',
+                                )}
+                              >
+                                {competitor.alreadyIncluded ? 'Already listed' : 'Added'}
+                              </span>
+                            </div>
+                            <a
+                              href={competitor.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-3 block truncate text-sm text-accent hover:underline"
+                            >
+                              {competitor.url}
+                            </a>
+                            <p className="mt-3 text-sm leading-6 text-text-secondary">
+                              {competitor.whyRelevant || competitor.snippet}
+                            </p>
+                            {competitor.themes.length ? (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {competitor.themes.map((theme) => (
+                                  <span
+                                    key={`${competitor.domain}-${theme}`}
+                                    className="rounded-full border border-accent/15 bg-accent/[0.08] px-2.5 py-1 text-xs font-medium text-accent"
+                                  >
+                                    {theme}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <textarea
+                  className="field-textarea mt-4"
+                  placeholder="https://competitor-one.com, https://competitor-two.com"
+                  {...form.register('competitorUrls')}
+                />
+                <p className="mt-3 text-xs leading-5 text-text-muted">
+                  Auto-found URLs are merged into the list above. You can edit, remove, or add your own competitors before starting the run.
+                </p>
+              </div>
             </Field>
 
             <Field label="Notes / instructions" error={form.formState.errors.notes?.message}>
@@ -318,7 +648,19 @@ export default function ResearchDashboard({
               <Button type="submit" size="lg" loading={isPending}>
                 Run research
               </Button>
-              <Button type="button" variant="secondary" size="lg" onClick={() => form.reset(defaultValues)}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                onClick={() => {
+                  form.reset(defaultValues);
+                  setCompetitorDiscovery({
+                    status: 'idle',
+                    suggestions: [],
+                  });
+                  setUploadedFile(null);
+                }}
+              >
                 Reset form
               </Button>
             </div>
@@ -344,6 +686,8 @@ export default function ResearchDashboard({
                 <Metric label="Brand" value={selectedRun.brandName} helper={`${selectedRun.language} · ${selectedRun.market}`} />
                 <Metric label="Queued" value={formatDateTimeLabel(selectedRun.queuedAt)} helper={selectedRun.step || 'Awaiting updates'} />
               </div>
+
+              <ResearchProcessTracker run={selectedRun} />
 
               <div className="flex flex-wrap gap-3">
                 <Button

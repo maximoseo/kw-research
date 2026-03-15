@@ -39,6 +39,18 @@ export const createResearchSchema = z.object({
 
 export type CreateResearchInput = z.infer<typeof createResearchSchema>;
 
+export const competitorDiscoverySchema = createResearchSchema.pick({
+  homepageUrl: true,
+  aboutUrl: true,
+  sitemapUrl: true,
+  brandName: true,
+  language: true,
+  market: true,
+  competitorUrls: true,
+});
+
+export type CompetitorDiscoveryInput = z.infer<typeof competitorDiscoverySchema>;
+
 export const createResearchFormSchema = z.object({
   homepageUrl: urlSchema,
   aboutUrl: urlSchema,

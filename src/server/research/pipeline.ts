@@ -5,7 +5,7 @@ import { sanitizeFilenameSegment } from '@/lib/utils';
 import { writeManagedReport } from '@/server/files/storage';
 import { getCrawlLimits } from '@/lib/env';
 import { callAiJson } from './ai';
-import { discoverCompetitors } from './competitors';
+import { discoverCompetitors, type CompetitorCandidate } from './competitors';
 import {
   buildExistingContentMap,
   fetchPageSnapshot,
@@ -87,7 +87,12 @@ type SiteUnderstanding = z.infer<typeof siteUnderstandingSchema>;
 type CompetitorIntelligence = z.infer<typeof competitorIntelligenceSchema>;
 type PillarCandidate = z.infer<typeof pillarSchema>['pillars'][number];
 type ClusterCandidate = z.infer<typeof clusterSchema>['clusters'][number];
-type AiAvailabilityState = { enabled: boolean };
+export type AiAvailabilityState = { enabled: boolean };
+export type CompetitorSuggestion = CompetitorCandidate & {
+  whyRelevant: string;
+  themes: string[];
+};
+type MaybePromise<T> = T | Promise<T>;
 
 function clip(value: string, limit: number) {
   return value.length <= limit ? value : `${value.slice(0, limit)}...`;
@@ -533,6 +538,88 @@ function keepPageSnapshot(value: PageSnapshot | null): value is PageSnapshot {
   return value !== null;
 }
 
+async function resolveWithAiFallback<T, TStage extends 'analysis' | 'competitors' | 'pillars' | 'clusters'>(params: {
+  stage: TStage;
+  aiState: AiAvailabilityState;
+  task: () => Promise<T>;
+  fallback: () => T;
+  onFallback?: (stage: TStage, error: unknown) => MaybePromise<void>;
+}) {
+  if (!params.aiState.enabled) {
+    return params.fallback();
+  }
+
+  try {
+    return await params.task();
+  } catch (error) {
+    params.aiState.enabled = false;
+    await params.onFallback?.(params.stage, error);
+    return params.fallback();
+  }
+}
+
+function normalizeCandidateDomain(url: string, fallback = '') {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return fallback;
+  }
+}
+
+function mergeSuggestedCompetitors(params: {
+  autoCompetitorCandidates: CompetitorCandidate[];
+  competitorIntelligence: CompetitorIntelligence;
+}) {
+  const merged: CompetitorSuggestion[] = [];
+  const seen = new Set<string>();
+  const candidateByDomain = new Map(
+    params.autoCompetitorCandidates.map((candidate) => [candidate.domain, candidate]),
+  );
+
+  const pushSuggestion = (candidate: CompetitorSuggestion) => {
+    const key = candidate.domain || normalizeCandidateDomain(candidate.url);
+    if (!key || seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    merged.push(candidate);
+  };
+
+  for (const competitor of params.competitorIntelligence.competitors) {
+    const matchedCandidate =
+      candidateByDomain.get(competitor.domain) ||
+      candidateByDomain.get(normalizeCandidateDomain(competitor.url, competitor.domain));
+    const resolvedUrl =
+      competitor.url || matchedCandidate?.url || (competitor.domain ? `https://${competitor.domain}` : '');
+    const resolvedDomain =
+      competitor.domain || matchedCandidate?.domain || normalizeCandidateDomain(resolvedUrl);
+
+    pushSuggestion({
+      name: competitor.name || matchedCandidate?.name || resolvedDomain,
+      domain: resolvedDomain,
+      url: resolvedUrl,
+      snippet: matchedCandidate?.snippet || '',
+      whyRelevant:
+        competitor.whyRelevant ||
+        matchedCandidate?.snippet ||
+        'Relevant competitor discovered from the same market and offering space.',
+      themes: competitor.themes ?? [],
+    });
+  }
+
+  for (const candidate of params.autoCompetitorCandidates) {
+    pushSuggestion({
+      ...candidate,
+      whyRelevant:
+        candidate.snippet || 'Relevant competitor discovered from the same market and offering space.',
+      themes: [],
+    });
+  }
+
+  return merged.slice(0, 5);
+}
+
 async function log(runId: string, stage: string, message: string, metadata?: Record<string, unknown>) {
   await addResearchLog({
     runId,
@@ -543,6 +630,27 @@ async function log(runId: string, stage: string, message: string, metadata?: Rec
   });
   await updateRunState(runId, { step: message });
   await heartbeatRun(runId);
+}
+
+export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'homepageUrl' | 'aboutUrl' | 'sitemapUrl'>) {
+  const crawlLimits = getCrawlLimits();
+  const concurrency = pLimit(4);
+  const sitemapUrls = await fetchSitemapUrls(input.sitemapUrl);
+  const baseEvidenceUrls = dedupeStrings([input.homepageUrl, input.aboutUrl, ...sitemapUrls]).slice(
+    0,
+    crawlLimits.maxPageFetches,
+  );
+
+  const pageSnapshots = (
+    await Promise.all(baseEvidenceUrls.map((url) => concurrency(() => fetchPageSnapshot(url))))
+  ).filter(keepPageSnapshot);
+  const existingContentMap = buildExistingContentMap(sitemapUrls, pageSnapshots);
+
+  return {
+    sitemapUrls,
+    pageSnapshots,
+    existingContentMap,
+  };
 }
 
 async function buildSiteUnderstanding(
@@ -635,6 +743,94 @@ async function buildCompetitorIntelligence(params: {
     }),
   });
   return competitorIntelligenceSchema.parse(response);
+}
+
+export async function analyzeCompetitiveLandscape(params: {
+  input: ResearchInputSnapshot;
+  pageSnapshots: PageSnapshot[];
+  existingContentMap: ReturnType<typeof buildExistingContentMap>;
+  aiState: AiAvailabilityState;
+  manualCompetitorUrls?: string[];
+  onAiFallback?: (stage: 'analysis' | 'competitors', error: unknown) => MaybePromise<void>;
+}) {
+  const handleAnalysisFallback = params.onAiFallback
+    ? (error: unknown) => params.onAiFallback?.('analysis', error)
+    : undefined;
+  const handleCompetitorFallback = params.onAiFallback
+    ? (error: unknown) => params.onAiFallback?.('competitors', error)
+    : undefined;
+
+  const siteUnderstanding = normalizeSiteUnderstanding(
+    await resolveWithAiFallback({
+      stage: 'analysis',
+      aiState: params.aiState,
+      task: () => buildSiteUnderstanding(params.input, params.pageSnapshots, params.existingContentMap),
+      fallback: () =>
+        buildSiteUnderstandingFallback({
+          input: params.input,
+          pageSnapshots: params.pageSnapshots,
+          existingContentMap: params.existingContentMap,
+        }),
+      onFallback: handleAnalysisFallback ? (_stage, error) => handleAnalysisFallback(error) : undefined,
+    }),
+  );
+
+  const manualCompetitorUrls = params.manualCompetitorUrls ?? params.input.competitorUrls;
+  const discoveredCompetitors = await discoverCompetitors({
+    homepageUrl: params.input.homepageUrl,
+    language: params.input.language,
+    market: params.input.market,
+    suggestedQueries:
+      manualCompetitorUrls.length > 0
+        ? []
+        : siteUnderstanding.competitorQueries.length > 0
+          ? siteUnderstanding.competitorQueries
+          : siteUnderstanding.offerings.map((offering) => `${offering} ${params.input.market}`),
+  }).catch(() => []);
+
+  const competitorUrls = dedupeStrings([
+    ...manualCompetitorUrls,
+    ...discoveredCompetitors.map((entry) => entry.url),
+  ]).slice(0, 5);
+
+  const concurrency = pLimit(4);
+  const competitorPageEvidence = (
+    await Promise.all(competitorUrls.map((url) => concurrency(() => fetchPageSnapshot(url))))
+  ).filter(keepPageSnapshot);
+
+  const competitorIntelligence = normalizeCompetitorIntelligence(
+    await resolveWithAiFallback({
+      stage: 'competitors',
+      aiState: params.aiState,
+      task: () =>
+        buildCompetitorIntelligence({
+          input: params.input,
+          siteUnderstanding,
+          competitorPageEvidence,
+          autoCompetitorCandidates: discoveredCompetitors,
+        }),
+      fallback: () =>
+        buildCompetitorIntelligenceFallback({
+          input: params.input,
+          siteUnderstanding,
+          competitorPageEvidence,
+          autoCompetitorCandidates: discoveredCompetitors,
+        }),
+      onFallback: handleCompetitorFallback ? (_stage, error) => handleCompetitorFallback(error) : undefined,
+    }),
+  );
+
+  return {
+    siteUnderstanding,
+    discoveredCompetitors,
+    suggestedCompetitors: mergeSuggestedCompetitors({
+      autoCompetitorCandidates: discoveredCompetitors,
+      competitorIntelligence,
+    }),
+    competitorUrls,
+    competitorPageEvidence,
+    competitorIntelligence,
+  };
 }
 
 async function generatePillars(params: {
@@ -785,19 +981,33 @@ export async function runResearchPipeline(params: {
   input: ResearchInputSnapshot;
 }) {
   const { runId, input } = params;
-  const crawlLimits = getCrawlLimits();
-  const concurrency = pLimit(4);
   const aiState: AiAvailabilityState = { enabled: true };
 
-  const resolveWithAiFallback = async <T>(stage: string, task: () => Promise<T>, fallback: () => T) => {
-    if (!aiState.enabled) {
-      return fallback();
-    }
+  await log(runId, 'crawl', 'Fetching sitemap and required pages');
+  const {
+    sitemapUrls,
+    pageSnapshots,
+    existingContentMap,
+  } = await buildSiteEvidence(input);
 
-    try {
-      return await task();
-    } catch (error) {
-      aiState.enabled = false;
+  await log(runId, 'analysis', 'Understanding the business and existing coverage', {
+    sitemapUrls: sitemapUrls.length,
+    pageEvidence: pageSnapshots.length,
+  });
+
+  await log(runId, 'competitors', 'Discovering relevant competitors');
+  const {
+    siteUnderstanding,
+    discoveredCompetitors,
+    suggestedCompetitors,
+    competitorUrls,
+    competitorIntelligence,
+  } = await analyzeCompetitiveLandscape({
+    input,
+    pageSnapshots,
+    existingContentMap,
+    aiState,
+    onAiFallback: async (stage, error) => {
       await addResearchLog({
         runId,
         stage,
@@ -807,74 +1017,8 @@ export async function runResearchPipeline(params: {
           reason: error instanceof Error ? error.message : 'Unknown AI error',
         },
       });
-      return fallback();
-    }
-  };
-
-  await log(runId, 'crawl', 'Fetching sitemap and required pages');
-  const sitemapUrls = await fetchSitemapUrls(input.sitemapUrl);
-  const baseEvidenceUrls = dedupeStrings([input.homepageUrl, input.aboutUrl, ...sitemapUrls]).slice(
-    0,
-    crawlLimits.maxPageFetches,
-  );
-
-  const pageSnapshots = (
-    await Promise.all(baseEvidenceUrls.map((url) => concurrency(() => fetchPageSnapshot(url))))
-  ).filter(keepPageSnapshot);
-  const existingContentMap = buildExistingContentMap(sitemapUrls, pageSnapshots);
-
-  await log(runId, 'analysis', 'Understanding the business and existing coverage', {
-    sitemapUrls: sitemapUrls.length,
-    pageEvidence: pageSnapshots.length,
+    },
   });
-  const siteUnderstanding = normalizeSiteUnderstanding(
-    await resolveWithAiFallback(
-      'analysis',
-      () => buildSiteUnderstanding(input, pageSnapshots, existingContentMap),
-      () => buildSiteUnderstandingFallback({ input, pageSnapshots, existingContentMap }),
-    ),
-  );
-
-  await log(runId, 'competitors', 'Discovering relevant competitors');
-  const discoveredCompetitors = await discoverCompetitors({
-    homepageUrl: input.homepageUrl,
-    language: input.language,
-    market: input.market,
-    suggestedQueries:
-      input.competitorUrls.length > 0
-        ? []
-        : siteUnderstanding.competitorQueries.length > 0
-          ? siteUnderstanding.competitorQueries
-          : siteUnderstanding.offerings.map((offering) => `${offering} ${input.market}`),
-  }).catch(() => []);
-
-  const competitorUrls = dedupeStrings([
-    ...input.competitorUrls,
-    ...discoveredCompetitors.map((entry) => entry.url),
-  ]).slice(0, 5);
-
-  const competitorPageEvidence = (
-    await Promise.all(competitorUrls.map((url) => concurrency(() => fetchPageSnapshot(url))))
-  ).filter(keepPageSnapshot);
-  const competitorIntelligence = normalizeCompetitorIntelligence(
-    await resolveWithAiFallback(
-      'competitors',
-      () =>
-        buildCompetitorIntelligence({
-          input,
-          siteUnderstanding,
-          competitorPageEvidence,
-          autoCompetitorCandidates: discoveredCompetitors,
-        }),
-      () =>
-        buildCompetitorIntelligenceFallback({
-          input,
-          siteUnderstanding,
-          competitorPageEvidence,
-          autoCompetitorCandidates: discoveredCompetitors,
-        }),
-    ),
-  );
 
   const desiredPillarCount = clamp(Math.round(input.targetRows / 14), 10, 15);
   const desiredClustersPerPillar = clamp(
@@ -896,9 +1040,10 @@ export async function runResearchPipeline(params: {
     ...(input.existingResearchSummary?.primaryKeywords ?? []),
   ]);
 
-  const pillarCandidates = (await resolveWithAiFallback(
-    'pillars',
-    () =>
+  const pillarCandidates = (await resolveWithAiFallback({
+    stage: 'pillars',
+    aiState,
+    task: () =>
       generatePillars({
         input,
         siteUnderstanding,
@@ -906,7 +1051,7 @@ export async function runResearchPipeline(params: {
         existingTopics,
         desiredCount: desiredPillarCount + 3,
       }),
-    () => ({
+    fallback: () => ({
       pillars: buildPillarCandidatesFallback({
         input,
         siteUnderstanding,
@@ -914,7 +1059,18 @@ export async function runResearchPipeline(params: {
         desiredCount: desiredPillarCount + 3,
       }),
     }),
-  )).pillars.filter(
+    onFallback: async (stage, error) => {
+      await addResearchLog({
+        runId,
+        stage,
+        level: 'warning',
+        message: 'AI generation failed. Switching to deterministic research fallback.',
+        metadata: {
+          reason: error instanceof Error ? error.message : 'Unknown AI error',
+        },
+      });
+    },
+  })).pillars.filter(
     (pillar, index, all) =>
       !overlapWithExisting(pillar, existingTopics) &&
       all.findIndex((entry) => entry.title.toLowerCase() === pillar.title.toLowerCase()) === index,
@@ -929,9 +1085,10 @@ export async function runResearchPipeline(params: {
 
   for (const pillar of pillars) {
     await log(runId, 'clusters', `Generating clusters for ${pillar.title}`);
-    const generated = await resolveWithAiFallback(
-      'clusters',
-      () =>
+    const generated = await resolveWithAiFallback({
+      stage: 'clusters',
+      aiState,
+      task: () =>
         generateClusters({
           input,
           siteUnderstanding,
@@ -940,14 +1097,25 @@ export async function runResearchPipeline(params: {
           siblingPillars: pillars.filter((entry) => entry.title !== pillar.title),
           desiredCount: desiredClustersPerPillar + 2,
         }),
-      () => ({
+      fallback: () => ({
         clusters: buildClusterCandidatesFallback({
           input,
           pillar,
           desiredCount: desiredClustersPerPillar + 2,
         }),
       }),
-    );
+      onFallback: async (stage, error) => {
+        await addResearchLog({
+          runId,
+          stage,
+          level: 'warning',
+          message: 'AI generation failed. Switching to deterministic research fallback.',
+          metadata: {
+            reason: error instanceof Error ? error.message : 'Unknown AI error',
+          },
+        });
+      },
+    });
 
     const filteredClusters = generated.clusters.filter(
       (cluster, index, all) =>
@@ -967,6 +1135,7 @@ export async function runResearchPipeline(params: {
     pillars: pillarBundles,
   });
 
+  await log(runId, 'qa', 'Validating and normalizing generated rows');
   const normalized = validateAndNormalizeRows(rawRows, input.brandName);
   if (normalized.issues.length) {
     await addResearchLog({
@@ -1016,7 +1185,19 @@ export async function runResearchPipeline(params: {
     competitorSnapshot: JSON.stringify({
       competitorUrls,
       discoveredCompetitors,
+      suggestedCompetitors,
       competitorIntelligence,
     }),
+  });
+
+  await addResearchLog({
+    runId,
+    stage: 'completed',
+    level: 'info',
+    message: 'Workbook verified and stored successfully.',
+    metadata: {
+      workbookName,
+      rowCount: normalized.rows.length,
+    },
   });
 }

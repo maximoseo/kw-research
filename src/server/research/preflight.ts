@@ -14,7 +14,7 @@ async function validateReachableUrl(url: string, label: string) {
   }
 }
 
-export async function validateResearchSources(input: CreateResearchInput) {
+export async function validateResearchSourceUrls(input: Pick<CreateResearchInput, 'homepageUrl' | 'aboutUrl' | 'sitemapUrl'>) {
   const issues = await Promise.all([
     validateReachableUrl(input.homepageUrl, 'Homepage URL'),
     validateReachableUrl(input.aboutUrl, 'About page URL'),
@@ -36,6 +36,10 @@ export async function validateResearchSources(input: CreateResearchInput) {
   }
 
   return issues.filter(Boolean) as string[];
+}
+
+export async function validateResearchSources(input: CreateResearchInput) {
+  return validateResearchSourceUrls(input);
 }
 
 export function parseResearchInput(payload: Record<string, FormDataEntryValue | null>) {
