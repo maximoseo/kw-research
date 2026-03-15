@@ -3,6 +3,8 @@ import AuthForm from '@/components/auth/AuthForm';
 import { sanitizeRedirectPath } from '@/lib/auth';
 import { getCurrentUser } from '@/server/auth/session';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Register · KW Research',
 };

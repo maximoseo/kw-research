@@ -4,11 +4,28 @@ import { drizzle } from 'drizzle-orm/libsql';
 import { getDataDir, getDatabaseUrl, getReportsDir, getUploadsDir } from '@/lib/env';
 import * as schema from './schema';
 
-const client = createClient({
-  url: getDatabaseUrl(),
-});
+let client: ReturnType<typeof createClient> | null = null;
+let database: ReturnType<typeof drizzle> | null = null;
 
-export const db = drizzle(client, { schema });
+function getClient() {
+  client ??= createClient({
+    url: getDatabaseUrl(),
+  });
+
+  return client;
+}
+
+export function getDb() {
+  database ??= drizzle(getClient(), { schema });
+  return database;
+}
+
+export const db = new Proxy({} as ReturnType<typeof drizzle>, {
+  get(_target, property) {
+    const value = (getDb() as unknown as Record<PropertyKey, unknown>)[property];
+    return typeof value === 'function' ? value.bind(getDb()) : value;
+  },
+});
 
 let directoriesReady: Promise<void> | null = null;
 
@@ -22,4 +39,4 @@ export async function ensureRuntimeDirectories() {
   await directoriesReady;
 }
 
-export { client };
+export { getClient as client };
