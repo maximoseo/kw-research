@@ -54,8 +54,8 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
 
   return (
     <div className="w-full max-w-[560px] mx-auto">
-      <div className="rounded-[32px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--surface))/0.98,hsl(var(--surface-raised))/0.96)] p-7 shadow-[0_40px_120px_-64px_rgba(0,0,0,0.9)] sm:p-8">
-        <div className="toolbar-chip w-fit border-accent/20 bg-accent/10 text-accent">
+      <div className="rounded-[32px] border border-[rgba(124,92,255,0.12)] bg-[rgba(20,26,49,0.8)] p-7 shadow-[0_40px_120px_-64px_rgba(0,0,0,0.9)] backdrop-blur-[20px] sm:p-8">
+        <div className="toolbar-chip w-fit border-[rgba(124,92,255,0.2)] bg-[rgba(124,92,255,0.08)] text-[#8f73ff]">
           {mode === 'login' ? 'Protected workspace access' : 'Create analyst account'}
         </div>
         <h2 className="mt-5 text-[2rem] font-semibold tracking-tight text-text-primary">
@@ -128,14 +128,14 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
           {mode === 'login' ? (
             <>
               Need an account?{' '}
-              <Link href={`/auth/register${redirectQuery}`} className="text-accent hover:underline font-medium">
+              <Link href={`/auth/register${redirectQuery}`} className="text-[#8f73ff] hover:underline font-medium">
                 Sign up
               </Link>
             </>
           ) : (
             <>
               Already have access?{' '}
-              <Link href={`/auth/login${redirectQuery}`} className="text-accent hover:underline font-medium">
+              <Link href={`/auth/login${redirectQuery}`} className="text-[#8f73ff] hover:underline font-medium">
                 Sign in
               </Link>
             </>

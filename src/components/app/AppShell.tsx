@@ -24,16 +24,16 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-transparent">
-      <aside className="hidden w-[318px] shrink-0 flex-col border-r border-white/5 bg-sidebar-bg px-5 py-5 text-sidebar-text lg:flex before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-accent/40 before:to-transparent relative">
+      <aside className="hidden w-[318px] shrink-0 flex-col border-r border-[rgba(124,92,255,0.08)] bg-sidebar-bg px-5 py-5 text-sidebar-text lg:flex before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[#7c5cff]/40 before:to-transparent relative">
         <Link
           href="/dashboard"
-          className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] px-5 py-5 shadow-[0_30px_80px_-55px_rgba(14,165,233,0.8)] backdrop-blur"
+          className="rounded-[30px] border border-[rgba(124,92,255,0.15)] bg-[linear-gradient(180deg,rgba(124,92,255,0.12),rgba(124,92,255,0.04))] px-5 py-5 shadow-[0_30px_80px_-55px_rgba(124,92,255,0.5)] backdrop-blur"
         >
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="eyebrow text-white/55">Research workspace</p>
               <div className="mt-4 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-accent/25 bg-accent/15 text-accent">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[rgba(124,92,255,0.25)] bg-[rgba(124,92,255,0.15)] text-[#7c5cff]">
                   <FolderKanban className="h-5 w-5" />
                 </div>
                 <div>
@@ -47,7 +47,7 @@ export function AppShell({
             </div>
           </div>
           <div className="mt-5 flex items-center gap-2 text-xs text-white/52">
-            <Download className="h-4 w-4 text-accent" />
+            <Download className="h-4 w-4 text-[#7c5cff]" />
             Logged research runs, previews, and downloadable Excel exports
           </div>
         </Link>
@@ -72,7 +72,7 @@ export function AppShell({
           </SidebarLink>
         </nav>
 
-        <div className="mt-6 rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
+        <div className="mt-6 rounded-[28px] border border-[rgba(124,92,255,0.08)] bg-[rgba(124,92,255,0.04)] p-4">
           <p className="eyebrow text-white/45">Pipeline</p>
           <div className="mt-4 space-y-3 text-sm text-white/65">
             {[
@@ -80,16 +80,16 @@ export function AppShell({
               'Competitor theme discovery tuned by language and market',
               'Deduplicated pillars, clusters, and polished workbook output',
             ].map((item) => (
-              <div key={item} className="rounded-[20px] border border-white/10 bg-white/[0.03] px-3 py-3">
+              <div key={item} className="rounded-[20px] border border-[rgba(124,92,255,0.1)] bg-[rgba(124,92,255,0.03)] px-3 py-3">
                 {item}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="mt-auto rounded-[28px] border border-white/10 bg-white/[0.055] p-4 backdrop-blur">
+        <div className="mt-auto rounded-[28px] border border-[rgba(124,92,255,0.12)] bg-[rgba(124,92,255,0.06)] p-4 backdrop-blur">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-semibold text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[rgba(124,92,255,0.15)] bg-[rgba(124,92,255,0.1)] text-sm font-semibold text-white">
               {user.displayName.slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -105,15 +105,15 @@ export function AppShell({
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-20 border-b border-border/60 bg-background/76 backdrop-blur-xl">
+        <header className="sticky top-0 z-20 border-b border-[rgba(124,92,255,0.08)] bg-[rgba(10,13,23,0.95)] backdrop-blur-xl">
           <div className="page-shell flex items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="toolbar-chip">
+                <span className="toolbar-chip border-[rgba(124,92,255,0.15)]">
                   <span className="h-2 w-2 rounded-full bg-success animate-pulse-dot" />
                   Protected workspace
                 </span>
-                <span className="toolbar-chip hidden sm:inline-flex">Background research queue</span>
+                <span className="toolbar-chip hidden sm:inline-flex border-[rgba(124,92,255,0.1)]">Background research queue</span>
               </div>
               <h1 className="mt-3 text-xl font-semibold tracking-tight sm:text-[1.65rem]">Keyword Research Dashboard</h1>
               <p className="mt-1 text-sm text-text-secondary">
@@ -121,7 +121,7 @@ export function AppShell({
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="hidden rounded-full border border-border/70 bg-surface-raised/70 px-3 py-1.5 text-xs font-medium text-text-secondary md:inline-flex">
+              <div className="hidden rounded-full border border-[rgba(124,92,255,0.12)] bg-[rgba(124,92,255,0.06)] px-3 py-1.5 text-xs font-medium text-text-secondary md:inline-flex">
                 Single-run job orchestration with persistent history
               </div>
               <div className="flex items-center gap-3 lg:hidden">
@@ -154,8 +154,8 @@ function SidebarLink({
       className={cn(
         'group flex items-center justify-between gap-3 rounded-[22px] border px-3.5 py-3 text-sm font-medium transition-all',
         active
-          ? 'border-accent/25 bg-accent/[0.12] text-white shadow-[0_18px_40px_-34px_rgba(14,165,233,0.9)]'
-          : 'border-transparent text-white/60 hover:border-white/10 hover:bg-white/[0.055] hover:text-white',
+          ? 'border-[rgba(124,92,255,0.25)] bg-[rgba(124,92,255,0.12)] text-white shadow-[0_18px_40px_-34px_rgba(124,92,255,0.7)]'
+          : 'border-transparent text-white/60 hover:border-[rgba(124,92,255,0.1)] hover:bg-[rgba(124,92,255,0.06)] hover:text-white',
       )}
     >
       <span className="flex items-center gap-3">
@@ -163,15 +163,15 @@ function SidebarLink({
           className={cn(
             'flex h-9 w-9 items-center justify-center rounded-2xl border transition-all',
             active
-              ? 'border-accent/20 bg-accent/[0.14] text-accent'
-              : 'border-white/8 bg-white/[0.035] text-white/60 group-hover:border-white/12 group-hover:text-white',
+              ? 'border-[rgba(124,92,255,0.2)] bg-[rgba(124,92,255,0.14)] text-[#7c5cff]'
+              : 'border-white/8 bg-white/[0.035] text-white/60 group-hover:border-[rgba(124,92,255,0.15)] group-hover:text-white',
           )}
         >
           <Icon className="h-4 w-4" />
         </span>
         {children}
       </span>
-      {active ? <span className="h-2 w-2 rounded-full bg-accent" /> : null}
+      {active ? <span className="h-2 w-2 rounded-full bg-[#7c5cff]" /> : null}
     </Link>
   );
 }

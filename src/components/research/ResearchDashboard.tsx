@@ -152,10 +152,10 @@ export default function ResearchDashboard({
         <Card padding="none" className="rounded-[32px] border-border/70">
           <div className="relative overflow-hidden px-6 py-7 sm:px-8 sm:py-8">
             <div className="absolute inset-0 bg-grid opacity-25" />
-            <div className="absolute -left-10 top-0 h-36 w-36 rounded-full bg-accent/15 blur-3xl" />
-            <div className="absolute bottom-0 right-0 h-40 w-40 rounded-full bg-success/10 blur-3xl" />
+            <div className="absolute -left-10 top-0 h-36 w-36 rounded-full bg-[rgba(124,92,255,0.15)] blur-3xl" />
+            <div className="absolute bottom-0 right-0 h-40 w-40 rounded-full bg-[rgba(96,165,250,0.1)] blur-3xl" />
             <div className="relative">
-              <div className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+              <div className="inline-flex items-center rounded-full border border-[rgba(124,92,255,0.2)] bg-[rgba(124,92,255,0.08)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8f73ff]">
                 Keyword architecture ops
               </div>
               <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">

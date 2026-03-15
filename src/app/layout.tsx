@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import { Sora, DM_Sans } from 'next/font/google';
 import { Providers } from '@/app/providers';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import './globals.css';
@@ -16,6 +17,20 @@ const mono = localFont({
   weight: '100 900',
 });
 
+const sora = Sora({
+  subsets: ['latin'],
+  variable: '--font-heading',
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-body',
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'KW Research',
   description:
@@ -30,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${sans.variable} ${mono.variable} min-h-screen bg-background font-sans text-text-primary antialiased`}
+        className={`${sans.variable} ${mono.variable} ${sora.variable} ${dmSans.variable} min-h-screen bg-background font-sans text-text-primary antialiased`}
       >
         <Providers>
           <ErrorBoundary>{children}</ErrorBoundary>

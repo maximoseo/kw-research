@@ -3,23 +3,34 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── Maximo SEO brand palette ──────────────────────────────────
+     Primary purple:  #7c5cff  → 254 100% 68%
+     Primary light:   #8f73ff  → 254 100% 73%
+     Blue accent:     #60a5fa  → 217 95%  68%
+     Deep bg:         #0a0d17  → 225 40%  6%
+     Surface:         #141a31  → 225 40%  14%
+     Text:            #f5f7ff
+     Text secondary:  #aab2d1
+     Text muted:      #7781a8
+  ─────────────────────────────────────────────────────────────── */
+
   :root,
   .light {
-    --background: 214 33% 97%;
-    --surface: 0 0% 100%;
-    --surface-raised: 210 28% 96%;
-    --surface-overlay: 0 0% 100%;
-    --border: 215 24% 84%;
-    --border-subtle: 214 26% 91%;
-    --text-primary: 220 33% 12%;
-    --text-secondary: 222 18% 32%;
-    --text-muted: 219 11% 50%;
+    --background: 230 25% 95%;
+    --surface: 240 20% 99%;
+    --surface-raised: 230 22% 96%;
+    --surface-overlay: 240 20% 99%;
+    --border: 250 20% 82%;
+    --border-subtle: 248 18% 89%;
+    --text-primary: 230 30% 10%;
+    --text-secondary: 232 18% 30%;
+    --text-muted: 234 12% 48%;
     --text-inverted: 0 0% 100%;
-    --accent: 206 100% 46%;
-    --accent-hover: 206 100% 40%;
+    --accent: 254 100% 68%;
+    --accent-hover: 254 100% 62%;
     --accent-foreground: 0 0% 100%;
-    --accent-muted: 204 100% 95%;
-    --accent-glow: 206 100% 46%;
+    --accent-muted: 254 60% 94%;
+    --accent-glow: 254 100% 68%;
     --destructive: 0 78% 55%;
     --destructive-foreground: 0 0% 100%;
     --success: 152 76% 30%;
@@ -28,60 +39,60 @@
     --warning: 34 91% 50%;
     --warning-foreground: 0 0% 100%;
     --warning-muted: 35 88% 93%;
-    --info: 214 91% 52%;
+    --info: 217 95% 68%;
     --info-foreground: 0 0% 100%;
-    --info-muted: 214 100% 95%;
-    --input-bg: 0 0% 100%;
-    --input-border: 214 24% 82%;
-    --input-focus: 206 100% 46%;
-    --ring: 206 100% 46%;
-    --sidebar-bg: 218 35% 10%;
-    --sidebar-active: 206 90% 18%;
-    --sidebar-text: 215 21% 82%;
-    --tab-active: 206 100% 46%;
-    --tab-inactive: 220 10% 58%;
-    --scrollbar-track: 214 32% 94%;
-    --scrollbar-thumb: 216 17% 78%;
+    --info-muted: 217 80% 94%;
+    --input-bg: 240 20% 99%;
+    --input-border: 250 18% 80%;
+    --input-focus: 254 100% 68%;
+    --ring: 254 100% 68%;
+    --sidebar-bg: 228 42% 8%;
+    --sidebar-active: 254 60% 22%;
+    --sidebar-text: 230 20% 82%;
+    --tab-active: 254 100% 68%;
+    --tab-inactive: 230 10% 54%;
+    --scrollbar-track: 230 22% 94%;
+    --scrollbar-thumb: 250 14% 74%;
   }
 
   .dark {
     --background: 225 40% 6%;
-    --surface: 222 28% 10%;
-    --surface-raised: 221 23% 14%;
-    --surface-overlay: 224 34% 8%;
-    --border: 219 18% 20%;
-    --border-subtle: 220 16% 13%;
-    --text-primary: 214 62% 96%;
-    --text-secondary: 214 23% 74%;
-    --text-muted: 217 12% 56%;
-    --text-inverted: 220 30% 7%;
-    --accent: 194 92% 58%;
-    --accent-hover: 194 92% 64%;
-    --accent-foreground: 219 37% 9%;
-    --accent-muted: 194 62% 15%;
-    --accent-glow: 194 92% 58%;
+    --surface: 225 36% 10%;
+    --surface-raised: 225 30% 14%;
+    --surface-overlay: 225 38% 8%;
+    --border: 248 20% 20%;
+    --border-subtle: 246 18% 14%;
+    --text-primary: 230 80% 97%;
+    --text-secondary: 228 28% 72%;
+    --text-muted: 230 16% 50%;
+    --text-inverted: 225 35% 7%;
+    --accent: 254 100% 68%;
+    --accent-hover: 254 100% 73%;
+    --accent-foreground: 0 0% 100%;
+    --accent-muted: 254 50% 18%;
+    --accent-glow: 254 100% 68%;
     --destructive: 0 80% 61%;
     --destructive-foreground: 0 0% 100%;
     --success: 152 76% 37%;
     --success-foreground: 0 0% 100%;
     --success-muted: 152 42% 16%;
     --warning: 36 96% 58%;
-    --warning-foreground: 220 30% 7%;
+    --warning-foreground: 225 35% 7%;
     --warning-muted: 35 72% 17%;
-    --info: 214 100% 64%;
-    --info-foreground: 220 30% 7%;
-    --info-muted: 214 51% 16%;
-    --input-bg: 223 23% 12%;
-    --input-border: 219 16% 26%;
-    --input-focus: 194 92% 58%;
-    --ring: 194 92% 58%;
-    --sidebar-bg: 226 42% 5%;
-    --sidebar-active: 194 74% 16%;
-    --sidebar-text: 214 24% 78%;
-    --tab-active: 194 92% 58%;
-    --tab-inactive: 218 12% 50%;
-    --scrollbar-track: 221 28% 8%;
-    --scrollbar-thumb: 219 16% 24%;
+    --info: 217 95% 68%;
+    --info-foreground: 225 35% 7%;
+    --info-muted: 217 46% 18%;
+    --input-bg: 225 32% 12%;
+    --input-border: 248 18% 24%;
+    --input-focus: 254 100% 68%;
+    --ring: 254 100% 68%;
+    --sidebar-bg: 226 44% 5%;
+    --sidebar-active: 254 50% 18%;
+    --sidebar-text: 228 24% 78%;
+    --tab-active: 254 100% 68%;
+    --tab-inactive: 230 14% 46%;
+    --scrollbar-track: 225 36% 8%;
+    --scrollbar-thumb: 248 18% 22%;
   }
 
   * {
@@ -108,11 +119,11 @@
 
   body {
     background:
-      radial-gradient(circle at 0% 0%, hsl(var(--accent) / 0.17), transparent 26%),
-      radial-gradient(circle at 100% 0%, hsl(var(--warning) / 0.1), transparent 22%),
-      radial-gradient(circle at 50% 100%, hsl(var(--info) / 0.08), transparent 28%),
-      linear-gradient(180deg, hsl(var(--background)), hsl(224 37% 5%));
-    font-family: var(--font-sans), sans-serif;
+      radial-gradient(ellipse at 0% 0%, hsl(254 100% 68% / 0.12), transparent 40%),
+      radial-gradient(ellipse at 100% 0%, hsl(217 95% 68% / 0.08), transparent 35%),
+      radial-gradient(ellipse at 50% 100%, hsl(254 100% 68% / 0.06), transparent 40%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(225 42% 4%));
+    font-family: var(--font-body), var(--font-sans), sans-serif;
     color: hsl(var(--text-primary));
     min-height: 100vh;
   }
@@ -123,11 +134,11 @@
     inset: 0;
     pointer-events: none;
     background-image:
-      linear-gradient(to right, hsl(var(--border-subtle) / 0.32) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border-subtle) / 0.22) 1px, transparent 1px);
+      linear-gradient(to right, hsl(var(--border-subtle) / 0.28) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border-subtle) / 0.18) 1px, transparent 1px);
     background-size: 72px 72px;
     mask-image: radial-gradient(circle at center, black 18%, transparent 78%);
-    opacity: 0.22;
+    opacity: 0.18;
   }
 
   body::after {
@@ -136,10 +147,11 @@
     inset: auto 0 0 0;
     pointer-events: none;
     height: 36vh;
-    background: linear-gradient(180deg, transparent, hsl(224 48% 3% / 0.7));
+    background: linear-gradient(180deg, transparent, hsl(225 48% 3% / 0.7));
   }
 
   h1, h2, h3 {
+    font-family: var(--font-heading), var(--font-sans), sans-serif;
     letter-spacing: -0.025em;
   }
 
@@ -274,6 +286,25 @@
   .timeline-dot {
     @apply relative pl-6 before:absolute before:left-0 before:top-2 before:h-2.5 before:w-2.5 before:rounded-full before:bg-current;
   }
+
+  /* Maximo SEO brand gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #8f73ff 0%, #60a5fa 50%, #7c5cff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Maximo SEO gradient button */
+  .gradient-btn {
+    background: linear-gradient(135deg, #7c5cff, #60a5fa);
+    box-shadow: 0 8px 24px rgba(124, 92, 255, 0.25);
+  }
+  .gradient-btn:hover {
+    background: linear-gradient(135deg, #8f73ff, #7cb8ff);
+    box-shadow: 0 12px 32px rgba(124, 92, 255, 0.35);
+    transform: translateY(-1px);
+  }
 }
 
 ::-webkit-scrollbar {
@@ -293,7 +324,7 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--text-muted) / 0.5);
+  background: hsl(254 100% 68% / 0.5);
   background-clip: content-box;
 }
 
