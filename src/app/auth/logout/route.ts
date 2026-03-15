@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getAppUrl } from '@/lib/env';
 import { clearSessionCookie, invalidateSession, SESSION_COOKIE_NAME } from '@/server/auth/session';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
-  const response = NextResponse.redirect(new URL('/auth/login', request.url));
+export async function GET() {
+  const response = NextResponse.redirect(new URL('/auth/login', getAppUrl()));
   const token = cookies().get(SESSION_COOKIE_NAME)?.value;
 
   await invalidateSession(token);
