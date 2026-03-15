@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: kw-research
+    runtime: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    autoDeploy: true
+    disk:
+      name: kw-research-data
+      mountPath: /var/data
+      sizeGB: 5
+    envVars:
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        value: file:/var/data/kw-research.db
+      - key: DATA_DIR
+        value: /var/data
+      - key: AI_REQUEST_TIMEOUT_MS
+        value: 15000
+      - key: AI_MAX_RETRIES
+        value: 0
+      - key: CRAWL_MAX_SITEMAPS
+        value: 20
+      - key: CRAWL_MAX_URLS
+        value: 1500
+      - key: CRAWL_MAX_PAGE_FETCHES
+        value: 60
+      - key: CRAWL_MAX_HTML_BYTES
+        value: 400000
+      - key: RUNNER_POLL_INTERVAL_MS
+        value: 3000
+      - key: RUNNER_STALE_LOCK_MS
+        value: 900000
+      - key: SEARCH_USER_AGENT
+        value: Mozilla/5.0 (compatible; MaximoSEOResearchBot/1.0; +https://maximo-seo.ai)
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        sync: false

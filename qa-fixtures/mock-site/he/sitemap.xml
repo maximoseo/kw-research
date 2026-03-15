@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>http://127.0.0.1:3200/he/</loc>
+  </url>
+  <url>
+    <loc>http://127.0.0.1:3200/he/about/</loc>
+  </url>
+  <url>
+    <loc>http://127.0.0.1:3200/he/services/%D7%91%D7%93%D7%99%D7%A7%D7%95%D7%AA-%D7%9E%D7%99%D7%9D/</loc>
+  </url>
+  <url>
+    <loc>http://127.0.0.1:3200/he/blog/%D7%AA%D7%97%D7%96%D7%95%D7%A7%D7%AA-%D7%9E%D7%A1%D7%A0%D7%A0%D7%99-%D7%9E%D7%99%D7%9D/</loc>
+  </url>
+</urlset>

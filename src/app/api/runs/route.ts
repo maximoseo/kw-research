@@ -1,0 +1,105 @@
+import path from 'path';
+import { NextResponse } from 'next/server';
+import { getAuthenticatedUserOrNull } from '@/server/auth/guards';
+import { createProjectAndRun, listRunsForUser } from '@/server/research/repository';
+import { parseResearchInput, validateResearchSources } from '@/server/research/preflight';
+import { parseUploadedWorkbook } from '@/server/research/uploaded-workbook';
+import { startResearchWorker } from '@/server/research/worker';
+import { writeManagedUpload } from '@/server/files/storage';
+
+export async function GET() {
+  startResearchWorker();
+  const user = await getAuthenticatedUserOrNull();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const runs = await listRunsForUser(user.id);
+  return NextResponse.json({ runs });
+}
+
+export async function POST(request: Request) {
+  startResearchWorker();
+  const user = await getAuthenticatedUserOrNull();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const formData = await request.formData();
+    const parsed = parseResearchInput({
+      homepageUrl: formData.get('homepageUrl'),
+      aboutUrl: formData.get('aboutUrl'),
+      sitemapUrl: formData.get('sitemapUrl'),
+      brandName: formData.get('brandName'),
+      language: formData.get('language'),
+      market: formData.get('market'),
+      competitorUrls: formData.get('competitorUrls'),
+      notes: formData.get('notes'),
+      mode: formData.get('mode'),
+      targetRows: formData.get('targetRows'),
+    });
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input.' }, { status: 400 });
+    }
+
+    const issues = await validateResearchSources(parsed.data);
+    if (issues.length) {
+      return NextResponse.json({ error: issues[0], issues }, { status: 400 });
+    }
+
+    const fileEntry = formData.get('existingResearch');
+    let uploadedFile: Awaited<ReturnType<typeof parseUploadedWorkbook>>['parsed'] | null = null;
+
+    if (fileEntry instanceof File && fileEntry.size > 0) {
+      const parsedFile = await parseUploadedWorkbook(fileEntry);
+      if (parsedFile.error || !parsedFile.parsed) {
+        return NextResponse.json({ error: parsedFile.error || 'Unable to parse the uploaded workbook.' }, { status: 400 });
+      }
+
+      uploadedFile = parsedFile.parsed;
+    }
+
+    const storedUpload = uploadedFile
+      ? {
+          originalName: (fileEntry as File).name,
+          storedPath: await writeManagedUpload({
+            buffer: uploadedFile.buffer,
+            originalName: (fileEntry as File).name,
+            extension: uploadedFile.extension || path.extname((fileEntry as File).name) || '.xlsx',
+          }),
+          mimeType: uploadedFile.mimeType,
+          sizeBytes: uploadedFile.buffer.length,
+          summary: uploadedFile.summary,
+        }
+      : null;
+
+    const projectName = `${parsed.data.brandName} - ${parsed.data.market}`;
+    const created = await createProjectAndRun({
+      userId: user.id,
+      projectName,
+      brandName: parsed.data.brandName,
+      language: parsed.data.language,
+      market: parsed.data.market,
+      homepageUrl: parsed.data.homepageUrl,
+      aboutUrl: parsed.data.aboutUrl,
+      sitemapUrl: parsed.data.sitemapUrl,
+      competitorUrls: parsed.data.competitorUrls,
+      notes: parsed.data.notes,
+      targetRows: parsed.data.targetRows,
+      mode: parsed.data.mode,
+      uploadedFile: storedUpload,
+    });
+
+    startResearchWorker();
+
+    return NextResponse.json({
+      ok: true,
+      runId: created.runId,
+      projectId: created.projectId,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Unable to create the research run.' }, { status: 500 });
+  }
+}
