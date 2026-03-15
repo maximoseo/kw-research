@@ -55,6 +55,7 @@ export default function ResearchDashboard({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<'preview' | 'logs' | 'summary'>('preview');
   const [isPending, startTransition] = useTransition();
+  const [hasMounted, setHasMounted] = useState(false);
   const runsQuery = useQuery({
     queryKey: ['runs'],
     queryFn: fetchRuns,
@@ -69,6 +70,10 @@ export default function ResearchDashboard({
       setSelectedRunId(runsQuery.data[0].id);
     }
   }, [runsQuery.data, selectedRunId]);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const runQuery = useQuery({
     queryKey: ['run', selectedRunId],
@@ -86,6 +91,17 @@ export default function ResearchDashboard({
   });
 
   const previewRows = useMemo(() => runQuery.data?.rows.slice(0, 50) || [], [runQuery.data?.rows]);
+  const greeting = hasMounted
+    ? new Date().getHours() < 12
+      ? 'Good morning'
+      : new Date().getHours() < 17
+        ? 'Good afternoon'
+        : 'Good evening'
+    : 'Welcome back';
+  const formatDateTimeLabel = (value: string | number | Date | null | undefined, fallback = 'Syncing time...') =>
+    hasMounted ? formatDateTime(value, fallback) : fallback;
+  const formatRelativeLabel = (value: string | number | Date | null | undefined, fallback = 'Syncing...') =>
+    hasMounted ? formatRelative(value, fallback) : fallback;
 
   const handleSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
@@ -144,9 +160,7 @@ export default function ResearchDashboard({
               </div>
               <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                 <div className="max-w-3xl">
-                  <p className="text-lg text-text-secondary">
-                    {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}
-                  </p>
+                  <p className="text-lg text-text-secondary">{greeting}</p>
                   <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-[2.2rem]">
                     Build deduplicated pillar and cluster plans that are ready to hand off.
                   </h2>
@@ -328,7 +342,7 @@ export default function ResearchDashboard({
             <div className="mt-6 space-y-5">
               <div className="grid gap-3 md:grid-cols-2">
                 <Metric label="Brand" value={selectedRun.brandName} helper={`${selectedRun.language} · ${selectedRun.market}`} />
-                <Metric label="Queued" value={formatDateTime(selectedRun.queuedAt)} helper={selectedRun.step || 'Awaiting updates'} />
+                <Metric label="Queued" value={formatDateTimeLabel(selectedRun.queuedAt)} helper={selectedRun.step || 'Awaiting updates'} />
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -439,7 +453,7 @@ export default function ResearchDashboard({
                             )}
                             {entry.message}
                           </div>
-                          <span className="text-xs text-text-muted">{formatRelative(entry.createdAt)}</span>
+                          <span className="text-xs text-text-muted">{formatRelativeLabel(entry.createdAt)}</span>
                         </div>
                         <p className="mt-2 text-xs uppercase tracking-[0.22em] text-text-muted">{entry.stage}</p>
                       </div>
@@ -455,7 +469,7 @@ export default function ResearchDashboard({
               {activeTab === 'summary' ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   <Metric label="Status" value={selectedRun.status} helper={selectedRun.step || 'No step reported'} />
-                  <Metric label="Workbook" value={selectedRun.workbookName || 'Pending'} helper={selectedRun.completedAt ? `Completed ${formatRelative(selectedRun.completedAt)}` : 'Not finished yet'} />
+                  <Metric label="Workbook" value={selectedRun.workbookName || 'Pending'} helper={selectedRun.completedAt ? `Completed ${formatRelativeLabel(selectedRun.completedAt)}` : 'Not finished yet'} />
                   <Metric label="Rows" value={String(selectedRun.rows.length || 0)} helper="Generated research rows" />
                   <Metric label="Mode" value={selectedRun.mode === 'expand' ? 'Expand existing research' : 'Fresh research'} helper={`Target ${selectedRun.targetRows} rows`} />
                 </div>
@@ -506,7 +520,7 @@ export default function ResearchDashboard({
                   <StatusBadge status={run.status} />
                 </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <Metric label="Queued" value={formatDateTime(run.queuedAt)} helper={formatRelative(run.queuedAt)} compact />
+                  <Metric label="Queued" value={formatDateTimeLabel(run.queuedAt)} helper={formatRelativeLabel(run.queuedAt)} compact />
                   <Metric label="Workbook" value={run.workbookName || 'Pending'} helper={run.errorMessage || run.step || 'No errors'} compact />
                 </div>
               </button>
