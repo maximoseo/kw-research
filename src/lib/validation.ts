@@ -39,6 +39,31 @@ export const createResearchSchema = z.object({
 
 export type CreateResearchInput = z.infer<typeof createResearchSchema>;
 
+export const createProjectSchema = createResearchSchema.omit({
+  mode: true,
+  targetRows: true,
+});
+
+export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+
+export const createProjectRunSchema = z.object({
+  competitorUrls: z
+    .string()
+    .default('')
+    .transform((value) =>
+      value
+        .split(/\r?\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(urlSchema).max(8, 'Add up to 8 competitor URLs.')),
+  notes: z.string().trim().max(3000, 'Notes must be 3000 characters or fewer.').optional().default(''),
+  mode: z.enum(['fresh', 'expand']).default('fresh'),
+  targetRows: z.coerce.number().int().min(120).max(320).default(220),
+});
+
+export type CreateProjectRunInput = z.infer<typeof createProjectRunSchema>;
+
 export const competitorDiscoverySchema = createResearchSchema.pick({
   homepageUrl: true,
   aboutUrl: true,
@@ -65,3 +90,19 @@ export const createResearchFormSchema = z.object({
 });
 
 export type CreateResearchFormInput = z.infer<typeof createResearchFormSchema>;
+
+export const createProjectFormSchema = createResearchFormSchema.omit({
+  mode: true,
+  targetRows: true,
+});
+
+export type CreateProjectFormInput = z.infer<typeof createProjectFormSchema>;
+
+export const createProjectRunFormSchema = z.object({
+  competitorUrls: z.string(),
+  notes: z.string().trim().max(3000, 'Notes must be 3000 characters or fewer.'),
+  mode: z.enum(['fresh', 'expand']),
+  targetRows: z.number().int().min(120).max(320),
+});
+
+export type CreateProjectRunFormInput = z.infer<typeof createProjectRunFormSchema>;

@@ -4,6 +4,8 @@ import { db } from '@/server/db/client';
 import { projects, researchLogs, researchRuns, uploadedFiles } from '@/server/db/schema';
 import { safeJsonParse } from '@/lib/utils';
 import type {
+  ResearchProjectDetail,
+  ResearchProjectSummary,
   ResearchInputSnapshot,
   ResearchRunDetail,
   ResearchRunLog,
@@ -121,6 +123,256 @@ export async function createProjectAndRun(params: {
   return { projectId, runId };
 }
 
+export async function createProject(params: {
+  userId: string;
+  projectName: string;
+  brandName: string;
+  language: 'English' | 'Hebrew';
+  market: string;
+  homepageUrl: string;
+  aboutUrl: string;
+  sitemapUrl: string;
+  competitorUrls: string[];
+  notes: string;
+}) {
+  const now = Date.now();
+  const projectId = randomUUID();
+
+  await db.insert(projects).values({
+    id: projectId,
+    userId: params.userId,
+    name: params.projectName,
+    brandName: params.brandName,
+    language: params.language,
+    market: params.market,
+    homepageUrl: params.homepageUrl,
+    aboutUrl: params.aboutUrl,
+    sitemapUrl: params.sitemapUrl,
+    competitorUrls: JSON.stringify(params.competitorUrls),
+    notes: params.notes,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return { projectId };
+}
+
+export async function getProjectForUser(userId: string, projectId: string): Promise<ResearchProjectDetail | null> {
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+    .limit(1);
+
+  const project = projectRows[0];
+  if (!project) {
+    return null;
+  }
+
+  const latestRunRows = await db
+    .select({
+      id: researchRuns.id,
+      status: researchRuns.status,
+      queuedAt: researchRuns.queuedAt,
+      completedAt: researchRuns.completedAt,
+    })
+    .from(researchRuns)
+    .where(and(eq(researchRuns.userId, userId), eq(researchRuns.projectId, projectId)))
+    .orderBy(desc(researchRuns.queuedAt))
+    .limit(1);
+
+  const runCountRows = await db
+    .select({
+      id: researchRuns.id,
+    })
+    .from(researchRuns)
+    .where(and(eq(researchRuns.userId, userId), eq(researchRuns.projectId, projectId)));
+
+  const latestRun = latestRunRows[0] || null;
+
+  return {
+    id: project.id,
+    name: project.name,
+    brandName: project.brandName,
+    language: project.language as SiteLanguage,
+    market: project.market,
+    homepageUrl: project.homepageUrl,
+    aboutUrl: project.aboutUrl,
+    sitemapUrl: project.sitemapUrl,
+    competitorUrls: parseJson(project.competitorUrls, []),
+    notes: project.notes || '',
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+    runCount: runCountRows.length,
+    latestRunId: latestRun?.id || null,
+    latestRunStatus: (latestRun?.status as ResearchStatus | undefined) || null,
+    latestRunQueuedAt: latestRun?.queuedAt || null,
+    latestRunCompletedAt: latestRun?.completedAt || null,
+  };
+}
+
+export async function listProjectsForUser(userId: string): Promise<ResearchProjectSummary[]> {
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.userId, userId))
+    .orderBy(desc(projects.updatedAt));
+
+  if (!projectRows.length) {
+    return [];
+  }
+
+  const runRows = await db
+    .select({
+      id: researchRuns.id,
+      projectId: researchRuns.projectId,
+      status: researchRuns.status,
+      queuedAt: researchRuns.queuedAt,
+      completedAt: researchRuns.completedAt,
+    })
+    .from(researchRuns)
+    .where(eq(researchRuns.userId, userId))
+    .orderBy(desc(researchRuns.queuedAt));
+
+  const runMap = new Map<
+    string,
+    {
+      count: number;
+      latestRunId: string | null;
+      latestRunStatus: ResearchStatus | null;
+      latestRunQueuedAt: number | null;
+      latestRunCompletedAt: number | null;
+    }
+  >();
+
+  for (const run of runRows) {
+    const existing = runMap.get(run.projectId);
+    if (!existing) {
+      runMap.set(run.projectId, {
+        count: 1,
+        latestRunId: run.id,
+        latestRunStatus: run.status as ResearchStatus,
+        latestRunQueuedAt: run.queuedAt,
+        latestRunCompletedAt: run.completedAt,
+      });
+      continue;
+    }
+
+    existing.count += 1;
+  }
+
+  return projectRows.map((project) => {
+    const runMeta = runMap.get(project.id);
+    return {
+      id: project.id,
+      name: project.name,
+      brandName: project.brandName,
+      language: project.language as SiteLanguage,
+      market: project.market,
+      homepageUrl: project.homepageUrl,
+      aboutUrl: project.aboutUrl,
+      sitemapUrl: project.sitemapUrl,
+      competitorUrls: parseJson(project.competitorUrls, []),
+      notes: project.notes || '',
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      runCount: runMeta?.count || 0,
+      latestRunId: runMeta?.latestRunId || null,
+      latestRunStatus: runMeta?.latestRunStatus || null,
+      latestRunQueuedAt: runMeta?.latestRunQueuedAt || null,
+      latestRunCompletedAt: runMeta?.latestRunCompletedAt || null,
+    };
+  });
+}
+
+export async function createRunForProject(params: {
+  userId: string;
+  projectId: string;
+  competitorUrls: string[];
+  notes: string;
+  targetRows: number;
+  mode: 'fresh' | 'expand';
+  uploadedFile?: {
+    originalName: string;
+    storedPath: string;
+    mimeType: string;
+    sizeBytes: number;
+    summary: UploadedResearchSummary | null;
+  } | null;
+}) {
+  const project = await getProjectForUser(params.userId, params.projectId);
+  if (!project) {
+    return null;
+  }
+
+  const now = Date.now();
+  const runId = randomUUID();
+
+  let uploadedFileId: string | null = null;
+  if (params.uploadedFile) {
+    uploadedFileId = randomUUID();
+    await db.insert(uploadedFiles).values({
+      id: uploadedFileId,
+      userId: params.userId,
+      runId,
+      originalName: params.uploadedFile.originalName,
+      storedPath: params.uploadedFile.storedPath,
+      mimeType: params.uploadedFile.mimeType,
+      sizeBytes: params.uploadedFile.sizeBytes,
+      summary: JSON.stringify(params.uploadedFile.summary),
+      createdAt: now,
+    });
+  }
+
+  const inputSnapshot: ResearchInputSnapshot = {
+    homepageUrl: project.homepageUrl,
+    aboutUrl: project.aboutUrl,
+    sitemapUrl: project.sitemapUrl,
+    brandName: project.brandName,
+    language: project.language,
+    market: project.market,
+    competitorUrls: params.competitorUrls,
+    notes: params.notes,
+    targetRows: params.targetRows,
+    mode: params.mode,
+    existingResearchSummary: params.uploadedFile?.summary || null,
+  };
+
+  await db.insert(researchRuns).values({
+    id: runId,
+    projectId: project.id,
+    userId: params.userId,
+    mode: params.mode,
+    status: 'queued',
+    step: 'Queued',
+    targetRows: params.targetRows,
+    inputSnapshot: JSON.stringify(inputSnapshot),
+    uploadedFileId,
+    queuedAt: now,
+    updatedAt: now,
+  });
+
+  await db
+    .update(projects)
+    .set({
+      updatedAt: now,
+    })
+    .where(and(eq(projects.id, project.id), eq(projects.userId, params.userId)));
+
+  await addResearchLog({
+    runId,
+    stage: 'system',
+    level: 'info',
+    message: 'Run queued successfully.',
+    metadata: {
+      targetRows: params.targetRows,
+      mode: params.mode,
+    },
+  });
+
+  return { projectId: project.id, runId };
+}
+
 export async function addResearchLog(params: {
   runId: string;
   stage: string;
@@ -160,6 +412,38 @@ export async function listRunsForUser(userId: string, limit = 24): Promise<Resea
     .from(researchRuns)
     .innerJoin(projects, eq(projects.id, researchRuns.projectId))
     .where(eq(researchRuns.userId, userId))
+    .orderBy(desc(researchRuns.queuedAt))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    ...row,
+    language: row.language as SiteLanguage,
+    mode: row.mode as ResearchMode,
+    status: row.status as ResearchStatus,
+  }));
+}
+
+export async function listRunsForProject(userId: string, projectId: string, limit = 24): Promise<ResearchRunSummary[]> {
+  const rows = await db
+    .select({
+      id: researchRuns.id,
+      projectId: researchRuns.projectId,
+      projectName: projects.name,
+      brandName: projects.brandName,
+      language: projects.language,
+      market: projects.market,
+      mode: researchRuns.mode,
+      status: researchRuns.status,
+      step: researchRuns.step,
+      targetRows: researchRuns.targetRows,
+      queuedAt: researchRuns.queuedAt,
+      completedAt: researchRuns.completedAt,
+      workbookName: researchRuns.workbookName,
+      errorMessage: researchRuns.errorMessage,
+    })
+    .from(researchRuns)
+    .innerJoin(projects, eq(projects.id, researchRuns.projectId))
+    .where(and(eq(researchRuns.userId, userId), eq(researchRuns.projectId, projectId)))
     .orderBy(desc(researchRuns.queuedAt))
     .limit(limit);
 

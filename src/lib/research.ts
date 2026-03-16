@@ -49,6 +49,28 @@ export type ResearchRunLog = {
   createdAt: number;
 };
 
+export type ResearchProjectSummary = {
+  id: string;
+  name: string;
+  brandName: string;
+  language: SiteLanguage;
+  market: string;
+  homepageUrl: string;
+  aboutUrl: string;
+  sitemapUrl: string;
+  competitorUrls: string[];
+  notes: string;
+  createdAt: number;
+  updatedAt: number;
+  runCount: number;
+  latestRunId: string | null;
+  latestRunStatus: ResearchStatus | null;
+  latestRunQueuedAt: number | null;
+  latestRunCompletedAt: number | null;
+};
+
+export type ResearchProjectDetail = ResearchProjectSummary;
+
 export type ResearchRunSummary = {
   id: string;
   projectId: string;

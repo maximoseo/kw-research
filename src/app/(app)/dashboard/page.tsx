@@ -1,9 +1,24 @@
-import ResearchDashboard from '@/components/research/ResearchDashboard';
+import { SiteSelectionDashboard } from '@/components/app/SiteSelectionDashboard';
+import { requireAuthenticatedUser } from '@/server/auth/guards';
+import { listProjectsForUser } from '@/server/research/repository';
 
 export const metadata = {
-  title: 'Dashboard · KW Research',
+  title: 'Select Website · KW Research',
 };
 
-export default function DashboardPage() {
-  return <ResearchDashboard />;
+export default async function DashboardSelectionPage() {
+  const user = await requireAuthenticatedUser();
+  const projects = await listProjectsForUser(user.id);
+
+  return (
+    <main className="page-shell flex flex-1 flex-col px-4 py-8 sm:px-6">
+      <SiteSelectionDashboard
+        user={{
+          email: user.email,
+          displayName: user.displayName,
+        }}
+        projects={projects}
+      />
+    </main>
+  );
 }

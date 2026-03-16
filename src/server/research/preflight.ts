@@ -1,4 +1,10 @@
-import { createResearchSchema, type CreateResearchInput } from '@/lib/validation';
+import {
+  createProjectRunSchema,
+  createProjectSchema,
+  createResearchSchema,
+  type CreateProjectInput,
+  type CreateResearchInput,
+} from '@/lib/validation';
 import { fetchWithTimeout } from './http';
 
 async function validateReachableUrl(url: string, label: string) {
@@ -42,6 +48,10 @@ export async function validateResearchSources(input: CreateResearchInput) {
   return validateResearchSourceUrls(input);
 }
 
+export async function validateProjectSources(input: CreateProjectInput) {
+  return validateResearchSourceUrls(input);
+}
+
 export function parseResearchInput(payload: Record<string, FormDataEntryValue | null>) {
   return createResearchSchema.safeParse({
     homepageUrl: payload.homepageUrl,
@@ -50,6 +60,28 @@ export function parseResearchInput(payload: Record<string, FormDataEntryValue | 
     brandName: payload.brandName,
     language: payload.language,
     market: payload.market,
+    competitorUrls: payload.competitorUrls,
+    notes: payload.notes,
+    mode: payload.mode,
+    targetRows: payload.targetRows,
+  });
+}
+
+export function parseProjectInput(payload: Record<string, FormDataEntryValue | null>) {
+  return createProjectSchema.safeParse({
+    homepageUrl: payload.homepageUrl,
+    aboutUrl: payload.aboutUrl,
+    sitemapUrl: payload.sitemapUrl,
+    brandName: payload.brandName,
+    language: payload.language,
+    market: payload.market,
+    competitorUrls: payload.competitorUrls,
+    notes: payload.notes,
+  });
+}
+
+export function parseProjectRunInput(payload: Record<string, FormDataEntryValue | null>) {
+  return createProjectRunSchema.safeParse({
     competitorUrls: payload.competitorUrls,
     notes: payload.notes,
     mode: payload.mode,

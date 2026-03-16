@@ -3,7 +3,7 @@ import { getAuthenticatedUserOrNull } from '@/server/auth/guards';
 import { getRunForUser } from '@/server/research/repository';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { runId: string } },
 ) {
   const user = await getAuthenticatedUserOrNull();
@@ -13,6 +13,12 @@ export async function GET(
   const run = await getRunForUser(user.id, params.runId);
 
   if (!run) {
+    return NextResponse.json({ error: 'Run not found.' }, { status: 404 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const projectId = searchParams.get('projectId');
+  if (projectId && run.projectId !== projectId) {
     return NextResponse.json({ error: 'Run not found.' }, { status: 404 });
   }
 

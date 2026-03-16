@@ -1,18 +1,38 @@
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUserOrNull } from '@/server/auth/guards';
-import { createProjectAndRun, listRunsForUser } from '@/server/research/repository';
-import { parseResearchInput, validateResearchSources } from '@/server/research/preflight';
+import {
+  createProjectAndRun,
+  createRunForProject,
+  getProjectForUser,
+  listRunsForProject,
+  listRunsForUser,
+} from '@/server/research/repository';
+import { parseProjectRunInput, parseResearchInput, validateResearchSources } from '@/server/research/preflight';
 import { parseUploadedWorkbook } from '@/server/research/uploaded-workbook';
 import { startResearchWorker } from '@/server/research/worker';
 import { writeManagedUpload } from '@/server/files/storage';
 
-export async function GET() {
+export async function GET(request: Request) {
   startResearchWorker();
   const user = await getAuthenticatedUserOrNull();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const { searchParams } = new URL(request.url);
+  const projectId = searchParams.get('projectId');
+
+  if (projectId) {
+    const project = await getProjectForUser(user.id, projectId);
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found.' }, { status: 404 });
+    }
+
+    const runs = await listRunsForProject(user.id, projectId);
+    return NextResponse.json({ runs });
+  }
+
   const runs = await listRunsForUser(user.id);
   return NextResponse.json({ runs });
 }
@@ -26,28 +46,6 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
-    const parsed = parseResearchInput({
-      homepageUrl: formData.get('homepageUrl'),
-      aboutUrl: formData.get('aboutUrl'),
-      sitemapUrl: formData.get('sitemapUrl'),
-      brandName: formData.get('brandName'),
-      language: formData.get('language'),
-      market: formData.get('market'),
-      competitorUrls: formData.get('competitorUrls'),
-      notes: formData.get('notes'),
-      mode: formData.get('mode'),
-      targetRows: formData.get('targetRows'),
-    });
-
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input.' }, { status: 400 });
-    }
-
-    const issues = await validateResearchSources(parsed.data);
-    if (issues.length) {
-      return NextResponse.json({ error: issues[0], issues }, { status: 400 });
-    }
-
     const fileEntry = formData.get('existingResearch');
     let uploadedFile: Awaited<ReturnType<typeof parseUploadedWorkbook>>['parsed'] | null = null;
 
@@ -73,6 +71,64 @@ export async function POST(request: Request) {
           summary: uploadedFile.summary,
         }
       : null;
+
+    const projectId = formData.get('projectId');
+    if (typeof projectId === 'string' && projectId.trim()) {
+      const parsedRun = parseProjectRunInput({
+        competitorUrls: formData.get('competitorUrls'),
+        notes: formData.get('notes'),
+        mode: formData.get('mode'),
+        targetRows: formData.get('targetRows'),
+      });
+
+      if (!parsedRun.success) {
+        return NextResponse.json({ error: parsedRun.error.issues[0]?.message || 'Invalid input.' }, { status: 400 });
+      }
+
+      const created = await createRunForProject({
+        userId: user.id,
+        projectId: projectId.trim(),
+        competitorUrls: parsedRun.data.competitorUrls,
+        notes: parsedRun.data.notes,
+        targetRows: parsedRun.data.targetRows,
+        mode: parsedRun.data.mode,
+        uploadedFile: storedUpload,
+      });
+
+      if (!created) {
+        return NextResponse.json({ error: 'Project not found.' }, { status: 404 });
+      }
+
+      startResearchWorker();
+
+      return NextResponse.json({
+        ok: true,
+        runId: created.runId,
+        projectId: created.projectId,
+      });
+    }
+
+    const parsed = parseResearchInput({
+      homepageUrl: formData.get('homepageUrl'),
+      aboutUrl: formData.get('aboutUrl'),
+      sitemapUrl: formData.get('sitemapUrl'),
+      brandName: formData.get('brandName'),
+      language: formData.get('language'),
+      market: formData.get('market'),
+      competitorUrls: formData.get('competitorUrls'),
+      notes: formData.get('notes'),
+      mode: formData.get('mode'),
+      targetRows: formData.get('targetRows'),
+    });
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input.' }, { status: 400 });
+    }
+
+    const issues = await validateResearchSources(parsed.data);
+    if (issues.length) {
+      return NextResponse.json({ error: issues[0], issues }, { status: 400 });
+    }
 
     const projectName = `${parsed.data.brandName} - ${parsed.data.market}`;
     const created = await createProjectAndRun({
