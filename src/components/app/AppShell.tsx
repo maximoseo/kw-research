@@ -21,6 +21,12 @@ export function AppShell({
   user: { email: string; displayName: string };
 }) {
   const pathname = usePathname();
+  const mobileLinks = [
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/dashboard#new-research', label: 'New research' },
+    { href: '/dashboard#history', label: 'History' },
+    { href: '/runs', label: 'Runs' },
+  ];
 
   return (
     <div className="flex min-h-screen bg-transparent">
@@ -127,6 +133,31 @@ export function AppShell({
               <div className="flex items-center gap-3 lg:hidden">
                 <ThemeToggle />
                 <LogoutButton />
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-[rgba(124,92,255,0.08)] lg:hidden">
+            <div className="page-shell px-4 py-3 sm:px-6">
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {mobileLinks.map((item) => {
+                  const isActive =
+                    item.href === '/runs' ? pathname.startsWith('/runs') : item.href === '/dashboard' ? pathname === '/dashboard' : false;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        'whitespace-nowrap rounded-full border px-3.5 py-2 text-sm font-medium transition-all',
+                        isActive
+                          ? 'border-[rgba(124,92,255,0.3)] bg-[rgba(124,92,255,0.16)] text-white'
+                          : 'border-[rgba(124,92,255,0.12)] bg-[rgba(124,92,255,0.06)] text-white/72 hover:border-[rgba(124,92,255,0.2)] hover:text-white',
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           </div>
