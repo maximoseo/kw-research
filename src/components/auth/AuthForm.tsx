@@ -17,7 +17,12 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
     email: '',
     password: '',
   });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    const urlError = searchParams.get('error');
+    if (urlError === 'oauth_callback_failed') return 'Google sign-in failed. Please try again.';
+    if (urlError === 'oauth_not_configured') return 'Google sign-in is not configured. Please use email and password.';
+    return null;
+  });
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [googleLoading, setGoogleLoading] = useState(false);

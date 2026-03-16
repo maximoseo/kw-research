@@ -41,6 +41,43 @@ export async function getUserByEmail(email: string) {
   return rows[0] ?? null;
 }
 
+export async function upsertGoogleUser(params: {
+  email: string;
+  displayName: string;
+}) {
+  await ensureRuntimeDirectories();
+
+  const existingUser = await getUserByEmail(params.email);
+  if (existingUser) {
+    return existingUser;
+  }
+
+  const now = Date.now();
+  const id = randomUUID();
+
+  // For Google users, we set a dummy password hash that cannot be used for regular login
+  // since it won't match any real password after bcrypt hashing.
+  const passwordHash = 'GOOGLE_OAUTH_USER_' + randomUUID();
+
+  await db.insert(users).values({
+    id,
+    email: params.email.toLowerCase(),
+    displayName: params.displayName.trim(),
+    passwordHash,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return {
+    id,
+    email: params.email.toLowerCase(),
+    displayName: params.displayName.trim(),
+    passwordHash,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 export async function getUserById(id: string) {
   await ensureRuntimeDirectories();
 

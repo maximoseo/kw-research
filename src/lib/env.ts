@@ -21,6 +21,8 @@ const envSchema = z.object({
   CRAWL_MAX_HTML_BYTES: z.coerce.number().min(10_000).max(2_000_000).default(400_000),
   RUNNER_POLL_INTERVAL_MS: z.coerce.number().min(1000).max(30_000).default(3000),
   RUNNER_STALE_LOCK_MS: z.coerce.number().min(60_000).max(3_600_000).default(900_000),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
 });
 
 const env = envSchema.parse(process.env);
@@ -89,4 +91,16 @@ export function getConfiguredModels() {
 
 export function getSessionSecret() {
   return env.SESSION_SECRET;
+}
+
+export function getGoogleClientId() {
+  return env.GOOGLE_CLIENT_ID;
+}
+
+export function getGoogleClientSecret() {
+  return env.GOOGLE_CLIENT_SECRET;
+}
+
+export function isGoogleOAuthConfigured() {
+  return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 }
