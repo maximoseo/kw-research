@@ -55,11 +55,11 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'relative min-h-tap whitespace-nowrap rounded-[18px] px-4 py-2.5 text-body-sm font-medium transition-all sm:min-h-0',
-              activeTab === tab.id
-                ? 'bg-[rgba(124,92,255,0.14)] text-[#8f73ff] shadow-[inset_0_0_0_1px_rgba(124,92,255,0.2)] font-semibold'
-                : 'text-tab-inactive hover:bg-surface-raised/60 hover:text-text-primary',
-            )}
+               'relative min-h-tap whitespace-nowrap rounded-[18px] px-4 py-2.5 text-body-sm font-medium transition-all sm:min-h-0',
+               activeTab === tab.id
+                 ? 'bg-accent/[0.14] text-accent shadow-[inset_0_0_0_1px_rgba(var(--accent-rgb),0.2)] font-semibold'
+                 : 'text-tab-inactive hover:bg-surface-raised/60 hover:text-text-primary',
+             )}
           >
             {tab.label}
             {tab.hasContent && (

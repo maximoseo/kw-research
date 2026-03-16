@@ -87,13 +87,13 @@ export function SiteSelectionDashboard({
   return (
     <div className="page-stack">
       <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <Card padding="none" className="rounded-[32px] border-border/70">
+        <Card padding="none" className="rounded-2xl border-border/70">
           <div className="relative overflow-hidden px-6 py-8 sm:px-8 sm:py-9">
             <div className="absolute inset-0 bg-grid opacity-20" />
-            <div className="absolute -left-10 top-0 h-40 w-40 rounded-full bg-[rgba(124,92,255,0.15)] blur-3xl" />
-            <div className="absolute bottom-0 right-0 h-44 w-44 rounded-full bg-[rgba(96,165,250,0.1)] blur-3xl" />
+            <div className="absolute -left-10 top-0 h-40 w-40 rounded-full bg-accent/15 blur-3xl" />
+            <div className="absolute bottom-0 right-0 h-44 w-44 rounded-full bg-info/10 blur-3xl" />
             <div className="relative">
-              <div className="toolbar-chip w-fit border-[rgba(124,92,255,0.18)] bg-[rgba(124,92,255,0.08)]">
+              <div className="toolbar-chip w-fit border-accent/18 bg-accent/8">
                 Website selection required
               </div>
               <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-[2.4rem]">
@@ -113,7 +113,7 @@ export function SiteSelectionDashboard({
           </div>
         </Card>
 
-        <Card className="rounded-[32px] border-border/70">
+        <Card className="rounded-2xl border-border/70">
           <p className="eyebrow">How this works now</p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight">Project-scoped entry</h2>
           <div className="mt-6 space-y-4">
@@ -122,7 +122,7 @@ export function SiteSelectionDashboard({
               'Refreshing a valid project URL restores that workspace cleanly.',
               'Invalid deep links and missing site context fall back to this selector instead of rendering a broken dashboard.',
             ].map((item) => (
-              <div key={item} className="rounded-[24px] border border-border/70 bg-surface-raised/65 px-4 py-4 text-sm leading-6 text-text-secondary">
+              <div key={item} className="rounded-xl border border-border/70 bg-surface-raised/65 px-4 py-4 text-sm leading-6 text-text-secondary">
                 {item}
               </div>
             ))}
@@ -131,7 +131,7 @@ export function SiteSelectionDashboard({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <Card className="rounded-[30px] border-border/70">
+        <Card className="rounded-xl border-border/70">
           <div className="section-header">
             <div>
               <p className="eyebrow">Website workspaces</p>
@@ -164,7 +164,7 @@ export function SiteSelectionDashboard({
                     key={project.id}
                     href={buildProjectDashboardPath(project.id)}
                     className={cn(
-                      'rounded-[28px] border px-5 py-5 transition-all hover:-translate-y-0.5',
+                      'rounded-xl border px-5 py-5 transition-all hover:-translate-y-0.5',
                       isLastSelected
                         ? 'border-accent/30 bg-accent/[0.08]'
                         : 'border-border/70 bg-surface-raised/40 hover:border-accent/20 hover:bg-surface',
@@ -208,7 +208,7 @@ export function SiteSelectionDashboard({
           )}
         </Card>
 
-        <Card className="rounded-[30px] border-border/70">
+        <Card className="rounded-xl border-border/70">
           <div className="section-header">
             <div>
               <p className="eyebrow">Create website workspace</p>
@@ -300,7 +300,7 @@ function Metric({
   compact?: boolean;
 }) {
   return (
-    <div className="rounded-[22px] border border-border/60 bg-surface-raised/70 px-4 py-3">
+    <div className="rounded-lg border border-border/60 bg-surface-raised/70 px-4 py-3">
       <p className="text-xs uppercase tracking-[0.22em] text-text-muted">{label}</p>
       <p className={cn('mt-2 font-semibold text-text-primary', compact ? 'text-base' : 'text-2xl')}>{value}</p>
       <p className="mt-2 text-sm leading-6 text-text-secondary">{helper}</p>

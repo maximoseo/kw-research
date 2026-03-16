@@ -31,6 +31,7 @@
     --accent-foreground: 0 0% 100%;
     --accent-muted: 254 60% 94%;
     --accent-glow: 254 100% 68%;
+    --accent-rgb: 124, 92, 255;
     --destructive: 0 78% 55%;
     --destructive-foreground: 0 0% 100%;
     --success: 152 76% 30%;
@@ -53,6 +54,15 @@
     --tab-inactive: 230 10% 54%;
     --scrollbar-track: 230 22% 94%;
     --scrollbar-thumb: 250 14% 74%;
+    --radius-xs: 6px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-2xl: 32px;
+    --elevation-1: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --elevation-2: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --elevation-3: 0 24px 48px rgba(0, 0, 0, 0.16);
   }
 
   .dark {
@@ -71,6 +81,7 @@
     --accent-foreground: 0 0% 100%;
     --accent-muted: 254 50% 18%;
     --accent-glow: 254 100% 68%;
+    --accent-rgb: 124, 92, 255;
     --destructive: 0 80% 61%;
     --destructive-foreground: 0 0% 100%;
     --success: 152 76% 37%;
@@ -93,6 +104,15 @@
     --tab-inactive: 230 14% 46%;
     --scrollbar-track: 225 36% 8%;
     --scrollbar-thumb: 248 18% 22%;
+    --radius-xs: 6px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-2xl: 32px;
+    --elevation-1: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --elevation-2: 0 12px 32px rgba(0, 0, 0, 0.5);
+    --elevation-3: 0 30px 90px rgba(0, 0, 0, 0.6);
   }
 
   * {
@@ -289,7 +309,7 @@
 
   /* Maximo SEO brand gradient text */
   .gradient-text {
-    background: linear-gradient(135deg, #8f73ff 0%, #60a5fa 50%, #7c5cff 100%);
+    background: linear-gradient(135deg, hsl(var(--accent-hover)) 0%, hsl(var(--info)) 50%, hsl(var(--accent)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -297,12 +317,12 @@
 
   /* Maximo SEO gradient button */
   .gradient-btn {
-    background: linear-gradient(135deg, #7c5cff, #60a5fa);
-    box-shadow: 0 8px 24px rgba(124, 92, 255, 0.25);
+    background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--info)));
+    box-shadow: 0 8px 24px rgba(var(--accent-rgb), 0.25);
   }
   .gradient-btn:hover {
-    background: linear-gradient(135deg, #8f73ff, #7cb8ff);
-    box-shadow: 0 12px 32px rgba(124, 92, 255, 0.35);
+    background: linear-gradient(135deg, hsl(var(--accent-hover)), hsl(217 95% 74%));
+    box-shadow: 0 12px 32px rgba(var(--accent-rgb), 0.35);
     transform: translateY(-1px);
   }
 }

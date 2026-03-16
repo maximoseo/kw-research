@@ -12,7 +12,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles = {
   primary:
-    'border border-accent/30 bg-[linear-gradient(135deg,#7c5cff,#60a5fa)] text-white shadow-[0_8px_24px_rgba(124,92,255,0.25)] hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(124,92,255,0.35)] hover:brightness-110',
+    'border border-accent/30 gradient-btn text-white hover:-translate-y-0.5 hover:brightness-110',
   secondary:
     'border border-border/80 bg-surface-raised/80 text-text-primary hover:-translate-y-0.5 hover:border-accent/20 hover:bg-surface',
   ghost:

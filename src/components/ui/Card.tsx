@@ -17,7 +17,7 @@ export default function Card({ children, className = '', padding = 'md' }: CardP
   return (
     <div
       className={cn(
-        'relative isolate overflow-hidden rounded-[26px] border border-[rgba(124,92,255,0.1)] bg-[rgba(20,26,49,0.7)] shadow-[0_32px_90px_-52px_rgba(0,0,0,0.85)] backdrop-blur-[20px] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-white/10 transition-all duration-300 hover:border-[rgba(124,92,255,0.25)] hover:shadow-[0_8px_32px_rgba(124,92,255,0.08)]',
+        'relative isolate overflow-hidden rounded-2xl border border-accent/10 bg-surface-raised/70 shadow-elevation backdrop-blur-xl before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-white/10 transition-all duration-300 hover:border-accent/25 hover:shadow-[0_8px_32px_rgba(var(--accent-rgb),0.08)]',
         paddingMap[padding],
         className,
       )}

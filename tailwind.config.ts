@@ -76,8 +76,18 @@ const config: Config = {
         '4.5': '1.125rem',
       },
       borderRadius: {
-        'xl': '0.75rem',
-        '2xl': '1rem',
+        'xs': 'var(--radius-xs)',
+        'sm': 'var(--radius-sm)',
+        'md': 'var(--radius-md)',
+        'lg': 'var(--radius-lg)',
+        'xl': 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
+      },
+      boxShadow: {
+        'elevation': 'var(--elevation-2)',
+        'elevation-1': 'var(--elevation-1)',
+        'elevation-2': 'var(--elevation-2)',
+        'elevation-3': 'var(--elevation-3)',
       },
       minHeight: {
         'tap': '44px',

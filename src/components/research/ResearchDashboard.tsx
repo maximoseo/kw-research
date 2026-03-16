@@ -179,7 +179,7 @@ export default function ResearchDashboard({
   return (
     <div className="page-stack">
       <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <Card className="rounded-[32px] border-border/70">
+        <Card className="rounded-2xl border-border/70">
           <p className="eyebrow">Selected website workspace</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight">{project.brandName} keyword research cockpit</h2>
           <p className="mt-4 max-w-3xl text-sm leading-6 text-text-secondary">
@@ -191,7 +191,7 @@ export default function ResearchDashboard({
             <Metric label="Sitemap" value="Validated" helper={project.sitemapUrl} />
           </div>
         </Card>
-        <Card className="rounded-[32px] border-border/70">
+        <Card className="rounded-2xl border-border/70">
           <p className="eyebrow">Website inputs</p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight">Locked profile data</h2>
           <div className="mt-6 space-y-4 text-sm text-text-secondary">
@@ -204,7 +204,7 @@ export default function ResearchDashboard({
       </section>
 
       <section id="new-research" className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
-        <Card className="rounded-[30px] border-border/70">
+        <Card className="rounded-xl border-border/70">
           <div className="section-header">
             <div>
               <p className="eyebrow">New run for this site</p>
@@ -226,7 +226,7 @@ export default function ResearchDashboard({
               </Field>
             </div>
             <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined}>
-              <div className="rounded-[24px] border border-border/70 bg-surface-raised/45 p-4 sm:p-5">
+              <div className="rounded-xl border border-border/70 bg-surface-raised/45 p-4 sm:p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="max-w-2xl">
                     <p className="text-sm font-medium text-text-primary">Manual list or automatic discovery</p>
@@ -236,7 +236,7 @@ export default function ResearchDashboard({
                     Find Competitors Automatically
                   </Button>
                 </div>
-                {competitorDiscovery.status !== 'idle' ? <p className="mt-4 rounded-[20px] border border-border/70 bg-surface-raised/60 px-4 py-3 text-sm text-text-secondary">{competitorDiscovery.message}</p> : null}
+                {competitorDiscovery.status !== 'idle' ? <p className="mt-4 rounded-lg border border-border/70 bg-surface-raised/60 px-4 py-3 text-sm text-text-secondary">{competitorDiscovery.message}</p> : null}
                 <textarea className="field-textarea mt-4" placeholder="https://competitor-one.com, https://competitor-two.com" {...form.register('competitorUrls')} />
               </div>
             </Field>
@@ -244,7 +244,7 @@ export default function ResearchDashboard({
               <textarea className="field-textarea" placeholder="Optional guidance for this run" {...form.register('notes')} />
             </Field>
             <Field label="Existing keyword research workbook">
-              <label className="flex cursor-pointer items-center justify-between rounded-[24px] border border-dashed border-border/80 bg-surface-raised/50 px-4 py-4 text-sm text-text-secondary transition-all hover:border-accent/25 hover:bg-surface">
+              <label className="flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-border/80 bg-surface-raised/50 px-4 py-4 text-sm text-text-secondary transition-all hover:border-accent/25 hover:bg-surface">
                 <div className="flex items-center gap-3">
                   <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-accent/15 bg-accent/[0.08] text-accent">
                     <UploadCloud className="h-5 w-5" />
@@ -270,7 +270,7 @@ export default function ResearchDashboard({
             </div>
           </form>
         </Card>
-        <Card className="rounded-[30px] border-border/70">
+        <Card className="rounded-xl border-border/70">
           <div className="section-header">
             <div>
               <p className="eyebrow">Live run</p>
@@ -328,7 +328,7 @@ export default function ResearchDashboard({
         ) : (
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             {runsQuery.data.map((run) => (
-              <div key={run.id} className={cn('rounded-[28px] border px-5 py-5 transition-all', selectedRunId === run.id ? 'border-accent/30 bg-accent/[0.08]' : 'border-border/70 bg-surface-raised/40 hover:-translate-y-0.5 hover:border-accent/20 hover:bg-surface')}>
+              <div key={run.id} className={cn('rounded-xl border px-5 py-5 transition-all', selectedRunId === run.id ? 'border-accent/30 bg-accent/[0.08]' : 'border-border/70 bg-surface-raised/40 hover:-translate-y-0.5 hover:border-accent/20 hover:bg-surface')}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-lg font-semibold tracking-tight text-text-primary">{run.projectName}</p>
@@ -359,7 +359,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 
 function InfoRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
   return (
-    <div className="rounded-[24px] border border-border/70 bg-surface-raised/65 px-4 py-4">
+    <div className="rounded-xl border border-border/70 bg-surface-raised/65 px-4 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">{label}</p>
       {multiline ? <p className="mt-3 leading-6">{value}</p> : <a href={value} target="_blank" rel="noreferrer" className="mt-3 block truncate text-accent hover:underline">{value}</a>}
     </div>
@@ -368,7 +368,7 @@ function InfoRow({ label, value, multiline = false }: { label: string; value: st
 
 function PreviewTable({ previewRows, rowCount, status }: { previewRows: ResearchRunDetail['rows']; rowCount: number; status: ResearchRunDetail['status'] }) {
   return (
-    <div className="rounded-[24px] border border-border/70 bg-surface-raised/50">
+    <div className="rounded-xl border border-border/70 bg-surface-raised/50">
       <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
         <div className="flex items-center gap-2 text-sm font-medium text-text-primary"><TableProperties className="h-4 w-4 text-accent" />Output preview</div>
         <span className="text-xs text-text-muted">{rowCount} rows generated</span>
@@ -393,13 +393,13 @@ function PreviewTable({ previewRows, rowCount, status }: { previewRows: Research
 
 function RunLogs({ entries, status, formatRelativeLabel }: { entries: ResearchRunDetail['logs']; status: ResearchRunDetail['status']; formatRelativeLabel: (value: string | number | Date | null | undefined, fallback?: string) => string }) {
   if (!entries.length) {
-    return <p className="rounded-[22px] border border-border/70 bg-surface-raised/50 px-4 py-4 text-sm text-text-secondary">Logs will stream here as the worker advances through crawl, analysis, generation, and export stages.</p>;
+    return <p className="rounded-lg border border-border/70 bg-surface-raised/50 px-4 py-4 text-sm text-text-secondary">Logs will stream here as the worker advances through crawl, analysis, generation, and export stages.</p>;
   }
-  return <div className="space-y-3">{entries.map((entry) => <div key={entry.id} className="rounded-[22px] border border-border/70 bg-surface-raised/55 px-4 py-3"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm font-medium text-text-primary">{status === 'processing' && entry === entries[entries.length - 1] ? <Loader2 className="h-4 w-4 animate-spin text-accent" /> : <Search className="h-4 w-4 text-accent" />}{entry.message}</div><span className="text-xs text-text-muted">{formatRelativeLabel(entry.createdAt)}</span></div><p className="mt-2 text-xs uppercase tracking-[0.22em] text-text-muted">{entry.stage}</p></div>)}</div>;
+  return <div className="space-y-3">{entries.map((entry) => <div key={entry.id} className="rounded-lg border border-border/70 bg-surface-raised/55 px-4 py-3"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm font-medium text-text-primary">{status === 'processing' && entry === entries[entries.length - 1] ? <Loader2 className="h-4 w-4 animate-spin text-accent" /> : <Search className="h-4 w-4 text-accent" />}{entry.message}</div><span className="text-xs text-text-muted">{formatRelativeLabel(entry.createdAt)}</span></div><p className="mt-2 text-xs uppercase tracking-[0.22em] text-text-muted">{entry.stage}</p></div>)}</div>;
 }
 
 function Metric({ label, value, helper, compact = false }: { label: string; value: string; helper: string; compact?: boolean }) {
-  return <div className="rounded-[22px] border border-border/60 bg-surface-raised/70 px-4 py-3"><p className="text-xs uppercase tracking-[0.22em] text-text-muted">{label}</p><p className={cn('mt-2 font-semibold text-text-primary', compact ? 'text-base' : 'text-2xl')}>{value}</p><p className="mt-2 text-sm leading-6 text-text-secondary">{helper}</p></div>;
+  return <div className="rounded-lg border border-border/60 bg-surface-raised/70 px-4 py-3"><p className="text-xs uppercase tracking-[0.22em] text-text-muted">{label}</p><p className={cn('mt-2 font-semibold text-text-primary', compact ? 'text-base' : 'text-2xl')}>{value}</p><p className="mt-2 text-sm leading-6 text-text-secondary">{helper}</p></div>;
 }
 
 function StatusBadge({ status }: { status: ResearchRunSummary['status'] | ResearchRunDetail['status'] }) {
