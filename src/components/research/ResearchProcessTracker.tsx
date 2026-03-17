@@ -89,7 +89,7 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
             <div
               key={step.id}
               className={cn(
-                'rounded-[22px] border px-4 py-4',
+                'rounded-[22px] border px-4 py-4 overflow-hidden min-w-0',
                 step.state === 'complete' && 'border-success/20 bg-success/[0.08]',
                 step.state === 'current' && 'border-accent/25 bg-accent/[0.08] shadow-[0_18px_36px_-28px_rgba(124,92,255,0.7)]',
                 step.state === 'failed' && 'border-destructive/25 bg-destructive/[0.08]',
@@ -126,8 +126,8 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
                         : 'Upcoming'}
                 </span>
               </div>
-              <p className="mt-4 text-base font-semibold text-text-primary">{step.label}</p>
-              <p className="mt-2 text-sm leading-6 text-text-secondary">{step.description}</p>
+              <p className="mt-4 text-base font-semibold text-text-primary break-words">{step.label}</p>
+              <p className="mt-2 text-sm leading-6 text-text-secondary line-clamp-3">{step.description}</p>
             </div>
           );
         })}

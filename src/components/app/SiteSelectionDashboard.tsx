@@ -87,7 +87,7 @@ export function SiteSelectionDashboard({
   return (
     <div className="page-stack">
       <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <Card padding="none" className="rounded-2xl border-border/70">
+        <Card padding="none" className="rounded-2xl border-border/70 overflow-hidden">
           <div className="relative overflow-hidden px-6 py-8 sm:px-8 sm:py-9">
             <div className="absolute inset-0 bg-grid opacity-20" />
             <div className="absolute -left-10 top-0 h-40 w-40 rounded-full bg-accent/15 blur-3xl" />
@@ -197,9 +197,9 @@ export function SiteSelectionDashboard({
                         compact
                       />
                     </div>
-                    <div className="mt-5 flex flex-wrap gap-2 text-xs text-text-muted">
-                      <span className="toolbar-chip border-border/60">{project.homepageUrl}</span>
-                      <span className="toolbar-chip border-border/60">{project.sitemapUrl}</span>
+                    <div className="mt-5 flex flex-wrap gap-2 text-xs text-text-muted min-w-0">
+                      <span className="toolbar-chip border-border/60 max-w-[260px] truncate">{project.homepageUrl}</span>
+                      <span className="toolbar-chip border-border/60 max-w-[260px] truncate">{project.sitemapUrl}</span>
                     </div>
                   </Link>
                 );
@@ -300,10 +300,10 @@ function Metric({
   compact?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-border/60 bg-surface-raised/70 px-4 py-3">
-      <p className="text-xs uppercase tracking-[0.22em] text-text-muted">{label}</p>
-      <p className={cn('mt-2 font-semibold text-text-primary', compact ? 'text-base' : 'text-2xl')}>{value}</p>
-      <p className="mt-2 text-sm leading-6 text-text-secondary">{helper}</p>
+    <div className="rounded-lg border border-border/60 bg-surface-raised/70 px-4 py-3 overflow-hidden min-w-0">
+      <p className="text-xs uppercase tracking-[0.22em] text-text-muted truncate">{label}</p>
+      <p className={cn('mt-2 font-semibold text-text-primary break-words', compact ? 'text-base' : 'text-2xl')}>{value}</p>
+      <p className="mt-2 text-sm leading-6 text-text-secondary line-clamp-2">{helper}</p>
     </div>
   );
 }

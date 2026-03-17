@@ -43,7 +43,7 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
   return (
     <div className="relative">
       {showFadeLeft && (
-        <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-8 bg-gradient-to-r from-surface to-transparent" />
+        <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-8 bg-gradient-to-r from-[hsl(var(--surface-overlay))] to-transparent" />
       )}
       <div
         ref={containerRef}
@@ -69,7 +69,7 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
         ))}
       </div>
       {showFadeRight && (
-        <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-8 bg-gradient-to-l from-surface to-transparent" />
+        <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-8 bg-gradient-to-l from-[hsl(var(--surface-overlay))] to-transparent" />
       )}
     </div>
   );

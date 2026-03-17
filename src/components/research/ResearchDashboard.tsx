@@ -211,7 +211,7 @@ export default function ResearchDashboard({
               <h2 className="section-subtitle mt-3">Launch a project-scoped research run</h2>
               <p className="section-copy mt-3">The site profile is already selected. Adjust competitors, notes, mode, and output size, then queue a new run.</p>
             </div>
-            <div className="toolbar-chip">{uploadedFile ? uploadedFile.name : 'No workbook uploaded'}</div>
+            <div className="toolbar-chip max-w-[200px] truncate">{uploadedFile ? uploadedFile.name : 'No workbook uploaded'}</div>
           </div>
           <form onSubmit={handleSubmit} className="mt-6 space-y-5">
             <div className="grid gap-5 md:grid-cols-2">
@@ -340,7 +340,7 @@ export default function ResearchDashboard({
                   <Metric label="Queued" value={formatDateTimeLabel(run.queuedAt)} helper={formatRelativeLabel(run.queuedAt)} compact />
                   <Metric label="Workbook" value={run.workbookName || 'Pending'} helper={run.errorMessage || run.step || 'No errors'} compact />
                 </div>
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-5 flex flex-wrap gap-3 min-w-0">
                   <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" onClick={() => setSelectedRunId(run.id)}>Open in workspace</Button>
                   <Link href={buildProjectRunPath(project.id, run.id)} className="inline-flex min-h-[40px] items-center justify-center rounded-2xl border border-border/80 bg-surface-raised/80 px-3.5 py-2 text-xs font-medium text-text-primary transition-all hover:-translate-y-0.5 hover:border-accent/20 hover:bg-surface">Dedicated run page</Link>
                 </div>
@@ -359,9 +359,9 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 
 function InfoRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-surface-raised/65 px-4 py-4">
+    <div className="rounded-xl border border-border/70 bg-surface-raised/65 px-4 py-4 overflow-hidden">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">{label}</p>
-      {multiline ? <p className="mt-3 leading-6">{value}</p> : <a href={value} target="_blank" rel="noreferrer" className="mt-3 block truncate text-accent hover:underline">{value}</a>}
+      {multiline ? <p className="mt-3 leading-6 break-words">{value}</p> : <a href={value} target="_blank" rel="noreferrer" className="mt-3 block truncate text-accent hover:underline" title={value}>{value}</a>}
     </div>
   );
 }
@@ -379,10 +379,10 @@ function PreviewTable({ previewRows, rowCount, status }: { previewRows: Research
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="sticky top-0 bg-surface">
-              <tr className="border-b border-border/70 text-text-muted">{['Existing Parent Page', 'Pillar', 'Cluster', 'Intent', 'Primary Keyword', 'Keywords'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr>
+              <tr className="border-b border-border/70 text-text-muted">{['Existing Parent Page', 'Pillar', 'Cluster', 'Intent', 'Primary Keyword', 'Keywords'].map((label) => <th key={label} className="px-4 py-3 font-medium whitespace-nowrap">{label}</th>)}</tr>
             </thead>
             <tbody>
-              {previewRows.map((row, index) => <tr key={`${row.cluster}-${index}`} className="border-b border-border/50 align-top"><td className="px-4 py-3 text-text-secondary">{row.existingParentPage}</td><td className="px-4 py-3">{row.pillar}</td><td className="px-4 py-3">{row.cluster}</td><td className="px-4 py-3">{row.intent}</td><td className="px-4 py-3">{row.primaryKeyword}</td><td className="px-4 py-3 text-text-secondary">{row.keywords.join(', ')}</td></tr>)}
+              {previewRows.map((row, index) => <tr key={`${row.cluster}-${index}`} className="border-b border-border/50 align-top"><td className="px-4 py-3 text-text-secondary max-w-[200px] truncate" title={row.existingParentPage}>{row.existingParentPage}</td><td className="px-4 py-3 max-w-[180px] truncate" title={row.pillar}>{row.pillar}</td><td className="px-4 py-3 max-w-[180px] truncate" title={row.cluster}>{row.cluster}</td><td className="px-4 py-3 max-w-[100px] truncate" title={row.intent}>{row.intent}</td><td className="px-4 py-3 max-w-[180px] truncate" title={row.primaryKeyword}>{row.primaryKeyword}</td><td className="px-4 py-3 text-text-secondary max-w-[250px] truncate" title={row.keywords.join(', ')}>{row.keywords.join(', ')}</td></tr>)}
             </tbody>
           </table>
         )}
@@ -399,7 +399,7 @@ function RunLogs({ entries, status, formatRelativeLabel }: { entries: ResearchRu
 }
 
 function Metric({ label, value, helper, compact = false }: { label: string; value: string; helper: string; compact?: boolean }) {
-  return <div className="rounded-lg border border-border/60 bg-surface-raised/70 px-4 py-3"><p className="text-xs uppercase tracking-[0.22em] text-text-muted">{label}</p><p className={cn('mt-2 font-semibold text-text-primary', compact ? 'text-base' : 'text-2xl')}>{value}</p><p className="mt-2 text-sm leading-6 text-text-secondary">{helper}</p></div>;
+  return <div className="rounded-lg border border-border/60 bg-surface-raised/70 px-4 py-3 overflow-hidden min-w-0"><p className="text-xs uppercase tracking-[0.22em] text-text-muted truncate">{label}</p><p className={cn('mt-2 font-semibold text-text-primary break-words', compact ? 'text-base' : 'text-2xl')}>{value}</p><p className="mt-2 text-sm leading-6 text-text-secondary line-clamp-2">{helper}</p></div>;
 }
 
 function StatusBadge({ status }: { status: ResearchRunSummary['status'] | ResearchRunDetail['status'] }) {

@@ -51,7 +51,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading ? <Spinner /> : icon}
-        {children}
+        <span className="truncate">{children}</span>
       </button>
     );
   }

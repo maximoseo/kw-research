@@ -146,6 +146,8 @@
     font-family: var(--font-body), var(--font-sans), sans-serif;
     color: hsl(var(--text-primary));
     min-height: 100vh;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   body::before {

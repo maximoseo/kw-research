@@ -40,9 +40,9 @@ export function AppShell({
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-accent/25 bg-accent/15 text-accent">
                   <FolderKanban className="h-5 w-5" />
                 </div>
-                <div>
-                  <p className="text-base font-semibold text-white">{project.brandName}</p>
-                  <p className="text-sm text-white/58">{project.market} · {project.language}</p>
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-white truncate">{project.brandName}</p>
+                  <p className="text-sm text-white/58 truncate">{project.market} · {project.language}</p>
                 </div>
               </div>
             </div>
@@ -118,7 +118,7 @@ export function AppShell({
                     <span className="h-2 w-2 rounded-full bg-success animate-pulse-dot" />
                     Site-scoped workspace
                   </span>
-                  <span className="toolbar-chip hidden sm:inline-flex border-accent/10">
+                  <span className="toolbar-chip hidden sm:inline-flex border-accent/10 max-w-[220px] truncate">
                     {project.brandName} · {project.market}
                   </span>
                 </div>
