@@ -69,28 +69,21 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[560px]">
-      <Card variant="hero" padding="lg" className="border-accent/12 bg-[linear-gradient(180deg,hsl(var(--surface))/0.99,hsl(var(--surface-raised))/0.97)]">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <Badge variant="info" className="w-fit border-accent/18 bg-accent/[0.1] text-accent">
-                {mode === 'login' ? 'Protected workspace access' : 'Create analyst account'}
-              </Badge>
-              <h2 className="mt-4 text-[1.9rem] font-semibold tracking-tight text-text-primary sm:text-[2.15rem]">
-                {mode === 'login' ? 'Sign in to your research workspace' : 'Create your research workspace account'}
-              </h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-text-secondary sm:text-[0.95rem]">
-                {mode === 'login'
-                  ? 'Access site-scoped dashboards, research history, processing logs, and polished workbook exports.'
-                  : 'Create a secure analyst account to manage projects, uploads, runs, and exports from one place.'}
-              </p>
-            </div>
-            <div className="subtle-surface px-4 py-3 text-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Method</p>
-              <p className="mt-2 font-semibold text-text-primary">{mode === 'login' ? 'Email or Google' : 'Email setup'}</p>
-              <p className="mt-1 text-sm leading-6 text-text-secondary">Session secured with route-protected access.</p>
-            </div>
+    <div className="mx-auto w-full max-w-[520px]">
+      <Card variant="hero" padding="lg" className="border-accent/10">
+        <div className="flex flex-col gap-5">
+          <div>
+            <Badge variant="info" className="w-fit border-accent/18 bg-accent/[0.1] text-accent">
+              {mode === 'login' ? 'Protected workspace' : 'Create account'}
+            </Badge>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-text-primary sm:text-[1.75rem]">
+              {mode === 'login' ? 'Sign in to your workspace' : 'Create your workspace account'}
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-text-secondary">
+              {mode === 'login'
+                ? 'Access dashboards, research history, logs, and workbook exports.'
+                : 'Set up a secure account to manage projects, runs, and exports.'}
+            </p>
           </div>
 
           {hasRedirectContext ? (
@@ -102,7 +95,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
           {error ? <Alert variant="error" title="Authentication failed">{error}</Alert> : null}
           {success ? <Alert variant="success" title="Success">{success}</Alert> : null}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' ? (
               <Field label="Display name">
                 <div className="relative">
@@ -148,7 +141,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
               </div>
             </Field>
 
-            <div className="stack-mobile pt-1">
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row">
               <Button type="submit" variant="primary" size="lg" className="w-full sm:flex-1" loading={isPending} disabled={isPending || googleLoading}>
                 {mode === 'login' ? 'Sign In' : 'Create Account'}
               </Button>
@@ -159,10 +152,10 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
                 onClick={handleGoogleSignIn}
                 loading={googleLoading}
                 disabled={isPending || googleLoading}
-                className="w-full sm:flex-1 sm:min-w-[220px] justify-center border-border/80 bg-surface"
+                className="w-full sm:flex-1 justify-center"
               >
                 {!googleLoading && (
-                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                  <svg className="h-4.5 w-4.5" viewBox="0 0 24 24">
                     <path
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                       fill="#4285F4"
@@ -181,12 +174,12 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
                     />
                   </svg>
                 )}
-                Continue with Google
+                Google
               </Button>
             </div>
           </form>
 
-          <div className="subtle-divider pt-5 text-center text-sm text-text-secondary">
+          <div className="border-t border-border/50 pt-4 text-center text-sm text-text-secondary">
           {mode === 'login' ? (
             <>
               Need an account?{' '}
@@ -204,10 +197,10 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
           )}
           </div>
 
-          <div className="interactive-surface px-4 py-4 sm:px-5">
-            <div className="flex items-center justify-between gap-3 text-sm text-text-secondary">
+          <div className="rounded-lg border border-border/50 bg-surface-raised/[0.4] px-4 py-3">
+            <div className="flex items-center justify-between gap-3 text-sm text-text-muted">
               <span>Private workspace, route-protected access</span>
-              <ArrowRight className="h-4 w-4 text-accent" />
+              <ArrowRight className="h-3.5 w-3.5 text-accent/60" />
             </div>
           </div>
         </div>

@@ -203,7 +203,7 @@
   }
 
   .page-hero {
-    @apply relative overflow-hidden rounded-[28px] border border-border/70 bg-[linear-gradient(180deg,hsl(var(--surface))/0.98,hsl(var(--surface-raised))/0.94)] shadow-[0_24px_80px_-48px_rgba(0,0,0,0.9)];
+    @apply relative overflow-hidden rounded-xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--surface))/0.98,hsl(var(--surface-raised))/0.94)] shadow-elevation-3;
   }
 
   .page-hero-inner {
@@ -227,11 +227,11 @@
   }
 
   .panel {
-    @apply rounded-[24px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--surface))/0.98,hsl(var(--surface-raised))/0.94)] shadow-[0_24px_72px_-46px_rgba(0,0,0,0.78)] backdrop-blur-sm;
+    @apply rounded-xl border border-border/80 bg-[linear-gradient(180deg,hsl(var(--surface))/0.98,hsl(var(--surface-raised))/0.94)] shadow-elevation-2 backdrop-blur-sm;
   }
 
   .panel-muted {
-    @apply rounded-[22px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.82,hsl(var(--surface-overlay))/0.8)];
+    @apply rounded-xl border border-border/80 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.82,hsl(var(--surface-overlay))/0.8)];
   }
 
   .section-shell {
@@ -251,11 +251,11 @@
   }
 
   .data-card {
-    @apply rounded-[20px] border border-border/70 bg-surface-raised/[0.62] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)];
+    @apply rounded-xl border border-border/70 bg-surface-raised/[0.62] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)];
   }
 
   .list-card {
-    @apply rounded-[20px] border border-border/70 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.8,hsl(var(--surface-overlay))/0.82)] px-4 py-4 transition-all;
+    @apply rounded-xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.8,hsl(var(--surface-overlay))/0.82)] px-4 py-4 transition-all;
   }
 
   .field-group {
@@ -310,7 +310,7 @@
   }
 
   .interactive-surface {
-    @apply rounded-[22px] border border-border/75 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.82,hsl(var(--surface-overlay))/0.82)] transition-all;
+    @apply rounded-xl border border-border/75 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.82,hsl(var(--surface-overlay))/0.82)] transition-all;
   }
 
   .section-gap {
@@ -464,7 +464,7 @@
   }
 
   .page-hero {
-    @apply rounded-[24px];
+    @apply rounded-xl;
   }
 
   .page-hero-inner {

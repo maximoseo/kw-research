@@ -181,12 +181,12 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
 
   return (
     <div className="page-stack">
-      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.05fr_0.95fr]">
         <Card variant="hero" className="space-y-5">
           <div>
             <p className="eyebrow">Selected workspace</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-[2.2rem]">{project.name}</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-6 text-text-secondary">
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{project.name}</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-text-secondary">
               This workspace is scoped to a single validated site. Every run, log, preview, and export stays attached to {project.brandName}.
             </p>
           </div>
@@ -199,8 +199,8 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
         <Card className="space-y-5">
           <div>
             <p className="eyebrow">Website profile</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight">Locked profile inputs</h2>
-            <p className="mt-3 section-copy">These values are fixed for this workspace. Change them in the project selector if needed.</p>
+            <h2 className="mt-2 text-xl font-semibold tracking-tight">Locked profile inputs</h2>
+            <p className="mt-2 section-copy">These values are fixed for this workspace. Change them in the project selector if needed.</p>
           </div>
           <div className="space-y-3">
             <InfoRow label="Homepage" value={project.homepageUrl} />
@@ -213,13 +213,13 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
         </Card>
       </section>
 
-      <section id="new-research" className="grid gap-6 xl:grid-cols-[1.03fr_0.97fr]">
+      <section id="new-research" className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.03fr_0.97fr]">
         <Card className="space-y-6">
           <div className="section-header">
             <div>
               <p className="eyebrow">New run for this site</p>
-              <h2 className="section-subtitle mt-3">Launch a project-scoped research run</h2>
-              <p className="section-copy mt-3">The workspace is already selected. Update competitors, notes, mode, and output size, then queue a new run.</p>
+              <h2 className="section-subtitle mt-2">Launch a project-scoped research run</h2>
+              <p className="section-copy mt-2">Update competitors, notes, mode, and output size, then queue a new run.</p>
             </div>
             <div className="toolbar-chip flex flex-wrap items-center gap-2">
               <UploadCloud className="h-3.5 w-3.5 text-text-muted" />
@@ -239,7 +239,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
               </Field>
             </div>
             <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined} hint="Add one competitor per line or use discovery below. This workspace scope is used for all lookups.">
-              <div className="space-y-4 rounded-[20px] border border-border/70 bg-surface-raised/55 p-4 sm:p-5">
+              <div className="space-y-4 rounded-xl border border-border/70 bg-surface-raised/55 p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="max-w-2xl">
                     <p className="text-sm font-medium text-text-primary">Discovery for this workspace</p>
@@ -281,7 +281,7 @@ https://competitor-two.com"
               <textarea className="field-textarea" placeholder="Add any research constraints, exclusions, or audience notes" {...form.register('notes')} />
             </Field>
             <Field label="Existing keyword research workbook" hint="Upload to seed expansion mode or provide context for follow-up runs.">
-              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[18px] border border-dashed border-border/80 bg-surface-raised/50 px-4 py-3.5 text-sm text-text-secondary transition-all hover:border-accent/25 hover:bg-surface">
+              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed border-border/80 bg-surface-raised/50 px-4 py-3.5 text-sm text-text-secondary transition-all hover:border-accent/25 hover:bg-surface">
                 <div className="min-w-0">
                   <p className="font-medium text-text-primary truncate">{uploadedFile ? uploadedFile.name : 'Upload optional workbook'}</p>
                   <p className="mt-1 text-xs text-text-muted">.xlsx, .xls, or .csv up to 10 MB</p>
@@ -314,7 +314,7 @@ https://competitor-two.com"
           <div className="section-header">
             <div>
               <p className="eyebrow">Live run</p>
-              <h2 className="section-subtitle mt-3">Status, logs, preview, and export</h2>
+              <h2 className="section-subtitle mt-2">Status, logs, preview, and export</h2>
             </div>
             {selectedRun ? (
               <Badge variant={statusBadgeMap[selectedRun.status].variant} className="rounded-full">
@@ -403,8 +403,8 @@ https://competitor-two.com"
         <div className="section-header">
           <div>
             <p className="eyebrow">Workspace history</p>
-            <h2 className="section-subtitle mt-3">Previous research runs for this site</h2>
-            <p className="section-copy mt-3">Reopen past results, review progress, and download completed workbooks again.</p>
+            <h2 className="section-subtitle mt-2">Previous research runs for this site</h2>
+            <p className="section-copy mt-2">Reopen past results, review progress, and download completed workbooks again.</p>
           </div>
           <div className="toolbar-chip flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -442,10 +442,10 @@ https://competitor-two.com"
                   <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" onClick={() => setSelectedRunId(run.id)}>
                     Open in workspace
                   </Button>
-                  <Link href={buildProjectRunPath(project.id, run.id)} className="inline-flex">
-                    <span className="inline-flex items-center rounded-[18px] border border-border/80 bg-surface-raised/[0.84] px-3.5 py-2 text-xs font-semibold text-text-primary transition-all hover:-translate-y-0.5 hover:border-accent/20 hover:bg-surface">
+                  <Link href={buildProjectRunPath(project.id, run.id)}>
+                    <Button type="button" variant="secondary" size="sm">
                       Dedicated run page
-                    </span>
+                    </Button>
                   </Link>
                 </div>
               </article>
@@ -459,10 +459,10 @@ https://competitor-two.com"
 
 function InfoRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
   return (
-    <div className="subtle-surface px-4 py-3 sm:px-4 sm:py-3.5">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">{label}</p>
-      {multiline ? <p className="mt-2.5 text-sm leading-6 text-text-secondary break-words">{value}</p> : (
-        <a href={value} target="_blank" rel="noreferrer" className="mt-2.5 block truncate text-sm text-accent hover:underline" title={value}>
+    <div className="subtle-surface px-4 py-3">
+      <p className="eyebrow">{label}</p>
+      {multiline ? <p className="mt-2 text-sm leading-6 text-text-secondary break-words">{value}</p> : (
+        <a href={value} target="_blank" rel="noreferrer" className="mt-2 block truncate text-sm text-accent hover:underline" title={value}>
           {value}
         </a>
       )}
@@ -480,7 +480,7 @@ function PreviewTable({
   status: ResearchRunDetail['status'];
 }) {
   return (
-    <div className="overflow-hidden rounded-[20px] border border-border/70 bg-surface-raised/55">
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-surface-raised/55">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3 text-sm">
         <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
           <TableProperties className="h-4 w-4 text-accent" />
@@ -559,7 +559,7 @@ function RunLogs({
       {entries.map((entry) => (
         <div
           key={entry.id}
-          className={cn('rounded-[18px] border border-border/70 bg-surface-raised/55 px-4 py-3', entry === lastEntry && status === 'processing' ? 'ring-1 ring-info/30' : null)}
+          className={cn('rounded-lg border border-border/70 bg-surface-raised/55 px-4 py-3', entry === lastEntry && status === 'processing' ? 'ring-1 ring-info/30' : null)}
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-text-primary">
@@ -568,7 +568,7 @@ function RunLogs({
             </div>
             <span className="text-xs text-text-muted">{formatRelativeLabel(entry.createdAt)}</span>
           </div>
-          <p className="mt-2 text-xs uppercase tracking-[0.22em] text-text-muted">{entry.stage}</p>
+          <p className="mt-1.5 eyebrow">{entry.stage}</p>
         </div>
       ))}
     </div>

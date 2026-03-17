@@ -112,22 +112,22 @@ export function SiteSelectionDashboard({
 
   return (
     <div className="page-stack">
-      <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+      <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.08fr_0.92fr]">
         <Card variant="hero" className="overflow-hidden">
-          <div className="relative px-6 py-8 sm:px-8 sm:py-9">
+          <div className="relative px-5 py-7 sm:px-7 sm:py-8">
             <div className="absolute inset-0 bg-grid/50" />
             <div className="absolute -left-12 top-0 h-40 w-40 rounded-full bg-accent/[0.12] blur-3xl" />
             <div className="absolute bottom-2 right-0 h-44 w-44 rounded-full bg-info/[0.08] blur-3xl" />
             <div className="relative">
               <div className="toolbar-chip w-fit border-accent/22 bg-accent/[0.11]">Site-first workspace model</div>
-              <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-[2.3rem]">
-                Choose a website workspace before entering research
+              <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl lg:text-[2rem]">
+                Choose a website workspace
               </h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-text-secondary sm:text-base">
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-text-secondary sm:text-base">
                 KW Research is organized by site context. Select a workspace first to keep runs, exports, and history isolated
                 and predictable.
               </p>
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 <Metric label="Signed-in analyst" value={user.displayName} helper={user.email} />
                 <Metric label="Available workspaces" value={String(projects.length)} helper="Website projects in your account" />
                 <Metric label="Scope model" value="Project selected" helper="Dashboard routes stay in site context" />
@@ -141,10 +141,9 @@ export function SiteSelectionDashboard({
             <div className="section-header">
               <div>
                 <p className="eyebrow">How the flow works</p>
-                <h2 className="section-subtitle mt-3">Cleaner route behavior</h2>
-                <p className="section-copy mt-3">
-                  A predictable workspace gate keeps analytics from leaking between sites and keeps each run scoped to one
-                  project.
+                <h2 className="section-subtitle mt-2">Cleaner route behavior</h2>
+                <p className="section-copy mt-2">
+                  A predictable workspace gate keeps analytics from leaking between sites.
                 </p>
               </div>
               <Badge variant="neutral" className="self-start">
@@ -152,14 +151,14 @@ export function SiteSelectionDashboard({
                 Guidance
               </Badge>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {[
                 ['Site-scoped routes', 'Every dashboard route opens only after a workspace is selected.'],
                 ['Context recovery', 'Returning sessions restore the last workspace when available.'],
                 ['Focused outputs', 'All uploads, logs, and exports stay attached to one website.'],
               ].map(([title, text]) => (
-                <div key={title} className="subtle-surface grid gap-1.5 px-4 py-4">
-                  <p className="font-semibold text-text-primary">{title}</p>
+                <div key={title} className="subtle-surface grid gap-1 px-4 py-3.5">
+                  <p className="text-sm font-semibold text-text-primary">{title}</p>
                   <p className="text-sm leading-6 text-text-secondary">{text}</p>
                 </div>
               ))}
@@ -172,13 +171,13 @@ export function SiteSelectionDashboard({
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <div className="section-header">
             <div>
               <p className="eyebrow">Website workspaces</p>
-              <h2 className="section-subtitle mt-3">Select a workspace to continue</h2>
-              <p className="section-copy mt-3">
+              <h2 className="section-subtitle mt-2">Select a workspace to continue</h2>
+              <p className="section-copy mt-2">
                 Each card opens one dedicated project dashboard for a single website.
               </p>
             </div>

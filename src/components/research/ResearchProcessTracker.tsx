@@ -39,7 +39,7 @@ const statusMeta: Record<ResearchRunDetail['status'], { variant: 'info' | 'succe
 
 const stepStateStyles: Record<StepState, string> = {
   complete: 'border-success/25 bg-success/[0.09]',
-  current: 'border-info/25 bg-info/[0.09] shadow-[0_16px_38px_-30px_rgba(124,92,255,0.35)]',
+  current: 'border-info/25 bg-info/[0.09] shadow-[0_16px_38px_-30px_rgba(var(--accent-rgb),0.35)]',
   failed: 'border-destructive/30 bg-destructive/[0.09]',
   upcoming: 'border-border/70 bg-background/35',
 };
@@ -81,7 +81,7 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
                 ? 'bg-destructive'
                 : run.status === 'completed'
                   ? 'bg-success'
-                  : 'bg-[linear-gradient(90deg,#7c5cff,#60a5fa)]',
+                  : 'bg-[linear-gradient(90deg,hsl(var(--accent)),hsl(var(--info)))]',
             )}
             style={{ width: `${process.progressPercent}%` }}
           />
@@ -98,11 +98,11 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
             <div
               key={step.id}
               className={cn(
-                'rounded-[20px] border px-4 py-4 overflow-hidden min-w-0 transition-all',
+                'rounded-xl border px-4 py-4 overflow-hidden min-w-0 transition-all',
                 stepStateStyles[state],
                 state === 'current' ? 'ring-1 ring-info/20' : null,
                 state === 'upcoming' ? 'hover:border-info/20 hover:bg-info/[0.03]' : null,
-                state === 'failed' ? 'hover:shadow-[0_20px_50px_-36px_rgba(239,68,68,0.4)]' : null,
+                state === 'failed' ? 'hover:shadow-elevation-1' : null,
               )}
             >
               <div className="flex items-start justify-between gap-3">
