@@ -2,8 +2,6 @@
 
 import type { ComponentType } from 'react';
 import {
-  AlertTriangle,
-  CheckCircle2,
   Clock3,
   FileSpreadsheet,
   GitBranchPlus,
@@ -14,9 +12,12 @@ import {
   ScanSearch,
   ShieldCheck,
 } from 'lucide-react';
+import { Badge, Card } from '@/components/ui';
 import type { ResearchRunDetail } from '@/lib/research';
 import { deriveResearchProcess, type ResearchProcessStepId } from '@/lib/research-progress';
 import { cn } from '@/lib/utils';
+
+type StepState = 'complete' | 'current' | 'upcoming' | 'failed';
 
 const stepIcons: Record<ResearchProcessStepId, ComponentType<{ className?: string }>> = {
   queued: Clock3,
@@ -29,11 +30,26 @@ const stepIcons: Record<ResearchProcessStepId, ComponentType<{ className?: strin
   export: FileSpreadsheet,
 };
 
+const statusMeta: Record<ResearchRunDetail['status'], { variant: 'info' | 'success' | 'warning' | 'error'; title: string }> = {
+  queued: { variant: 'warning', title: 'Queued' },
+  processing: { variant: 'info', title: 'In progress' },
+  completed: { variant: 'success', title: 'Ready' },
+  failed: { variant: 'error', title: 'Needs attention' },
+};
+
+const stepStateStyles: Record<StepState, string> = {
+  complete: 'border-success/25 bg-success/[0.09]',
+  current: 'border-info/25 bg-info/[0.09] shadow-[0_16px_38px_-30px_rgba(124,92,255,0.35)]',
+  failed: 'border-destructive/30 bg-destructive/[0.09]',
+  upcoming: 'border-border/70 bg-background/35',
+};
+
 export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail }) {
   const process = deriveResearchProcess(run);
+  const status = statusMeta[run.status];
 
   return (
-    <div className="rounded-[28px] border border-border/70 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.78,hsl(var(--surface))/0.92)] p-4 sm:p-5">
+    <Card className="pt-4 sm:pt-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="eyebrow">Research progress</p>
@@ -41,26 +57,17 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
           <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">{process.helperText}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="toolbar-chip border-border/60">
+          <Badge variant="neutral" className="rounded-full">
             {process.completedCount} / {process.totalSteps} steps complete
-          </span>
+          </Badge>
+          <Badge variant={status.variant} className="rounded-full">
+            {status.title}
+          </Badge>
           {run.status === 'processing' ? (
-            <span className="toolbar-chip border-accent/20 bg-accent/[0.08] text-accent">
+            <Badge variant="info" className="rounded-full">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Active
-            </span>
-          ) : null}
-          {run.status === 'completed' ? (
-            <span className="toolbar-chip border-success/20 bg-success/[0.08] text-success">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Workbook ready
-            </span>
-          ) : null}
-          {run.status === 'failed' ? (
-            <span className="toolbar-chip border-destructive/20 bg-destructive/[0.08] text-destructive">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              Needs attention
-            </span>
+            </Badge>
           ) : null}
         </div>
       </div>
@@ -84,44 +91,50 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {process.steps.map((step) => {
           const Icon = stepIcons[step.id];
+          const currentState = step.state as StepState;
+          const state = run.status === 'failed' && currentState === 'current' ? 'failed' : currentState;
 
           return (
             <div
               key={step.id}
               className={cn(
-                'rounded-[22px] border px-4 py-4 overflow-hidden min-w-0',
-                step.state === 'complete' && 'border-success/20 bg-success/[0.08]',
-                step.state === 'current' && 'border-accent/25 bg-accent/[0.08] shadow-[0_18px_36px_-28px_rgba(124,92,255,0.7)]',
-                step.state === 'failed' && 'border-destructive/25 bg-destructive/[0.08]',
-                step.state === 'upcoming' && 'border-border/60 bg-background/35',
+                'rounded-[20px] border px-4 py-4 overflow-hidden min-w-0 transition-all',
+                stepStateStyles[state],
+                state === 'current' ? 'ring-1 ring-info/20' : null,
+                state === 'upcoming' ? 'hover:border-info/20 hover:bg-info/[0.03]' : null,
+                state === 'failed' ? 'hover:shadow-[0_20px_50px_-36px_rgba(239,68,68,0.4)]' : null,
               )}
             >
               <div className="flex items-start justify-between gap-3">
                 <span
                   className={cn(
                     'flex h-11 w-11 items-center justify-center rounded-2xl border',
-                    step.state === 'complete' && 'border-success/25 bg-success/[0.12] text-success',
-                    step.state === 'current' && 'border-accent/20 bg-accent/[0.14] text-accent',
-                    step.state === 'failed' && 'border-destructive/20 bg-destructive/[0.12] text-destructive',
-                    step.state === 'upcoming' && 'border-border/60 bg-surface-raised/60 text-text-muted',
+                    state === 'complete' && 'border-success/25 bg-success/[0.12] text-success',
+                    state === 'current' && 'border-info/20 bg-info/[0.14] text-info',
+                    state === 'failed' && 'border-destructive/25 bg-destructive/[0.12] text-destructive',
+                    state === 'upcoming' && 'border-border/60 bg-surface-raised/60 text-text-muted',
                   )}
                 >
-                  <Icon className={cn('h-5 w-5', step.state === 'current' && 'animate-pulse')} />
+                  {state === 'current' && run.status === 'processing' ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Icon className={cn('h-5 w-5', state === 'current' ? 'text-info' : state === 'upcoming' ? 'text-text-muted' : '')} />
+                  )}
                 </span>
                 <span
                   className={cn(
                     'rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]',
-                    step.state === 'complete' && 'border-success/20 bg-success/[0.08] text-success',
-                    step.state === 'current' && 'border-accent/20 bg-accent/[0.08] text-accent',
-                    step.state === 'failed' && 'border-destructive/20 bg-destructive/[0.08] text-destructive',
-                    step.state === 'upcoming' && 'border-border/60 text-text-muted',
+                    state === 'complete' && 'border-success/20 bg-success/[0.08] text-success',
+                    state === 'current' && 'border-info/20 bg-info/[0.08] text-info',
+                    state === 'failed' && 'border-destructive/20 bg-destructive/[0.08] text-destructive',
+                    state === 'upcoming' && 'border-border/60 text-text-muted',
                   )}
                 >
-                  {step.state === 'complete'
+                  {state === 'complete'
                     ? 'Done'
-                    : step.state === 'current'
+                    : state === 'current'
                       ? 'Current'
-                      : step.state === 'failed'
+                      : state === 'failed'
                         ? 'Failed'
                         : 'Upcoming'}
                 </span>
@@ -132,6 +145,6 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }

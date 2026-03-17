@@ -8,7 +8,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
       attribute="class"
       defaultTheme="dark"
       enableSystem={false}
-      storageKey="social-media-dist-theme"
+      storageKey="kw-research-theme"
       disableTransitionOnChange
     >
       {children}

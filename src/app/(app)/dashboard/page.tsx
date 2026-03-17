@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 export default async function DashboardSelectionPage() {
-  const user = await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser('/dashboard');
   const projects = await listProjectsForUser(user.id);
 
   return (

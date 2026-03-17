@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Globe, Layers3, Plus, Radar, SearchCheck } from 'lucide-react';
+import { ArrowRight, Layers3, Plus, SearchCheck, Globe } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, EmptyState } from '@/components/ui';
+import { Alert, Badge, Button, Card, EmptyState, Field, Metric } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import { buildProjectDashboardPath, SELECTED_PROJECT_STORAGE_KEY } from '@/lib/project-context';
-import type { ResearchProjectSummary } from '@/lib/research';
+import type { ResearchProjectSummary, ResearchStatus } from '@/lib/research';
 import { cn, formatDateTime, formatRelative } from '@/lib/utils';
 import { createProjectFormSchema, type CreateProjectFormInput } from '@/lib/validation';
 
@@ -22,6 +22,23 @@ const defaultValues: CreateProjectFormInput = {
   competitorUrls: '',
   notes: '',
 };
+
+type RunStatusVisual = {
+  label: string;
+  variant: 'success' | 'warning' | 'error' | 'info' | 'neutral';
+};
+
+const runStatusVisual: Record<ResearchStatus | 'none', RunStatusVisual> = {
+  queued: { label: 'Queued', variant: 'info' },
+  processing: { label: 'Processing', variant: 'warning' },
+  completed: { label: 'Completed', variant: 'success' },
+  failed: { label: 'Failed', variant: 'error' },
+  none: { label: 'No runs yet', variant: 'neutral' },
+};
+
+function getStatusVisual(status: ResearchStatus | null) {
+  return status ? runStatusVisual[status] : runStatusVisual.none;
+}
 
 export function SiteSelectionDashboard({
   user,
@@ -37,6 +54,7 @@ export function SiteSelectionDashboard({
     resolver: zodResolver(createProjectFormSchema),
     defaultValues,
   });
+  const { formState } = form;
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -84,123 +102,167 @@ export function SiteSelectionDashboard({
     });
   });
 
+  const focusCreateSection = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const section = document.getElementById('new-site-form');
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <div className="page-stack">
       <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <Card padding="none" className="rounded-2xl border-border/70 overflow-hidden">
-          <div className="relative overflow-hidden px-6 py-8 sm:px-8 sm:py-9">
-            <div className="absolute inset-0 bg-grid opacity-20" />
-            <div className="absolute -left-10 top-0 h-40 w-40 rounded-full bg-accent/15 blur-3xl" />
-            <div className="absolute bottom-0 right-0 h-44 w-44 rounded-full bg-info/10 blur-3xl" />
+        <Card variant="hero" className="overflow-hidden">
+          <div className="relative px-6 py-8 sm:px-8 sm:py-9">
+            <div className="absolute inset-0 bg-grid/50" />
+            <div className="absolute -left-12 top-0 h-40 w-40 rounded-full bg-accent/[0.12] blur-3xl" />
+            <div className="absolute bottom-2 right-0 h-44 w-44 rounded-full bg-info/[0.08] blur-3xl" />
             <div className="relative">
-              <div className="toolbar-chip w-fit border-accent/18 bg-accent/8">
-                Website selection required
-              </div>
-              <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-[2.4rem]">
-                Choose the website workspace before opening internal research tools.
+              <div className="toolbar-chip w-fit border-accent/22 bg-accent/[0.11]">Site-first workspace model</div>
+              <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-[2.3rem]">
+                Choose a website workspace before entering research
               </h1>
               <p className="mt-4 max-w-3xl text-sm leading-7 text-text-secondary sm:text-base">
-                The app no longer drops users into a global dashboard. Select a site first, then enter
-                that website&apos;s dedicated keyword research workspace with project-scoped runs,
-                exports, and competitor discovery.
+                KW Research is organized by site context. Select a workspace first to keep runs, exports, and history isolated
+                and predictable.
               </p>
-              <div className="mt-8 grid gap-3 md:grid-cols-3">
-                <Metric label="Analyst" value={user.displayName} helper={user.email} />
-                <Metric label="Projects" value={String(projects.length)} helper="Website workspaces available" />
-                <Metric label="Routing model" value="Site first" helper="Internal dashboards only load with a valid site context" />
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                <Metric label="Signed-in analyst" value={user.displayName} helper={user.email} />
+                <Metric label="Available workspaces" value={String(projects.length)} helper="Website projects in your account" />
+                <Metric label="Scope model" value="Project selected" helper="Dashboard routes stay in site context" />
               </div>
             </div>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border-border/70">
-          <p className="eyebrow">How this works now</p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight">Project-scoped entry</h2>
-          <div className="mt-6 space-y-4">
-            {[
-              'Every dashboard route is now tied to one selected website workspace.',
-              'Refreshing a valid project URL restores that workspace cleanly.',
-              'Invalid deep links and missing site context fall back to this selector instead of rendering a broken dashboard.',
-            ].map((item) => (
-              <div key={item} className="rounded-xl border border-border/70 bg-surface-raised/65 px-4 py-4 text-sm leading-6 text-text-secondary">
-                {item}
+        <Card variant="muted">
+          <div className="space-y-4">
+            <div className="section-header">
+              <div>
+                <p className="eyebrow">How the flow works</p>
+                <h2 className="section-subtitle mt-3">Cleaner route behavior</h2>
+                <p className="section-copy mt-3">
+                  A predictable workspace gate keeps analytics from leaking between sites and keeps each run scoped to one
+                  project.
+                </p>
               </div>
-            ))}
+              <Badge variant="neutral" className="self-start">
+                <SearchCheck className="h-3.5 w-3.5" />
+                Guidance
+              </Badge>
+            </div>
+            <div className="space-y-3">
+              {[
+                ['Site-scoped routes', 'Every dashboard route opens only after a workspace is selected.'],
+                ['Context recovery', 'Returning sessions restore the last workspace when available.'],
+                ['Focused outputs', 'All uploads, logs, and exports stay attached to one website.'],
+              ].map(([title, text]) => (
+                <div key={title} className="subtle-surface grid gap-1.5 px-4 py-4">
+                  <p className="font-semibold text-text-primary">{title}</p>
+                  <p className="text-sm leading-6 text-text-secondary">{text}</p>
+                </div>
+              ))}
+            </div>
+            <Button type="button" variant="ghost" className="w-full sm:w-auto" size="sm" onClick={focusCreateSection}>
+              <SearchCheck className="h-4 w-4" />
+              Jump to create form
+            </Button>
           </div>
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <Card className="rounded-xl border-border/70">
+      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card>
           <div className="section-header">
             <div>
               <p className="eyebrow">Website workspaces</p>
-              <h2 className="section-subtitle mt-3">Select a site to enter its dashboard</h2>
+              <h2 className="section-subtitle mt-3">Select a workspace to continue</h2>
               <p className="section-copy mt-3">
-                Each card opens one dedicated site workspace. The last site you used is surfaced first when available.
+                Each card opens one dedicated project dashboard for a single website.
               </p>
             </div>
-            <div className="toolbar-chip flex items-center gap-2">
-              <Layers3 className="h-4 w-4" />
-              {projects.length} sites
-            </div>
+            <Badge variant="info" className="self-start">
+              <Layers3 className="h-3.5 w-3.5" />
+              {projects.length} workspace{projects.length === 1 ? '' : 's'}
+            </Badge>
           </div>
 
           {!orderedProjects.length ? (
-            <div className="mt-6">
-              <EmptyState
-                title="No website workspaces yet"
-                description="Create the first website workspace to start project-scoped keyword research."
-              />
-            </div>
+            <EmptyState
+              className="mt-6"
+              title="No website workspaces yet"
+              description="Create your first workspace so research can run inside a scoped project context."
+              action={{
+                label: 'Create workspace',
+                onClick: focusCreateSection,
+              }}
+            />
           ) : (
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
               {orderedProjects.map((project) => {
                 const isLastSelected = project.id === lastSelectedProjectId;
                 const activityTime = project.latestRunQueuedAt || project.updatedAt;
+                const status = getStatusVisual(project.latestRunStatus);
 
                 return (
                   <Link
                     key={project.id}
                     href={buildProjectDashboardPath(project.id)}
-                    className={cn(
-                      'rounded-xl border px-5 py-5 transition-all hover:-translate-y-0.5',
-                      isLastSelected
-                        ? 'border-accent/30 bg-accent/[0.08]'
-                        : 'border-border/70 bg-surface-raised/40 hover:border-accent/20 hover:bg-surface',
-                    )}
+                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-lg font-semibold tracking-tight text-text-primary">{project.name}</p>
-                        <p className="mt-1 text-sm text-text-muted">
-                          {project.brandName} · {project.language} · {project.market}
-                        </p>
+                    <Card
+                      variant="interactive"
+                      className={cn(
+                        'h-full transition-colors',
+                        isLastSelected ? 'border-accent/32 bg-accent/[0.06]' : 'hover:bg-surface',
+                      )}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-lg font-semibold tracking-tight text-text-primary">{project.name}</p>
+                          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-text-muted">
+                            <Globe className="h-4 w-4" />
+                            <span className="truncate">
+                              {project.brandName} · {project.language} · {project.market}
+                            </span>
+                          </p>
+                        </div>
+                        <div className="stack-mobile items-center">
+                          {isLastSelected ? <Badge variant="success">Last used</Badge> : null}
+                          <Badge variant={status.variant}>{status.label}</Badge>
+                        </div>
                       </div>
-                      {isLastSelected ? (
-                        <span className="rounded-full border border-accent/25 bg-accent/[0.12] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
-                          Recent
+
+                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                        <Metric label="Runs" value={String(project.runCount)} helper="Total research executions" compact />
+                        <Metric
+                          label="Activity"
+                          value={formatRelative(activityTime)}
+                          helper={formatDateTime(activityTime)}
+                          compact
+                        />
+                        <Metric label="Competitors" value={String(project.competitorUrls.length)} helper="Seeded URL sources" compact />
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        <span className="max-w-full truncate rounded-full border border-border/70 bg-surface-raised/[0.66] px-3 py-1.5 text-[11px] text-text-secondary">
+                          {project.homepageUrl}
                         </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      <Metric
-                        label="Runs"
-                        value={String(project.runCount)}
-                        helper={project.latestRunStatus ? `Latest ${project.latestRunStatus}` : 'No runs yet'}
-                        compact
-                      />
-                      <Metric
-                        label="Activity"
-                        value={formatRelative(activityTime)}
-                        helper={formatDateTime(activityTime)}
-                        compact
-                      />
-                    </div>
-                    <div className="mt-5 flex flex-wrap gap-2 text-xs text-text-muted min-w-0">
-                      <span className="toolbar-chip border-border/60 max-w-[260px] truncate">{project.homepageUrl}</span>
-                      <span className="toolbar-chip border-border/60 max-w-[260px] truncate">{project.sitemapUrl}</span>
-                    </div>
+                        {project.sitemapUrl ? (
+                          <span className="max-w-full truncate rounded-full border border-border/70 bg-surface-raised/[0.66] px-3 py-1.5 text-[11px] text-text-secondary">
+                            {project.sitemapUrl}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-5 flex items-center justify-between text-xs text-text-muted">
+                        <span>Open workspace</span>
+                        <span className="inline-flex items-center gap-1">
+                          <span className="font-semibold text-text-secondary">Enter</span>
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                    </Card>
                   </Link>
                 );
               })}
@@ -208,102 +270,76 @@ export function SiteSelectionDashboard({
           )}
         </Card>
 
-        <Card className="rounded-xl border-border/70">
+        <Card>
           <div className="section-header">
             <div>
-              <p className="eyebrow">Create website workspace</p>
-              <h2 className="section-subtitle mt-3">Add a new site</h2>
+              <p className="eyebrow">Create workspace</p>
+              <h2 className="section-subtitle mt-3">Add a new website workspace</h2>
               <p className="section-copy mt-3">
-                Define the site once here. After that, all research runs happen inside the selected site dashboard.
+                Add once, then use it across runs, exports, and reporting without re-entering context.
               </p>
             </div>
-            <div className="toolbar-chip flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New site
-            </div>
+            <Badge variant="neutral" className="self-start">
+              <Plus className="h-3.5 w-3.5" />
+              New
+            </Badge>
           </div>
 
-          <form onSubmit={handleCreateProject} className="mt-6 space-y-5">
+          <Alert variant="info" className="mt-6">
+            Required fields: homepage URL, about URL, and sitemap URL. Competitor URLs can be added later.
+          </Alert>
+
+          <form id="new-site-form" onSubmit={handleCreateProject} className="mt-6 space-y-5">
             <div className="grid gap-5 md:grid-cols-2">
-              <Field label="Homepage URL" error={form.formState.errors.homepageUrl?.message}>
+              <Field label="Homepage URL" error={formState.errors.homepageUrl?.message} hint="Example: https://example.com">
                 <input className="field-input" placeholder="https://example.com" {...form.register('homepageUrl')} />
               </Field>
-              <Field label="About page URL" error={form.formState.errors.aboutUrl?.message}>
+              <Field label="About page URL" error={formState.errors.aboutUrl?.message} hint="Optional, but useful for context">
                 <input className="field-input" placeholder="https://example.com/about" {...form.register('aboutUrl')} />
               </Field>
             </div>
-            <Field label="Sitemap URL" error={form.formState.errors.sitemapUrl?.message}>
+            <Field label="Sitemap URL" error={formState.errors.sitemapUrl?.message} hint="Example: https://example.com/sitemap.xml">
               <input className="field-input" placeholder="https://example.com/sitemap.xml" {...form.register('sitemapUrl')} />
             </Field>
             <div className="grid gap-5 md:grid-cols-3">
-              <Field label="Brand name" error={form.formState.errors.brandName?.message}>
+              <Field label="Brand name" error={formState.errors.brandName?.message} hint="Shown in cards and reports">
                 <input className="field-input" placeholder="Maximo SEO" {...form.register('brandName')} />
               </Field>
-              <Field label="Language" error={form.formState.errors.language?.message}>
+              <Field label="Language" error={formState.errors.language?.message} hint="Research language context">
                 <select className="field-select" {...form.register('language')}>
                   <option value="English">English</option>
                   <option value="Hebrew">Hebrew / עברית</option>
                 </select>
               </Field>
-              <Field label="Market" error={form.formState.errors.market?.message}>
+              <Field label="Market" error={formState.errors.market?.message} hint="Optional target market">
                 <input className="field-input" placeholder="United Kingdom / Israel / Texas" {...form.register('market')} />
               </Field>
             </div>
-            <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined}>
-              <textarea className="field-textarea" placeholder="Optional seed competitor URLs" {...form.register('competitorUrls')} />
+            <Field
+              label="Competitor URLs"
+              error={formState.errors.competitorUrls?.message as string | undefined}
+              hint="Optional seed URLs, commas or new lines"
+            >
+              <textarea
+                className="field-textarea"
+                placeholder="https://competitor-a.com, https://competitor-b.com"
+                {...form.register('competitorUrls')}
+              />
             </Field>
-            <Field label="Workspace notes" error={form.formState.errors.notes?.message}>
-              <textarea className="field-textarea" placeholder="Optional project notes" {...form.register('notes')} />
+            <Field label="Workspace notes" error={formState.errors.notes?.message} hint="Optional analyst notes">
+              <textarea className="field-textarea" placeholder="Project-specific assumptions or exclusions" {...form.register('notes')} />
             </Field>
-            <div className="flex flex-wrap gap-3">
-              <Button type="submit" size="lg" loading={isPending}>
-                Create Workspace
-              </Button>
-              <Button type="button" variant="secondary" size="lg" onClick={() => form.reset(defaultValues)}>
+            <div className="flex flex-col gap-3 border-t border-border/65 pt-2 sm:flex-row sm:items-center sm:justify-end">
+              <Button type="button" variant="ghost" size="lg" onClick={() => form.reset(defaultValues)} disabled={isPending}>
                 Reset
+              </Button>
+              <Button type="submit" size="lg" loading={isPending} disabled={formState.isSubmitting}>
+                Create workspace
               </Button>
             </div>
           </form>
         </Card>
       </section>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="field-group">
-      <label className="field-label">{label}</label>
-      {children}
-      {error ? <p className="field-help text-destructive">{error}</p> : null}
-    </div>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  helper,
-  compact = false,
-}: {
-  label: string;
-  value: string;
-  helper: string;
-  compact?: boolean;
-}) {
-  return (
-    <div className="rounded-lg border border-border/60 bg-surface-raised/70 px-4 py-3 overflow-hidden min-w-0">
-      <p className="text-xs uppercase tracking-[0.22em] text-text-muted truncate">{label}</p>
-      <p className={cn('mt-2 font-semibold text-text-primary break-words', compact ? 'text-base' : 'text-2xl')}>{value}</p>
-      <p className="mt-2 text-sm leading-6 text-text-secondary line-clamp-2">{helper}</p>
     </div>
   );
 }

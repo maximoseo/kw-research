@@ -38,14 +38,17 @@ const config: Config = {
         },
         success: {
           DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
           muted: 'hsl(var(--success-muted))',
         },
         warning: {
           DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
           muted: 'hsl(var(--warning-muted))',
         },
         info: {
           DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--info-foreground))',
           muted: 'hsl(var(--info-muted))',
         },
         input: {
@@ -74,6 +77,7 @@ const config: Config = {
       },
       spacing: {
         '4.5': '1.125rem',
+        '5.5': '1.375rem',
       },
       borderRadius: {
         'xs': 'var(--radius-xs)',

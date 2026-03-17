@@ -12,19 +12,19 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles = {
   primary:
-    'border border-accent/30 gradient-btn text-white hover:-translate-y-0.5 hover:brightness-110',
+    'border border-accent/25 bg-accent text-white shadow-[0_12px_28px_-8px_rgba(var(--accent-rgb),0.5)] hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-[0_16px_36px_-8px_rgba(var(--accent-rgb),0.6)]',
   secondary:
-    'border border-border/80 bg-surface-raised/80 text-text-primary hover:-translate-y-0.5 hover:border-accent/20 hover:bg-surface',
+    'border border-border/80 bg-surface-raised/[0.84] text-text-primary hover:-translate-y-0.5 hover:border-accent/18 hover:bg-surface',
   ghost:
-    'border border-transparent bg-transparent text-text-secondary hover:border-border/70 hover:bg-surface-raised/70 hover:text-text-primary',
+    'border border-transparent bg-transparent text-text-secondary hover:border-border/70 hover:bg-surface-raised/[0.72] hover:text-text-primary',
   danger:
     'border border-destructive/30 bg-destructive/10 text-destructive hover:-translate-y-0.5 hover:bg-destructive/15',
 };
 
 const sizeStyles = {
   sm: 'min-h-[40px] px-3.5 py-2 text-xs',
-  md: 'min-h-[44px] px-4.5 py-2.5 text-body-sm',
-  lg: 'min-h-[48px] px-5.5 py-3 text-body',
+  md: 'min-h-[44px] px-4.5 py-2.5 text-sm',
+  lg: 'min-h-[48px] px-5.5 py-3 text-[0.95rem]',
 };
 
 function Spinner() {
@@ -43,7 +43,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          'inline-flex items-center justify-center gap-2 rounded-2xl font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none',
+          'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none',
           sizeStyles[size],
           variantStyles[variant],
           className,

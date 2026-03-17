@@ -47,7 +47,7 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
       )}
       <div
         ref={containerRef}
-        className="flex overflow-x-auto rounded-[24px] border border-border/70 bg-surface-overlay/75 p-1.5 scrollbar-none"
+        className="flex overflow-x-auto rounded-lg border border-border/70 bg-surface-overlay/85 p-1.5 scrollbar-none"
         style={{ scrollbarWidth: 'none' }}
       >
         {tabs.map((tab) => (
@@ -55,9 +55,9 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={cn(
-               'relative min-h-tap whitespace-nowrap rounded-[18px] px-4 py-2.5 text-body-sm font-medium transition-all sm:min-h-0',
+               'relative min-h-tap whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-semibold transition-all',
                activeTab === tab.id
-                 ? 'bg-accent/[0.14] text-accent shadow-[inset_0_0_0_1px_rgba(var(--accent-rgb),0.2)] font-semibold'
+                 ? 'bg-surface text-text-primary shadow-elevation-1 ring-1 ring-accent/18'
                  : 'text-tab-inactive hover:bg-surface-raised/60 hover:text-text-primary',
              )}
           >

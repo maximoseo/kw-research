@@ -8,7 +8,7 @@ export default async function LegacyRunDetailPage({
 }: {
   params: { runId: string };
 }) {
-  const user = await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser(`/runs/${params.runId}`);
   const run = await getRunForUser(user.id, params.runId);
 
   if (!run) {

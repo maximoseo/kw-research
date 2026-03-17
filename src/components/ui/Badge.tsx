@@ -4,6 +4,7 @@ interface BadgeProps {
   variant: 'success' | 'warning' | 'error' | 'info' | 'neutral';
   children: React.ReactNode;
   pulse?: boolean;
+  dot?: boolean;
   className?: string;
 }
 
@@ -15,16 +16,16 @@ const variantStyles = {
   neutral: 'border-border/80 bg-surface-raised/70 text-text-secondary',
 };
 
-export default function Badge({ variant, children, pulse, className = '' }: BadgeProps) {
+export default function Badge({ variant, children, pulse, dot = true, className = '' }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em]',
+        'inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]',
         variantStyles[variant],
         className,
       )}
     >
-      <span className={cn('h-1.5 w-1.5 rounded-full bg-current', pulse ? 'animate-pulse-dot' : '')} />
+      {dot ? <span className={cn('h-1.5 w-1.5 rounded-full bg-current', pulse ? 'animate-pulse-dot' : '')} /> : null}
       {children}
     </span>
   );

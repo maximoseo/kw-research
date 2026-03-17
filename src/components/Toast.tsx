@@ -63,7 +63,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
   return (
-    <div className="fixed right-4 top-4 z-[100] flex w-full max-w-md flex-col gap-3 pointer-events-none">
+    <div className="pointer-events-none fixed left-4 right-4 top-4 z-[100] flex flex-col gap-3 sm:left-auto sm:right-4 sm:w-full sm:max-w-md">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
       ))}
@@ -96,7 +96,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
   return (
     <div
       className={cn(
-        'pointer-events-auto flex items-start gap-3 rounded-[24px] border px-4 py-4 shadow-[0_26px_70px_-42px_rgba(0,0,0,0.9)] backdrop-blur-md transition-all duration-200 ease-out',
+        'pointer-events-auto flex items-start gap-3 rounded-[22px] border px-4 py-4 shadow-[0_24px_54px_-34px_rgba(0,0,0,0.82)] backdrop-blur-md transition-all duration-200 ease-out',
         variantStyles[toast.variant],
         isLeaving ? 'translate-x-4 scale-95 opacity-0' : 'translate-x-0 scale-100 opacity-100',
       )}

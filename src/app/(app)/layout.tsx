@@ -9,7 +9,7 @@ export default async function ProtectedLayout({
   children: React.ReactNode;
 }) {
   startResearchWorker();
-  await requireAuthenticatedUser();
+  await requireAuthenticatedUser('/dashboard');
 
   return <>{children}</>;
 }
