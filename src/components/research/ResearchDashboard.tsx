@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Download, History, Loader2, Radar, RefreshCcw, Search, TableProperties, UploadCloud } from 'lucide-react';
+import { CheckCircle2, Download, FileSpreadsheet, History, Loader2, Radar, RefreshCcw, Search, TableProperties, UploadCloud } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -43,6 +43,35 @@ const statusBadgeMap: Record<ResearchRunSummary['status'], { variant: 'warning' 
   failed: { variant: 'error', label: 'Failed' },
 };
 
+/** Trigger a file download without opening a new tab (avoids popup blockers). */
+function triggerDownload(runId: string, addToast: (msg: string, type: 'error' | 'success') => void, setDownloading: (v: boolean) => void) {
+  setDownloading(true);
+  fetch(`/api/runs/${runId}/download`)
+    .then(async (res) => {
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || 'Download failed.');
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get('content-disposition') || '';
+      const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';\n]+)/i);
+      const filename = match ? decodeURIComponent(match[1]) : 'keyword-research.xlsx';
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      addToast('Workbook downloaded successfully.', 'success');
+    })
+    .catch((err) => {
+      addToast(err instanceof Error ? err.message : 'Download failed.', 'error');
+    })
+    .finally(() => setDownloading(false));
+}
+
 export default function ResearchDashboard({ project, initialRunId }: { project: ResearchProjectDetail; initialRunId?: string | null }) {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
@@ -51,6 +80,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   const [activeTab, setActiveTab] = useState<'preview' | 'logs' | 'summary'>('preview');
   const [isPending, startTransition] = useTransition();
   const [isDiscoveringCompetitors, startCompetitorDiscovery] = useTransition();
+  const [isDownloading, setIsDownloading] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [competitorDiscovery, setCompetitorDiscovery] = useState<CompetitorDiscoveryState>({
     status: 'idle',
@@ -109,6 +139,11 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
     hasMounted ? formatDateTime(value, fallback) : fallback;
   const formatRelativeLabel = (value: string | number | Date | null | undefined, fallback = 'Syncing...') =>
     hasMounted ? formatRelative(value, fallback) : fallback;
+
+  const handleDownload = useCallback(() => {
+    if (!selectedRun?.workbookName) return;
+    triggerDownload(selectedRun.id, addToast, setIsDownloading);
+  }, [selectedRun?.id, selectedRun?.workbookName, addToast]);
 
   const handleSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
@@ -181,11 +216,12 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
 
   return (
     <div className="page-stack">
+      {/* ── Hero section ── */}
       <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card variant="hero" className="space-y-5">
+        <Card variant="hero" className="space-y-6">
           <div>
             <p className="eyebrow">Selected workspace</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{project.name}</h1>
+            <h1 className="mt-2.5 text-2xl font-semibold tracking-tight sm:text-3xl">{project.name}</h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-text-secondary">
               This workspace is scoped to a single validated site. Every run, log, preview, and export stays attached to {project.brandName}.
             </p>
@@ -196,10 +232,10 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
             <Metric label="Sitemap" value="Validated" helper={project.sitemapUrl} />
           </div>
         </Card>
-        <Card className="space-y-5">
+        <Card className="space-y-6">
           <div>
             <p className="eyebrow">Website profile</p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight">Locked profile inputs</h2>
+            <h2 className="mt-2.5 text-xl font-semibold tracking-tight">Locked profile inputs</h2>
             <p className="mt-2 section-copy">These values are fixed for this workspace. Change them in the project selector if needed.</p>
           </div>
           <div className="space-y-3">
@@ -213,6 +249,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
         </Card>
       </section>
 
+      {/* ── New run + Live run ── */}
       <section id="new-research" className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.03fr_0.97fr]">
         <Card className="space-y-6">
           <div className="section-header">
@@ -238,12 +275,12 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 <input className="field-input" type="number" min={120} max={320} step={5} {...form.register('targetRows', { valueAsNumber: true })} />
               </Field>
             </div>
-            <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined} hint="Add one competitor per line or use discovery below. This workspace scope is used for all lookups.">
+            <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined} hint="One competitor per line, or auto-discover below.">
               <div className="space-y-4 rounded-xl border border-border/70 bg-surface-raised/55 p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="max-w-2xl">
-                    <p className="text-sm font-medium text-text-primary">Discovery for this workspace</p>
-                    <p className="mt-1 text-sm leading-6 text-text-secondary">Find relevant competitors from your current site profile and add them in one step.</p>
+                    <p className="text-sm font-medium text-text-primary">Auto-discover competitors</p>
+                    <p className="mt-1 text-sm leading-6 text-text-secondary">Scan your site profile and find relevant competitors in one step.</p>
                   </div>
                   <Button
                     type="button"
@@ -251,7 +288,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                     icon={<Radar className="h-4 w-4" />}
                     loading={isDiscoveringCompetitors}
                     onClick={handleAutoFindCompetitors}
-                    className="w-full sm:w-auto"
+                    className="w-full shrink-0 sm:w-auto"
                   >
                     Find Competitors
                   </Button>
@@ -271,26 +308,25 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 ) : null}
                 <textarea
                   className="field-textarea"
-                  placeholder="https://competitor-one.com
-https://competitor-two.com"
+                  placeholder="https://competitor-one.com&#10;https://competitor-two.com"
                   {...form.register('competitorUrls')}
                 />
               </div>
             </Field>
-            <Field label="Notes / instructions" error={form.formState.errors.notes?.message} hint="Optional instructions to influence coverage and output tone.">
+            <Field label="Notes / instructions" error={form.formState.errors.notes?.message} hint="Optional instructions for coverage and tone.">
               <textarea className="field-textarea" placeholder="Add any research constraints, exclusions, or audience notes" {...form.register('notes')} />
             </Field>
-            <Field label="Existing keyword research workbook" hint="Upload to seed expansion mode or provide context for follow-up runs.">
+            <Field label="Existing keyword research workbook" hint="Upload to seed expansion mode or provide context.">
               <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed border-border/80 bg-surface-raised/50 px-4 py-3.5 text-sm text-text-secondary transition-all hover:border-accent/25 hover:bg-surface">
                 <div className="min-w-0">
                   <p className="font-medium text-text-primary truncate">{uploadedFile ? uploadedFile.name : 'Upload optional workbook'}</p>
                   <p className="mt-1 text-xs text-text-muted">.xlsx, .xls, or .csv up to 10 MB</p>
                 </div>
-                <span className="toolbar-chip border-accent/20 bg-accent/[0.08] text-accent">{uploadedFile ? 'Replace' : 'Choose file'}</span>
+                <span className="toolbar-chip shrink-0 border-accent/20 bg-accent/[0.08] text-accent">{uploadedFile ? 'Replace' : 'Choose file'}</span>
                 <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => setUploadedFile(event.target.files?.[0] || null)} />
               </label>
             </Field>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 pt-1">
               <Button type="submit" size="lg" loading={isPending}>
                 Run research
               </Button>
@@ -304,7 +340,7 @@ https://competitor-two.com"
                   setUploadedFile(null);
                 }}
               >
-                Reset run form
+                Reset form
               </Button>
             </div>
           </form>
@@ -328,8 +364,9 @@ https://competitor-two.com"
           </div>
           {!selectedRun ? (
             <EmptyState
+              icon={<FileSpreadsheet className="h-10 w-10 text-text-muted" />}
               title="No run selected"
-              description="Queue a run for this workspace or pick a historical run from this view."
+              description="Queue a new research run or select a previous run from the history below."
               action={{
                 label: 'Start a run',
                 onClick: () => {
@@ -340,36 +377,62 @@ https://competitor-two.com"
             />
           ) : (
             <div className="space-y-5">
+              {/* Success banner when run is completed */}
+              {selectedRun.status === 'completed' && selectedRun.workbookName ? (
+                <div className="flex flex-col gap-3 rounded-xl border border-success/25 bg-success/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-success/20 bg-success/[0.12]">
+                      <CheckCircle2 className="h-5 w-5 text-success" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-primary">Research complete</p>
+                      <p className="mt-0.5 text-sm text-text-secondary truncate">{selectedRun.rows.length} rows generated &middot; {selectedRun.workbookName}</p>
+                    </div>
+                  </div>
+                  <Button type="button" variant="primary" size="sm" icon={<Download className="h-4 w-4" />} loading={isDownloading} onClick={handleDownload} className="w-full shrink-0 sm:w-auto">
+                    Download XLSX
+                  </Button>
+                </div>
+              ) : null}
+
+              {/* Failed banner */}
+              {selectedRun.status === 'failed' ? (
+                <Alert variant="error" title="Run failed">
+                  {selectedRun.errorMessage || 'An unexpected error occurred during processing. You can retry this run.'}
+                </Alert>
+              ) : null}
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <Metric label="Brand" value={selectedRun.brandName} helper={`${selectedRun.language} · ${selectedRun.market}`} />
                 <Metric label="Queued" value={formatDateTimeLabel(selectedRun.queuedAt)} helper={selectedRun.step || 'Awaiting updates'} />
               </div>
               <ResearchProcessTracker run={selectedRun} />
               <div className="flex flex-wrap gap-3">
-                <Button type="button" variant="primary" icon={<Download className="h-4 w-4" />} disabled={!selectedRun.workbookName} onClick={() => window.open(`/api/runs/${selectedRun.id}/download`, '_blank')}>
+                <Button type="button" variant="primary" icon={<Download className="h-4 w-4" />} disabled={!selectedRun.workbookName} loading={isDownloading} onClick={handleDownload}>
                   Download XLSX
                 </Button>
                 <Button type="button" variant="secondary" icon={<RefreshCcw className="h-4 w-4" />} loading={runQuery.isRefetching} onClick={() => runQuery.refetch()}>
-                  Refresh status
+                  Refresh
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  icon={<RefreshCcw className="h-4 w-4" />}
-                  disabled={selectedRun.status === 'processing'}
-                  onClick={async () => {
-                    const response = await fetch(`/api/runs/${selectedRun.id}/retry`, { method: 'POST' });
-                    if (!response.ok) {
-                      addToast('Unable to retry the run.', 'error');
-                      return;
-                    }
-                    addToast('Run queued for retry.', 'success');
-                    await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
-                    await runQuery.refetch();
-                  }}
-                >
-                  Retry run
-                </Button>
+                {selectedRun.status !== 'processing' ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    icon={<RefreshCcw className="h-4 w-4" />}
+                    onClick={async () => {
+                      const response = await fetch(`/api/runs/${selectedRun.id}/retry`, { method: 'POST' });
+                      if (!response.ok) {
+                        addToast('Unable to retry the run.', 'error');
+                        return;
+                      }
+                      addToast('Run queued for retry.', 'success');
+                      await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
+                      await runQuery.refetch();
+                    }}
+                  >
+                    Retry
+                  </Button>
+                ) : null}
               </div>
               <Tabs
                 activeTab={activeTab}
@@ -399,12 +462,13 @@ https://competitor-two.com"
         </Card>
       </section>
 
-      <section id="history" className="section-shell space-y-4">
+      {/* ── History ── */}
+      <section id="history" className="section-shell space-y-5">
         <div className="section-header">
           <div>
             <p className="eyebrow">Workspace history</p>
             <h2 className="section-subtitle mt-2">Previous research runs for this site</h2>
-            <p className="section-copy mt-2">Reopen past results, review progress, and download completed workbooks again.</p>
+            <p className="section-copy mt-2">Reopen past results, review progress, and download completed workbooks.</p>
           </div>
           <div className="toolbar-chip flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -412,39 +476,44 @@ https://competitor-two.com"
           </div>
         </div>
         {!runsQuery.data?.length ? (
-          <EmptyState title="No research runs yet" description="This website workspace has not queued any research yet." />
+          <EmptyState
+            icon={<History className="h-10 w-10 text-text-muted" />}
+            title="No research runs yet"
+            description="This workspace has no research runs. Queue your first run above to get started."
+          />
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {runsQuery.data.map((run) => (
               <article
                 key={run.id}
                 className={cn(
-                  'list-card transition-all',
+                  'list-card cursor-pointer transition-all',
                   selectedRunId === run.id
-                    ? 'border-accent/35 bg-accent/[0.06]'
+                    ? 'border-accent/35 bg-accent/[0.06] ring-1 ring-accent/10'
                     : 'hover:border-accent/20 hover:-translate-y-0.5 hover:bg-surface',
                 )}
+                onClick={() => setSelectedRunId(run.id)}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-lg font-semibold tracking-tight text-text-primary">{run.projectName}</p>
+                    <p className="text-base font-semibold tracking-tight text-text-primary sm:text-lg">{run.projectName}</p>
                     <p className="mt-1 text-xs uppercase tracking-[0.2em] text-text-muted">
                       {run.brandName} · {run.language} · {run.market}
                     </p>
                   </div>
                   <StatusBadge status={run.status} />
                 </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <Metric label="Queued" value={formatDateTimeLabel(run.queuedAt)} helper={formatRelativeLabel(run.queuedAt)} compact />
                   <Metric label="Workbook" value={run.workbookName || 'Pending'} helper={run.errorMessage || run.step || 'No errors'} compact />
                 </div>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" onClick={() => setSelectedRunId(run.id)}>
-                    Open in workspace
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" onClick={(e) => { e.stopPropagation(); setSelectedRunId(run.id); }}>
+                    {selectedRunId === run.id ? 'Selected' : 'Open in workspace'}
                   </Button>
-                  <Link href={buildProjectRunPath(project.id, run.id)}>
-                    <Button type="button" variant="secondary" size="sm">
-                      Dedicated run page
+                  <Link href={buildProjectRunPath(project.id, run.id)} onClick={(e) => e.stopPropagation()}>
+                    <Button type="button" variant="ghost" size="sm">
+                      Full page
                     </Button>
                   </Link>
                 </div>
@@ -486,43 +555,59 @@ function PreviewTable({
           <TableProperties className="h-4 w-4 text-accent" />
           Output preview
         </div>
-        <span className="text-xs text-text-muted">{rowCount} rows generated</span>
+        <span className="text-xs text-text-muted">
+          Showing {Math.min(previewRows.length, 50)} of {rowCount} rows
+        </span>
       </div>
-      <div className="overflow-x-auto">
+      <div className="max-h-[480px] overflow-x-auto overflow-y-auto">
         {!previewRows.length ? (
-          <p className="px-4 py-8 text-sm text-text-secondary">
-            {status === 'completed' ? 'No preview rows were stored.' : 'Preview will appear once the run reaches the generation phase.'}
-          </p>
+          <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+            <TableProperties className="h-8 w-8 text-text-muted/50 mb-3" />
+            <p className="text-sm font-medium text-text-primary">
+              {status === 'completed' ? 'No preview rows were stored.' : 'Waiting for results'}
+            </p>
+            <p className="mt-1 text-xs text-text-muted">
+              {status === 'completed' ? '' : 'Preview will appear once the run reaches the generation phase.'}
+            </p>
+          </div>
         ) : (
           <table className="min-w-full text-left text-sm">
-            <thead className="sticky top-0 bg-surface">
-              <tr className="border-b border-border/70 text-text-muted">
+            <thead className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_hsl(var(--border)/0.7)]">
+              <tr className="text-text-muted">
                 {['Existing Parent Page', 'Pillar', 'Cluster', 'Intent', 'Primary Keyword', 'Keywords'].map((label) => (
-                  <th key={label} className="px-4 py-3 font-medium whitespace-nowrap">
+                  <th key={label} className="px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
                     {label}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/40">
               {previewRows.map((row, index) => (
-                <tr key={`${row.cluster}-${index}`} className="border-b border-border/50 align-top">
-                  <td className="max-w-[220px] px-4 py-3 text-text-secondary" title={row.existingParentPage}>
+                <tr key={`${row.cluster}-${index}`} className={cn('align-top transition-colors hover:bg-accent/[0.03]', index % 2 === 1 && 'bg-surface-raised/30')}>
+                  <td className="max-w-[220px] truncate px-4 py-3 text-text-secondary" title={row.existingParentPage}>
                     {row.existingParentPage}
                   </td>
-                  <td className="max-w-[170px] px-4 py-3" title={row.pillar}>
+                  <td className="max-w-[170px] truncate px-4 py-3 font-medium" title={row.pillar}>
                     {row.pillar}
                   </td>
-                  <td className="max-w-[170px] px-4 py-3" title={row.cluster}>
+                  <td className="max-w-[170px] truncate px-4 py-3" title={row.cluster}>
                     {row.cluster}
                   </td>
-                  <td className="max-w-[110px] px-4 py-3" title={row.intent}>
-                    {row.intent}
+                  <td className="px-4 py-3" title={row.intent}>
+                    <span className={cn(
+                      'inline-block rounded-md px-2 py-0.5 text-xs font-medium',
+                      row.intent === 'Informational' && 'bg-info/[0.1] text-info',
+                      row.intent === 'Commercial' && 'bg-warning/[0.1] text-warning',
+                      row.intent === 'Transactional' && 'bg-success/[0.1] text-success',
+                      row.intent === 'Navigational' && 'bg-accent/[0.1] text-accent',
+                    )}>
+                      {row.intent}
+                    </span>
                   </td>
-                  <td className="max-w-[170px] px-4 py-3" title={row.primaryKeyword}>
+                  <td className="max-w-[170px] truncate px-4 py-3 font-medium" title={row.primaryKeyword}>
                     {row.primaryKeyword}
                   </td>
-                  <td className="max-w-[250px] px-4 py-3 text-text-secondary" title={row.keywords.join(', ')}>
+                  <td className="max-w-[250px] truncate px-4 py-3 text-text-secondary" title={row.keywords.join(', ')}>
                     {row.keywords.join(', ')}
                   </td>
                 </tr>
@@ -546,7 +631,7 @@ function RunLogs({
 }) {
   if (!entries.length) {
     return (
-      <Alert variant="info" title="Log stream waiting">
+      <Alert variant="info" title="Waiting for logs">
         Logs will stream here as the worker advances through crawl, analysis, generation, and export stages.
       </Alert>
     );
@@ -555,7 +640,7 @@ function RunLogs({
   const lastEntry = entries[entries.length - 1];
 
   return (
-    <div className="space-y-3">
+    <div className="max-h-[400px] space-y-2.5 overflow-y-auto pr-1">
       {entries.map((entry) => (
         <div
           key={entry.id}
@@ -563,10 +648,10 @@ function RunLogs({
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-text-primary">
-              {status === 'processing' && entry === lastEntry ? <Loader2 className="h-4 w-4 animate-spin text-info" /> : <Search className="h-4 w-4 text-accent" />}
+              {status === 'processing' && entry === lastEntry ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-info" /> : <Search className="h-4 w-4 shrink-0 text-accent" />}
               <span className="truncate">{entry.message}</span>
             </div>
-            <span className="text-xs text-text-muted">{formatRelativeLabel(entry.createdAt)}</span>
+            <span className="shrink-0 text-xs text-text-muted">{formatRelativeLabel(entry.createdAt)}</span>
           </div>
           <p className="mt-1.5 eyebrow">{entry.stage}</p>
         </div>

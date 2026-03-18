@@ -275,7 +275,7 @@
   }
 
   .field-textarea {
-    @apply field-input min-h-[136px] resize-y;
+    @apply field-input min-h-[120px] resize-y leading-6;
   }
 
   .field-select {
