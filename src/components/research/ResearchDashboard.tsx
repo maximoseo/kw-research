@@ -554,12 +554,12 @@ function PreviewTable({
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border/70 bg-surface-raised/55">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3 text-sm">
-        <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3">
+        <div className="flex items-center gap-2 text-body font-medium text-text-primary">
           <TableProperties className="h-4 w-4 text-accent" />
           Output preview
         </div>
-        <span className="text-xs text-text-muted">
+        <span className="text-caption text-text-muted">
           Showing {Math.min(previewRows.length, 50)} of {rowCount} rows
         </span>
       </div>
@@ -567,19 +567,19 @@ function PreviewTable({
         {!previewRows.length ? (
           <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
             <TableProperties className="h-8 w-8 text-text-muted/50 mb-3" />
-            <p className="text-sm font-medium text-text-primary">
+            <p className="text-body font-medium text-text-primary">
               {status === 'completed' ? 'No preview rows were stored.' : 'Waiting for results'}
             </p>
-            <p className="mt-1 text-xs text-text-muted">
+            <p className="mt-1 text-caption text-text-muted">
               {status === 'completed' ? '' : 'Preview will appear once the run reaches the generation phase.'}
             </p>
           </div>
         ) : (
-          <table className="min-w-full text-left text-sm">
+          <table className="min-w-full text-left">
             <thead className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_hsl(var(--border)/0.7)]">
               <tr className="text-text-muted">
                 {['Existing Parent Page', 'Pillar', 'Cluster', 'Intent', 'Primary Keyword', 'Volume', 'CPC', 'Keywords'].map((label) => (
-                  <th key={label} className="px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+                  <th key={label} className="px-4 py-3 text-caption font-semibold uppercase tracking-wider whitespace-nowrap">
                     {label}
                   </th>
                 ))}
@@ -588,18 +588,18 @@ function PreviewTable({
             <tbody className="divide-y divide-border/40">
               {previewRows.map((row, index) => (
                 <tr key={`${row.cluster}-${index}`} className={cn('align-top transition-colors hover:bg-accent/[0.03]', index % 2 === 1 && 'bg-surface-raised/30')}>
-                  <td className="max-w-[220px] truncate px-4 py-3 text-text-secondary" title={row.existingParentPage}>
+                  <td className="max-w-[220px] truncate px-4 py-3 text-body text-text-secondary" title={row.existingParentPage}>
                     {row.existingParentPage}
                   </td>
-                  <td className="max-w-[170px] truncate px-4 py-3 font-medium" title={row.pillar}>
+                  <td className="max-w-[170px] truncate px-4 py-3 font-medium text-body" title={row.pillar}>
                     {row.pillar}
                   </td>
-                  <td className="max-w-[170px] truncate px-4 py-3" title={row.cluster}>
+                  <td className="max-w-[170px] truncate px-4 py-3 text-body text-text-secondary" title={row.cluster}>
                     {row.cluster}
                   </td>
                   <td className="px-4 py-3" title={row.intent}>
                     <span className={cn(
-                      'inline-block rounded-md px-2 py-0.5 text-xs font-medium',
+                      'inline-block rounded-md px-2 py-0.5 text-caption font-medium',
                       row.intent === 'Informational' && 'bg-info/[0.1] text-info',
                       row.intent === 'Commercial' && 'bg-warning/[0.1] text-warning',
                       row.intent === 'Transactional' && 'bg-success/[0.1] text-success',
@@ -608,16 +608,16 @@ function PreviewTable({
                       {row.intent}
                     </span>
                   </td>
-                  <td className="max-w-[170px] truncate px-4 py-3 font-medium" title={row.primaryKeyword}>
+                  <td className="max-w-[170px] truncate px-4 py-3 font-medium text-body" title={row.primaryKeyword}>
                     {row.primaryKeyword}
                   </td>
-                  <td className="px-4 py-3 text-center font-mono text-sm text-text-secondary" title={row.searchVolume != null ? String(row.searchVolume) : 'N/A'}>
+                  <td className="px-4 py-3 text-center font-mono text-body text-text-secondary" title={row.searchVolume != null ? String(row.searchVolume) : 'N/A'}>
                     {row.searchVolume != null ? row.searchVolume.toLocaleString() : '-'}
                   </td>
-                  <td className="px-4 py-3 text-center font-mono text-sm text-text-secondary" title={row.cpc != null ? String(row.cpc) : 'N/A'}>
+                  <td className="px-4 py-3 text-center font-mono text-body text-text-secondary" title={row.cpc != null ? String(row.cpc) : 'N/A'}>
                     {row.cpc != null ? `$${row.cpc.toFixed(2)}` : '-'}
                   </td>
-                  <td className="max-w-[220px] truncate px-4 py-3 text-text-secondary" title={row.keywords.join(', ')}>
+                  <td className="max-w-[220px] truncate px-4 py-3 text-body text-text-secondary" title={row.keywords.join(', ')}>
                     {row.keywords.join(', ')}
                   </td>
                 </tr>
@@ -704,10 +704,10 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
         <div className="rounded-xl border border-border/70 bg-surface-raised/55 p-5">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="h-4 w-4 text-accent" />
-            <h3 className="text-base font-semibold text-text-primary">{String(executiveSummary.title ?? 'Keyword Research Report')}</h3>
+            <h3 className="text-heading-3 text-text-primary">{String(executiveSummary.title ?? 'Keyword Research Report')}</h3>
           </div>
-          <p className="text-sm text-text-secondary">{String(executiveSummary.subtitle ?? '')}</p>
-          <div className="mt-3 flex flex-wrap gap-4 text-xs text-text-muted">
+          <p className="text-body text-text-secondary">{String(executiveSummary.subtitle ?? '')}</p>
+          <div className="mt-3 flex flex-wrap gap-4 text-caption text-text-muted">
             <span>{String(executiveSummary.brandName ?? '')}</span>
             <span>·</span>
             <span>{String(executiveSummary.language ?? '')} · {String(executiveSummary.market ?? '')}</span>
@@ -725,29 +725,29 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
             <p className="text-2xl font-bold text-accent tabular-nums">
               {totalVolume != null ? totalVolume.toLocaleString() : '-'}
             </p>
-            <p className="mt-1 text-xs text-text-muted">Total Monthly Volume</p>
-            {highestVolKw && <p className="mt-1 text-xs text-text-secondary truncate" title={highestVolKw}>Top: {highestVolKw}</p>}
+            <p className="mt-1 text-caption text-text-muted">Total Monthly Volume</p>
+            {highestVolKw &&             <p className="mt-1 text-caption text-text-secondary truncate" title={highestVolKw}>Top: {highestVolKw}</p>}
           </Card>
           <Card className="p-4 text-center">
             <p className="text-2xl font-bold text-accent tabular-nums">
               {avgCpc != null ? `$${avgCpc.toFixed(2)}` : '-'}
             </p>
-            <p className="mt-1 text-xs text-text-muted">Average CPC</p>
-            {highestCpcKw && <p className="mt-1 text-xs text-text-secondary truncate" title={highestCpcKw}>Top: {highestCpcKw}</p>}
+            <p className="mt-1 text-caption text-text-muted">Average CPC</p>
+            {highestCpcKw && <p className="mt-1 text-caption text-text-secondary truncate" title={highestCpcKw}>Top: {highestCpcKw}</p>}
           </Card>
           <Card className="p-4 text-center">
             <p className="text-2xl font-bold text-accent tabular-nums">
               {highVolumeCount > 0 ? highVolumeCount : '-'}
             </p>
-            <p className="mt-1 text-xs text-text-muted">High-Volume Keywords</p>
-            <p className="mt-1 text-xs text-text-secondary">&gt;1K monthly searches</p>
+            <p className="mt-1 text-caption text-text-muted">High-Volume Keywords</p>
+            <p className="mt-1 text-caption text-text-secondary">&gt;1K monthly searches</p>
           </Card>
           <Card className="p-4 text-center">
             <p className="text-2xl font-bold text-accent tabular-nums">
               {mainKeywordsTable.length}
             </p>
-            <p className="mt-1 text-xs text-text-muted">Tracked Keywords</p>
-            <p className="mt-1 text-xs text-text-secondary">with real volume &amp; CPC</p>
+            <p className="mt-1 text-caption text-text-muted">Tracked Keywords</p>
+            <p className="mt-1 text-caption text-text-secondary">with real volume &amp; CPC</p>
           </Card>
         </div>
       )}
@@ -755,18 +755,18 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
       {mainKeywordsTable.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-border/70 bg-surface-raised/55">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+            <div className="flex items-center gap-2 text-body font-semibold text-text-primary">
               <TableProperties className="h-4 w-4 text-accent" />
               Main Keywords — Volume &amp; CPC
             </div>
-            <span className="text-xs text-text-muted">{mainKeywordsTable.length} keywords</span>
+            <span className="text-caption text-text-muted">{mainKeywordsTable.length} keywords</span>
           </div>
           <div className="max-h-[400px] overflow-x-auto overflow-y-auto">
-            <table className="min-w-full text-left text-sm">
+            <table className="min-w-full text-left">
               <thead className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_hsl(var(--border)/0.7)]">
                 <tr className="text-text-muted">
                   {['Keyword', 'Volume', 'CPC', 'Intent', 'Pillar', 'Priority'].map((label) => (
-                    <th key={label} className="px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+                    <th key={label} className="px-4 py-3 text-caption font-semibold uppercase tracking-wider whitespace-nowrap">
                       {label}
                     </th>
                   ))}
@@ -778,15 +778,15 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
                     <td className="px-4 py-3 font-medium text-text-primary" title={String(row.keyword ?? '')}>
                       {String(row.keyword ?? '')}
                     </td>
-                    <td className="px-4 py-3 font-mono text-sm text-text-secondary tabular-nums">
+                    <td className="px-4 py-3 font-mono text-body text-text-secondary tabular-nums">
                       {row.searchVolume != null ? Number(row.searchVolume).toLocaleString() : '-'}
                     </td>
-                    <td className="px-4 py-3 font-mono text-sm text-text-secondary tabular-nums">
+                    <td className="px-4 py-3 font-mono text-body text-text-secondary tabular-nums">
                       {row.cpc != null ? `$${Number(row.cpc).toFixed(2)}` : '-'}
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn(
-                        'inline-block rounded-md px-2 py-0.5 text-xs font-medium',
+                        'inline-block rounded-md px-2 py-0.5 text-caption font-medium',
                         String(row.intent) === 'Informational' && 'bg-info/[0.1] text-info',
                         String(row.intent) === 'Commercial' && 'bg-warning/[0.1] text-warning',
                         String(row.intent) === 'Transactional' && 'bg-success/[0.1] text-success',
@@ -795,12 +795,12 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
                         {String(row.intent ?? '')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-text-secondary text-sm max-w-[140px] truncate" title={String(row.pillar ?? '')}>
+                    <td className="px-4 py-3 text-text-secondary text-body max-w-[140px] truncate" title={String(row.pillar ?? '')}>
                       {String(row.pillar ?? '')}
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn(
-                        'inline-block rounded-md px-2 py-0.5 text-xs font-medium',
+                        'inline-block rounded-md px-2 py-0.5 text-caption font-medium',
                         String(row.priority) === 'high' && 'bg-success/[0.1] text-success',
                         String(row.priority) === 'medium' && 'bg-warning/[0.1] text-warning',
                         String(row.priority) === 'low' && 'bg-text-muted/[0.1] text-text-muted',
@@ -818,10 +818,10 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
 
       {keyInsights.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-text-primary">Key Insights</h4>
+          <h4 className="text-body font-semibold text-text-primary">Key Insights</h4>
           <ul className="space-y-1.5">
             {keyInsights.slice(0, 6).map((insight, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-text-secondary">
+              <li key={i} className="flex items-start gap-2 text-body text-text-secondary">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                 {insight}
               </li>
@@ -832,10 +832,10 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
 
       {contentStrategy && (contentStrategy.topOpportunities as Array<SynthesisSnapshot>)?.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-text-primary">Top Opportunities</h4>
+          <h4 className="text-body font-semibold text-text-primary">Top Opportunities</h4>
           <ul className="space-y-1.5">
             {(contentStrategy.topOpportunities as Array<SynthesisSnapshot>).slice(0, 5).map((opp, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-text-secondary">
+              <li key={i} className="flex items-start gap-2 text-body text-text-secondary">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
                 <span className="font-medium text-text-primary">{String(opp.keyword ?? '')}</span>
                 <span>— {String(opp.rationale ?? '')}</span>
