@@ -7,6 +7,8 @@ const HEADER_ORDER = [
   'Cluster',
   'Intent',
   'Primary Keyword',
+  'Search Volume',
+  'Est. CPC (USD)',
   'Keywords',
 ] as const;
 
@@ -75,15 +77,17 @@ export async function buildWorkbook(params: {
 
   worksheet.columns = [
     { header: HEADER_ORDER[0], key: 'existingParentPage', width: 30 },
-    { header: HEADER_ORDER[1], key: 'pillar', width: 28 },
-    { header: HEADER_ORDER[2], key: 'cluster', width: 34 },
-    { header: HEADER_ORDER[3], key: 'intent', width: 18 },
+    { header: HEADER_ORDER[1], key: 'pillar', width: 26 },
+    { header: HEADER_ORDER[2], key: 'cluster', width: 32 },
+    { header: HEADER_ORDER[3], key: 'intent', width: 16 },
     { header: HEADER_ORDER[4], key: 'primaryKeyword', width: 28 },
-    { header: HEADER_ORDER[5], key: 'keywords', width: 52 },
+    { header: HEADER_ORDER[5], key: 'searchVolume', width: 16 },
+    { header: HEADER_ORDER[6], key: 'cpc', width: 16 },
+    { header: HEADER_ORDER[7], key: 'keywords', width: 48 },
   ];
 
   const headerRow = worksheet.getRow(1);
-  headerRow.height = 28;
+  headerRow.height = 36;
   headerRow.eachCell(buildHeaderStyle);
 
   let currentPillar = '';
@@ -103,8 +107,20 @@ export async function buildWorkbook(params: {
       cluster: row.cluster,
       intent: row.intent,
       primaryKeyword: row.primaryKeyword,
+      searchVolume: row.searchVolume ?? null,
+      cpc: row.cpc ?? null,
       keywords: row.keywords.join(', '),
     });
+
+    const volumeCell = worksheetRow.getCell(6);
+    if (row.searchVolume != null) {
+      volumeCell.numFmt = '#,##0';
+    }
+
+    const cpcCell = worksheetRow.getCell(7);
+    if (row.cpc != null) {
+      cpcCell.numFmt = '"$"#,##0.00';
+    }
 
     applyRowStyle(worksheetRow, groupColor);
 
@@ -129,7 +145,7 @@ export async function buildWorkbook(params: {
 
   worksheet.autoFilter = {
     from: 'A1',
-    to: `F${worksheet.rowCount}`,
+    to: `H${worksheet.rowCount}`,
   };
 
   const buffer = Buffer.from(await workbook.xlsx.writeBuffer());

@@ -58,6 +58,7 @@ export const researchRuns = sqliteTable('research_runs', {
   inputSnapshot: text('input_snapshot').notNull(),
   siteSnapshot: text('site_snapshot'),
   competitorSnapshot: text('competitor_snapshot'),
+  synthesisSnapshot: text('synthesis_snapshot'),
   uploadedFileId: text('uploaded_file_id').references(() => uploadedFiles.id, { onDelete: 'set null' }),
   resultRows: text('result_rows'),
   resultSummary: text('result_summary'),

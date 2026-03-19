@@ -139,7 +139,7 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
                         : 'Upcoming'}
                 </span>
               </div>
-              <p className="mt-4 text-base font-semibold text-text-primary break-words">{step.label}</p>
+              <p className="mt-4 text-base font-semibold text-text-primary leading-snug line-clamp-2">{step.label}</p>
               <p className="mt-2 text-sm leading-6 text-text-secondary line-clamp-3">{step.description}</p>
             </div>
           );

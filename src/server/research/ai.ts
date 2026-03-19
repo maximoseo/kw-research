@@ -3,6 +3,8 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { getAiMaxRetries, getAiRequestTimeoutMs, getConfiguredModels } from '@/lib/env';
 
+export type ModelTier = 'opus' | 'sonnet' | 'haiku' | 'openai-fast' | 'openai-mini';
+
 function extractJsonPayload(content: string) {
   const fenced = content.match(/```json\s*([\s\S]*?)```/i);
   if (fenced?.[1]) {
@@ -25,11 +27,17 @@ function parseJsonWithSchema<T>(content: string, schema: z.ZodSchema<T>) {
   return schema.parse(JSON.parse(extracted));
 }
 
-function buildAnthropicCandidates() {
+function buildAnthropicCandidates(tier?: ModelTier) {
   const { anthropicModel } = getConfiguredModels();
-  return anthropicModel
-    ? [anthropicModel]
-    : ['claude-opus-4-1-20250805', 'claude-3-7-sonnet-latest'];
+  if (anthropicModel) {
+    return [anthropicModel];
+  }
+  switch (tier) {
+    case 'opus': return ['claude-opus-4-1-20250805'];
+    case 'sonnet': return ['claude-3-7-sonnet-latest', 'claude-opus-4-1-20250805'];
+    case 'haiku': return ['claude-3-5-haiku-latest', 'claude-3-7-sonnet-latest'];
+    default: return ['claude-opus-4-1-20250805', 'claude-3-7-sonnet-latest'];
+  }
 }
 
 async function callAnthropic<T>(params: {
@@ -37,6 +45,7 @@ async function callAnthropic<T>(params: {
   system: string;
   prompt: string;
   maxTokens?: number;
+  modelTier?: ModelTier;
 }) {
   const { anthropicApiKey } = getConfiguredModels();
   if (!anthropicApiKey) {
@@ -50,7 +59,8 @@ async function callAnthropic<T>(params: {
   });
 
   let lastError: Error | null = null;
-  for (const model of buildAnthropicCandidates()) {
+  const candidates = buildAnthropicCandidates(params.modelTier);
+  for (const model of candidates) {
     for (let attempt = 0; attempt <= getAiMaxRetries(); attempt += 1) {
       try {
         const response = await client.messages.create({
@@ -97,11 +107,12 @@ async function callOpenAi<T>(params: {
     maxRetries: getAiMaxRetries(),
   });
 
+  const isGpt5 = openAiModel.startsWith('gpt-5');
   const response = await client.chat.completions.create({
     model: openAiModel,
     temperature: 0.3,
     response_format: { type: 'json_object' },
-    ...(openAiModel.startsWith('gpt-5')
+    ...(isGpt5
       ? { max_completion_tokens: params.maxTokens ?? 4096 }
       : { max_tokens: params.maxTokens ?? 4096 }),
     messages: [
@@ -123,6 +134,7 @@ export async function callAiJson<T>(params: {
   system: string;
   prompt: string;
   maxTokens?: number;
+  modelTier?: ModelTier;
 }) {
   try {
     const anthropicResult = await callAnthropic(params);

@@ -5,6 +5,7 @@ import { sanitizeFilenameSegment } from '@/lib/utils';
 import { writeManagedReport } from '@/server/files/storage';
 import { getCrawlLimits } from '@/lib/env';
 import { callAiJson } from './ai';
+import { fetchBulkKeywordMetrics } from './keyword-metrics';
 import { discoverCompetitors, type CompetitorCandidate } from './competitors';
 import {
   buildExistingContentMap,
@@ -26,6 +27,7 @@ import {
   jaccardSimilarity,
 } from './utils';
 import { buildWorkbook } from './workbook';
+import { callSwarmAgent, planSwarmExecution, selectModelForTask, synthesizeAgentResults, synthesizeReport, type AgentResult } from './agents';
 
 const siteUnderstandingSchema = z.object({
   businessSummary: z.string(),
@@ -78,6 +80,8 @@ const clusterSchema = z.object({
         primaryKeyword: z.string(),
         supportingKeywords: z.array(z.string()).min(3).max(8),
         rationale: z.string(),
+        searchVolume: z.number().nullable().optional(),
+        cpc: z.number().nullable().optional(),
       }),
     )
     .min(1),
@@ -94,12 +98,39 @@ export type CompetitorSuggestion = CompetitorCandidate & {
 };
 type MaybePromise<T> = T | Promise<T>;
 
-function clip(value: string, limit: number) {
-  return value.length <= limit ? value : `${value.slice(0, limit)}...`;
+interface ResolveWithAiFallbackParams<T, TStage extends 'analysis' | 'competitors' | 'pillars' | 'clusters'> {
+  stage: TStage;
+  aiState: AiAvailabilityState;
+  task: () => Promise<T>;
+  fallback: () => T;
+  onFallback?: (stage: TStage, error: unknown) => MaybePromise<void>;
+  modelTier?: 'opus' | 'sonnet' | 'haiku' | 'openai-fast' | 'openai-mini';
+}
+
+async function resolveWithAiFallback<T, TStage extends 'analysis' | 'competitors' | 'pillars' | 'clusters'>(params: ResolveWithAiFallbackParams<T, TStage>): Promise<T> {
+  if (!params.aiState.enabled) {
+    return params.fallback();
+  }
+
+  try {
+    return await params.task();
+  } catch (error) {
+    params.aiState.enabled = false;
+    await params.onFallback?.(params.stage, error);
+    return params.fallback();
+  }
 }
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function clip(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return value.slice(0, maxLength - 3) + '...';
 }
 
 function buildParentUrl(baseUrl: string, slugPath: string) {
@@ -538,26 +569,6 @@ function keepPageSnapshot(value: PageSnapshot | null): value is PageSnapshot {
   return value !== null;
 }
 
-async function resolveWithAiFallback<T, TStage extends 'analysis' | 'competitors' | 'pillars' | 'clusters'>(params: {
-  stage: TStage;
-  aiState: AiAvailabilityState;
-  task: () => Promise<T>;
-  fallback: () => T;
-  onFallback?: (stage: TStage, error: unknown) => MaybePromise<void>;
-}) {
-  if (!params.aiState.enabled) {
-    return params.fallback();
-  }
-
-  try {
-    return await params.task();
-  } catch (error) {
-    params.aiState.enabled = false;
-    await params.onFallback?.(params.stage, error);
-    return params.fallback();
-  }
-}
-
 function normalizeCandidateDomain(url: string, fallback = '') {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
@@ -697,6 +708,7 @@ async function buildSiteUnderstanding(
         competitorQueries: 'array of search queries that would surface relevant competitors',
       },
     }),
+    modelTier: 'opus',
   });
   return siteUnderstandingSchema.parse(response);
 }
@@ -741,6 +753,7 @@ async function buildCompetitorIntelligence(params: {
         opportunityThemes: ['gaps or themes worth considering'],
       },
     }),
+    modelTier: 'sonnet',
   });
   return competitorIntelligenceSchema.parse(response);
 }
@@ -839,6 +852,7 @@ async function generatePillars(params: {
   competitorIntelligence: CompetitorIntelligence;
   existingTopics: string[];
   desiredCount: number;
+  modelTier?: 'opus' | 'sonnet' | 'haiku' | 'openai-fast' | 'openai-mini';
 }): Promise<z.output<typeof pillarSchema>> {
   const response = await callAiJson({
     schema: pillarSchema,
@@ -879,60 +893,101 @@ async function generatePillars(params: {
       },
     }),
     maxTokens: 5000,
+    modelTier: params.modelTier ?? 'sonnet',
   });
   return pillarSchema.parse(response);
 }
 
-async function generateClusters(params: {
+async function runSwarmClusterGeneration(params: {
   input: ResearchInputSnapshot;
   siteUnderstanding: SiteUnderstanding;
   existingTopics: string[];
-  pillar: PillarCandidate;
-  siblingPillars: PillarCandidate[];
-  desiredCount: number;
-}): Promise<z.output<typeof clusterSchema>> {
-  const response = await callAiJson({
-    schema: clusterSchema,
-    system:
-      'You design non-overlapping SEO clusters. Each cluster must have a unique angle, distinct primary keyword, and supporting keywords that do not mirror the parent pillar or sibling clusters too closely.',
-    prompt: JSON.stringify({
-      task: `Generate ${params.desiredCount} clusters for the supplied pillar.`,
-      language: params.input.language,
-      market: params.input.market,
-      brandName: params.input.brandName,
-      mode: params.input.mode,
-      existingResearchSummary: params.input.existingResearchSummary,
-      businessSummary: params.siteUnderstanding.businessSummary,
-      offerings: params.siteUnderstanding.offerings,
-      audiences: params.siteUnderstanding.audiences,
-      existingTopics: params.existingTopics.slice(0, 80),
-      pillar: params.pillar,
-      siblingPillars: params.siblingPillars.map((pillar) => ({
-        title: pillar.title,
-        primaryKeyword: pillar.primaryKeyword,
-      })),
-      rules: [
-        'Clusters must be clearly subordinate to the parent pillar.',
-        'Avoid repeating the pillar primary keyword set too closely.',
-        'Avoid near-duplicate supporting keywords across siblings.',
-        'Use real search phrasing that people would type.',
-        'Do not propose content already clearly covered on the existing site or in the uploaded research.',
-      ],
-      outputContract: {
-        clusters: [
-          {
-            title: 'Cluster title',
-            intent: 'Informational | Commercial | Transactional | Navigational',
-            primaryKeyword: 'cluster primary keyword',
-            supportingKeywords: ['3-8 supporting keywords'],
-            rationale: 'why this cluster is distinct',
-          },
-        ],
-      },
+  pillars: PillarCandidate[];
+  desiredClustersPerPillar: number;
+  maxParallel?: number;
+}): Promise<Array<PillarCandidate & { clusters: ClusterCandidate[] }>> {
+  const limit = pLimit(params.maxParallel ?? 3);
+  const modelTier = selectModelForTask('medium');
+
+  const swarmTasks = params.pillars.map((pillar) =>
+    limit(async () => {
+      const taskId = `cluster-${pillar.title.replace(/\s+/g, '-').slice(0, 20)}`;
+
+      const agentResult = await callSwarmAgent({
+        agentId: taskId,
+        agentRole: 'Cluster Generation Agent',
+        phaseLabel: 'Cluster Generation',
+        taskLabel: `Generate ${params.desiredClustersPerPillar} clusters for pillar: ${pillar.title}`,
+        input: {
+          language: params.input.language,
+          market: params.input.market,
+          brandName: params.input.brandName,
+          mode: params.input.mode,
+          existingResearchSummary: params.input.existingResearchSummary,
+          businessSummary: params.siteUnderstanding.businessSummary,
+          offerings: params.siteUnderstanding.offerings,
+          audiences: params.siteUnderstanding.audiences,
+          existingTopics: params.existingTopics.slice(0, 80),
+          pillar,
+          siblingPillars: params.pillars.filter((p) => p.title !== pillar.title).map((p) => ({
+            title: p.title,
+            primaryKeyword: p.primaryKeyword,
+          })),
+          desiredCount: params.desiredClustersPerPillar + 2,
+        },
+        outputContract: {
+          clusters: [
+            {
+              title: 'Cluster title',
+              intent: 'Informational | Commercial | Transactional | Navigational',
+              primaryKeyword: 'cluster primary keyword',
+              supportingKeywords: ['3-8 supporting keywords'],
+              rationale: 'why this cluster is distinct',
+              searchVolume: 'estimated monthly search volume (integer) or null if unavailable',
+              cpc: 'estimated cost-per-click in USD or null if unavailable',
+            },
+          ],
+        },
+        modelTier,
+        maxTokens: 4500,
+      });
+
+      if (agentResult.status === 'error' || !agentResult.output) {
+        const fallback = buildClusterCandidatesFallback({
+          input: params.input,
+          pillar,
+          desiredCount: params.desiredClustersPerPillar + 2,
+        });
+        return {
+          ...pillar,
+          clusters: fallback.slice(0, params.desiredClustersPerPillar),
+        } as PillarCandidate & { clusters: ClusterCandidate[] };
+      }
+
+      const rawClusters = (agentResult.output.clusters as ClusterCandidate[]) ?? [];
+      const filteredClusters = rawClusters.filter(
+        (cluster, index, all) =>
+          !overlapWithExisting(cluster, params.existingTopics) &&
+          jaccardSimilarity(cluster.primaryKeyword, pillar.primaryKeyword) < 0.85 &&
+          all.findIndex((entry) => entry.title.toLowerCase() === cluster.title.toLowerCase()) === index,
+      );
+
+      return {
+        ...pillar,
+        clusters: filteredClusters.slice(0, params.desiredClustersPerPillar),
+      } as PillarCandidate & { clusters: ClusterCandidate[] };
     }),
-    maxTokens: 4500,
-  });
-  return clusterSchema.parse(response);
+  );
+
+  const results = await Promise.allSettled(swarmTasks);
+  const pillarBundles: Array<PillarCandidate & { clusters: ClusterCandidate[] }> = [];
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      pillarBundles.push(result.value);
+    }
+  }
+
+  return pillarBundles;
 }
 
 function buildRows(params: {
@@ -969,6 +1024,8 @@ function buildRows(params: {
         rowType: 'cluster',
         slugPath,
         notes: [cluster.rationale],
+        searchVolume: cluster.searchVolume ?? null,
+        cpc: cluster.cpc ?? null,
       });
     }
   }
@@ -1050,6 +1107,7 @@ export async function runResearchPipeline(params: {
         competitorIntelligence,
         existingTopics,
         desiredCount: desiredPillarCount + 3,
+        modelTier: 'sonnet',
       }),
     fallback: () => ({
       pillars: buildPillarCandidatesFallback({
@@ -1083,57 +1141,45 @@ export async function runResearchPipeline(params: {
 
   const pillarBundles: Array<PillarCandidate & { clusters: ClusterCandidate[] }> = [];
 
-  for (const pillar of pillars) {
-    await log(runId, 'clusters', `Generating clusters for ${pillar.title}`);
-    const generated = await resolveWithAiFallback({
-      stage: 'clusters',
-      aiState,
-      task: () =>
-        generateClusters({
-          input,
-          siteUnderstanding,
-          existingTopics,
-          pillar,
-          siblingPillars: pillars.filter((entry) => entry.title !== pillar.title),
-          desiredCount: desiredClustersPerPillar + 2,
-        }),
-      fallback: () => ({
-        clusters: buildClusterCandidatesFallback({
-          input,
-          pillar,
-          desiredCount: desiredClustersPerPillar + 2,
-        }),
-      }),
-      onFallback: async (stage, error) => {
-        await addResearchLog({
-          runId,
-          stage,
-          level: 'warning',
-          message: 'AI generation failed. Switching to deterministic research fallback.',
-          metadata: {
-            reason: error instanceof Error ? error.message : 'Unknown AI error',
-          },
-        });
-      },
-    });
+  await log(runId, 'clusters', `Generating clusters for ${pillars.length} pillars using swarm orchestration`);
+  const swarmBundles = await runSwarmClusterGeneration({
+    input,
+    siteUnderstanding,
+    existingTopics,
+    pillars,
+    desiredClustersPerPillar: desiredClustersPerPillar,
+    maxParallel: 3,
+  });
 
-    const filteredClusters = generated.clusters.filter(
-      (cluster, index, all) =>
-        !overlapWithExisting(cluster, existingTopics) &&
-        jaccardSimilarity(cluster.primaryKeyword, pillar.primaryKeyword) < 0.85 &&
-        all.findIndex((entry) => entry.title.toLowerCase() === cluster.title.toLowerCase()) === index,
-    );
+  for (const bundle of swarmBundles) {
+    pillarBundles.push(bundle);
+  }
 
-    pillarBundles.push({
-      ...pillar,
-      clusters: filteredClusters.slice(0, desiredClustersPerPillar),
-    });
+  if (!pillarBundles.length) {
+    throw new Error('All cluster generation tasks failed.');
   }
 
   const rawRows = buildRows({
     input,
     pillars: pillarBundles,
   });
+
+  await log(runId, 'metrics', 'Enriching keyword metrics from real data sources');
+
+  const primaryKeywords = dedupeStrings(rawRows.map((row) => row.primaryKeyword));
+  const metricsMap = await fetchBulkKeywordMetrics({
+    keywords: primaryKeywords,
+    language: input.language,
+    market: input.market,
+  });
+
+  for (const row of rawRows) {
+    const metrics = metricsMap.get(row.primaryKeyword);
+    if (metrics) {
+      row.searchVolume = metrics.searchVolume;
+      row.cpc = metrics.cpc;
+    }
+  }
 
   await log(runId, 'qa', 'Validating and normalizing generated rows');
   const normalized = validateAndNormalizeRows(rawRows, input.brandName);
@@ -1146,6 +1192,14 @@ export async function runResearchPipeline(params: {
       metadata: { issues: normalized.issues.slice(0, 20) },
     });
   }
+
+  await log(runId, 'synthesis', 'Generating premium report synthesis');
+  const synthesis = await synthesizeReport({
+    input,
+    rows: normalized.rows,
+    pillarCount: pillarBundles.length,
+    clusterCount: normalized.rows.filter((r) => r.rowType === 'cluster').length,
+  });
 
   await log(runId, 'export', 'Building the Excel workbook');
   const workbookBuffer = await buildWorkbook({
@@ -1168,6 +1222,7 @@ export async function runResearchPipeline(params: {
     workbookCheck,
     qaIssues: normalized.issues,
     aiUsed: aiState.enabled,
+    metricsApplied: true,
   };
 
   await attachWorkbookToRun(runId, {
@@ -1188,6 +1243,7 @@ export async function runResearchPipeline(params: {
       suggestedCompetitors,
       competitorIntelligence,
     }),
+    synthesisSnapshot: JSON.stringify(synthesis),
   });
 
   await addResearchLog({

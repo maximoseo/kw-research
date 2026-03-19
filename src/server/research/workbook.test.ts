@@ -64,7 +64,7 @@ describe('buildWorkbook', () => {
     const linkedCell = worksheet.getRow(3).getCell(1).value as ExcelJS.CellHyperlinkValue;
     expect(linkedCell.text).toBe('/water-filtration-systems/');
     expect(linkedCell.hyperlink).toBe('https://example.com/water-filtration-systems/');
-    expect(worksheet.autoFilter).toBe('A1:F3');
+    expect(worksheet.autoFilter).toBe('A1:H3');
   });
 
   it('sets worksheet direction to RTL for Hebrew output', async () => {

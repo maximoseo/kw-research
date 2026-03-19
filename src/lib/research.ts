@@ -28,6 +28,8 @@ export type ResearchRow = {
   rowType: 'pillar' | 'cluster';
   slugPath: string;
   notes?: string[];
+  searchVolume?: number | null;
+  cpc?: number | null;
 };
 
 export type UploadedResearchSummary = {
@@ -95,5 +97,6 @@ export type ResearchRunDetail = ResearchRunSummary & {
   siteSnapshot?: Record<string, unknown> | null;
   competitorSnapshot?: Record<string, unknown> | null;
   resultSummary?: Record<string, unknown> | null;
+  synthesisSnapshot?: Record<string, unknown> | null;
   uploadedFileId?: string | null;
 };

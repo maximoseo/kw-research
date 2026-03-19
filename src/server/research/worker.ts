@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { safeJsonParse } from '@/lib/utils';
 import { getRunnerPollIntervalMs, getRunnerStaleLockMs } from '@/lib/env';
-import { addResearchLog, claimNextQueuedRun, failRun, resetActiveRunLocks } from './repository';
+import { addResearchLog, claimNextQueuedRun, failRun } from './repository';
 import { runResearchPipeline } from './pipeline';
 import type { ResearchInputSnapshot } from '@/lib/research';
 
@@ -21,8 +21,6 @@ export function startResearchWorker() {
 
   global.__kwResearchWorkerStarted = true;
   const workerId = `worker-${randomUUID()}`;
-
-  void resetActiveRunLocks(workerId);
 
   const tick = async () => {
     const claimed = await claimNextQueuedRun({

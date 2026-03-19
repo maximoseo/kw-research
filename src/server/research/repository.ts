@@ -476,6 +476,7 @@ export async function getRunForUser(userId: string, runId: string): Promise<Rese
       resultRows: researchRuns.resultRows,
       siteSnapshot: researchRuns.siteSnapshot,
       competitorSnapshot: researchRuns.competitorSnapshot,
+      synthesisSnapshot: researchRuns.synthesisSnapshot,
       resultSummary: researchRuns.resultSummary,
       uploadedFileId: researchRuns.uploadedFileId,
     })
@@ -525,6 +526,7 @@ export async function getRunForUser(userId: string, runId: string): Promise<Rese
     logs,
     siteSnapshot: parseJson(run.siteSnapshot, null),
     competitorSnapshot: parseJson(run.competitorSnapshot, null),
+    synthesisSnapshot: parseJson(run.synthesisSnapshot, null),
     resultSummary: parseJson(run.resultSummary, null),
     uploadedFileId: run.uploadedFileId,
   };
@@ -637,6 +639,7 @@ export async function attachWorkbookToRun(runId: string, params: {
   summary: string;
   siteSnapshot: string;
   competitorSnapshot: string;
+  synthesisSnapshot?: string;
 }) {
   await db
     .update(researchRuns)
@@ -648,6 +651,7 @@ export async function attachWorkbookToRun(runId: string, params: {
       resultSummary: params.summary,
       siteSnapshot: params.siteSnapshot,
       competitorSnapshot: params.competitorSnapshot,
+      synthesisSnapshot: params.synthesisSnapshot ?? null,
       status: 'completed',
       step: 'Completed',
       completedAt: Date.now(),

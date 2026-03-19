@@ -145,7 +145,7 @@
     font-family: var(--font-body), var(--font-sans), sans-serif;
     color: hsl(var(--text-primary));
     min-height: 100vh;
-    overflow-x: clip;
+    overflow-x: hidden;
     overflow-wrap: break-word;
     word-break: break-word;
   }
@@ -284,6 +284,13 @@
     background-repeat: no-repeat;
     background-position: right 0.875rem center;
     background-size: 1rem;
+  }
+
+  [dir="rtl"] .field-select,
+  :where([dir="rtl"]) .field-select {
+    background-position: left 0.875rem center;
+    padding-right: 0.875rem;
+    padding-left: 2.5rem;
   }
 
   .subtle-divider {

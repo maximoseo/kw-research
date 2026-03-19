@@ -11,7 +11,7 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_MODEL: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_MODEL: z.string().default('gpt-5'),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
   SEARCH_USER_AGENT: z
     .string()
     .default('Mozilla/5.0 (compatible; MaximoSEOResearchBot/1.0; +https://maximo-seo.ai)'),
@@ -23,6 +23,7 @@ const envSchema = z.object({
   RUNNER_STALE_LOCK_MS: z.coerce.number().min(60_000).max(3_600_000).default(900_000),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  KEYWORDS_EVERYWHERE_API_KEY: z.string().optional(),
 });
 
 const env = envSchema.parse(process.env);
@@ -103,4 +104,8 @@ export function getGoogleClientSecret() {
 
 export function isGoogleOAuthConfigured() {
   return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+}
+
+export function getKeywordsEverywhereApiKey() {
+  return env.KEYWORDS_EVERYWHERE_API_KEY;
 }
