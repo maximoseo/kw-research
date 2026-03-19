@@ -29,7 +29,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-transparent">
-      <aside className="hidden w-[280px] shrink-0 flex-col border-r border-border/60 bg-sidebar-bg/94 px-4 py-5 text-sidebar-text xl:flex">
+      <aside className="hidden w-[280px] shrink-0 flex-col border-r border-accent/[0.08] bg-sidebar-bg/96 px-4 py-5 text-sidebar-text xl:flex">
         <Card padding="md" variant="hero" className="border-accent/14 bg-[linear-gradient(180deg,hsl(var(--surface))/0.18,hsl(var(--accent))/0.08)] text-white">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -70,7 +70,7 @@ export function AppShell({
           </SidebarLink>
         </nav>
 
-        <div className="mt-auto rounded-xl border border-border/60 bg-surface-raised/[0.5] p-3.5 backdrop-blur">
+        <div className="mt-auto rounded-xl border border-accent/[0.10] bg-surface-raised/[0.5] p-3.5 backdrop-blur">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/15 bg-accent/10 text-xs font-semibold text-white">
               {user.displayName.slice(0, 1).toUpperCase()}
@@ -88,7 +88,7 @@ export function AppShell({
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-20 border-b border-border/60 bg-surface/92 backdrop-blur-xl">
+        <header className="sticky top-0 z-20 border-b border-accent/[0.08] bg-surface/94 backdrop-blur-xl">
           <div className="page-shell flex flex-col gap-3 px-4 py-3.5 sm:px-6 sm:py-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
@@ -102,7 +102,7 @@ export function AppShell({
                   {project.brandName} dashboard
                 </h1>
               </div>
-              <div className="stack-mobile md:justify-end">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center md:justify-end">
                 <Link href="/dashboard" className="w-full sm:w-auto">
                   <Button variant="secondary" size="sm" className="w-full sm:w-auto">Switch site</Button>
                 </Link>
@@ -118,10 +118,10 @@ export function AppShell({
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'whitespace-nowrap rounded-full border px-3.5 py-2 text-sm font-semibold transition-all',
+                    'whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-semibold transition-all',
                     item.active
-                      ? 'border-accent/26 bg-accent/[0.12] text-text-primary'
-                      : 'border-border/70 bg-surface-raised/[0.68] text-text-secondary hover:border-accent/18 hover:text-text-primary',
+                      ? 'border-accent/30 bg-accent/[0.14] text-accent shadow-[0_2px_8px_-2px_rgba(var(--accent-rgb),0.2)]'
+                      : 'border-accent/[0.08] bg-surface-raised/[0.68] text-text-secondary hover:border-accent/20 hover:text-text-primary',
                   )}
                 >
                   {item.label}

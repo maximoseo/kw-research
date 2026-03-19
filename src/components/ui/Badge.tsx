@@ -9,11 +9,11 @@ interface BadgeProps {
 }
 
 const variantStyles = {
-  success: 'border-success/25 bg-success/[0.14] text-success',
-  warning: 'border-warning/25 bg-warning/[0.14] text-warning',
-  error: 'border-destructive/25 bg-destructive/[0.14] text-destructive',
-  info: 'border-accent/25 bg-accent/[0.14] text-accent',
-  neutral: 'border-border/80 bg-surface-raised/70 text-text-secondary',
+  success: 'border-success/30 bg-success/[0.12] text-success shadow-[0_1px_4px_rgba(0,0,0,0.04)]',
+  warning: 'border-warning/30 bg-warning/[0.12] text-warning shadow-[0_1px_4px_rgba(0,0,0,0.04)]',
+  error: 'border-destructive/30 bg-destructive/[0.12] text-destructive shadow-[0_1px_4px_rgba(0,0,0,0.04)]',
+  info: 'border-accent/30 bg-accent/[0.12] text-accent shadow-[0_1px_4px_rgba(var(--accent-rgb),0.08)]',
+  neutral: 'border-accent/10 bg-surface-raised/70 text-text-secondary shadow-[0_1px_4px_rgba(0,0,0,0.04)]',
 };
 
 export default function Badge({ variant, children, pulse, dot = true, className = '' }: BadgeProps) {

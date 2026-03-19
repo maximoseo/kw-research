@@ -55,15 +55,15 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={cn(
-               'relative min-h-tap whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-semibold transition-all',
+               'relative min-h-tap whitespace-nowrap rounded-lg px-5 py-2.5 text-sm font-semibold transition-all',
                activeTab === tab.id
-                 ? 'bg-surface text-text-primary shadow-elevation-1 ring-1 ring-accent/18'
-                 : 'text-tab-inactive hover:bg-surface-raised/60 hover:text-text-primary',
+                 ? 'bg-accent/[0.12] text-accent shadow-[0_2px_8px_-2px_rgba(var(--accent-rgb),0.2)] ring-1 ring-accent/25'
+                 : 'text-tab-inactive hover:bg-accent/[0.05] hover:text-text-primary',
              )}
           >
             {tab.label}
             {tab.hasContent && (
-              <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-success inline-block" />
+              <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-accent inline-block" />
             )}
           </button>
         ))}

@@ -73,22 +73,22 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
       </div>
 
       <div className="mt-5">
-        <div className="h-2 overflow-hidden rounded-full bg-background/70">
+        <div className="h-2.5 overflow-hidden rounded-full bg-background/70 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
           <div
             className={cn(
               'h-full rounded-full transition-all duration-500',
               run.status === 'failed'
-                ? 'bg-destructive'
+                ? 'bg-destructive shadow-[0_0_12px_rgba(220,50,50,0.3)]'
                 : run.status === 'completed'
-                  ? 'bg-success'
-                  : 'bg-[linear-gradient(90deg,hsl(var(--accent)),hsl(var(--info)))]',
+                  ? 'bg-success shadow-[0_0_12px_rgba(50,180,100,0.3)]'
+                  : 'bg-[linear-gradient(90deg,hsl(var(--accent)),hsl(254_80%_65%))] shadow-[0_0_16px_rgba(var(--accent-rgb),0.4)]',
             )}
             style={{ width: `${process.progressPercent}%` }}
           />
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {process.steps.map((step) => {
           const Icon = stepIcons[step.id];
           const currentState = step.state as StepState;

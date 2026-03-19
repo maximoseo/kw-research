@@ -19,8 +19,8 @@ function DefaultIcon() {
 
 export default function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center rounded-xl border border-dashed border-border/75 bg-surface-overlay/[0.5] px-5 py-10 text-center sm:px-6 sm:py-14', className)}>
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl border border-border/70 bg-surface-raised/80 shadow-elevation-1 sm:h-16 sm:w-16">
+    <div className={cn('flex flex-col items-center justify-center rounded-xl border border-dashed border-accent/15 bg-accent/[0.02] px-5 py-10 text-center sm:px-6 sm:py-14', className)}>
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl border border-accent/15 bg-accent/[0.06] shadow-elevation-1 sm:h-16 sm:w-16">
         {icon || <DefaultIcon />}
       </div>
       <p className="text-base font-semibold tracking-tight text-text-primary sm:text-lg">{title}</p>

@@ -113,13 +113,14 @@ export function SiteSelectionDashboard({
   return (
     <div className="page-stack">
       <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.08fr_0.92fr]">
-        <Card variant="hero" className="overflow-hidden">
+        <Card variant="hero" className="overflow-hidden" padding="none">
           <div className="relative px-5 py-7 sm:px-7 sm:py-8">
             <div className="absolute inset-0 bg-grid/50" />
-            <div className="absolute -left-12 top-0 h-40 w-40 rounded-full bg-accent/[0.12] blur-3xl" />
-            <div className="absolute bottom-2 right-0 h-44 w-44 rounded-full bg-info/[0.08] blur-3xl" />
+            <div className="absolute -left-12 top-0 h-48 w-48 rounded-full bg-accent/[0.16] blur-3xl" />
+            <div className="absolute bottom-2 right-0 h-44 w-44 rounded-full bg-accent/[0.06] blur-3xl" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[1px] w-2/3 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
             <div className="relative">
-              <div className="toolbar-chip w-fit border-accent/22 bg-accent/[0.11]">Site-first workspace model</div>
+              <div className="toolbar-chip w-fit border-accent/25 bg-accent/[0.10] text-accent">Site-first workspace model</div>
               <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl lg:text-[2rem]">
                 Choose a website workspace
               </h1>
@@ -137,7 +138,7 @@ export function SiteSelectionDashboard({
         </Card>
 
         <Card variant="muted">
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="section-header">
               <div>
                 <p className="eyebrow">How the flow works</p>
@@ -146,7 +147,7 @@ export function SiteSelectionDashboard({
                   A predictable workspace gate keeps analytics from leaking between sites.
                 </p>
               </div>
-              <Badge variant="neutral" className="self-start">
+              <Badge variant="info" className="self-start">
                 <SearchCheck className="h-3.5 w-3.5" />
                 Guidance
               </Badge>
@@ -254,10 +255,10 @@ export function SiteSelectionDashboard({
                           </span>
                         ) : null}
                       </div>
-                      <div className="mt-5 flex items-center justify-between text-xs text-text-muted">
-                        <span>Open workspace</span>
-                        <span className="inline-flex items-center gap-1">
-                          <span className="font-semibold text-text-secondary">Enter</span>
+                      <div className="mt-5 flex items-center justify-between rounded-lg border border-accent/[0.08] bg-accent/[0.03] px-3.5 py-2.5 text-xs">
+                        <span className="font-medium text-text-secondary">Open workspace</span>
+                        <span className="inline-flex items-center gap-1.5 text-accent">
+                          <span className="font-semibold">Enter</span>
                           <ArrowRight className="h-3.5 w-3.5" />
                         </span>
                       </div>
@@ -328,11 +329,11 @@ export function SiteSelectionDashboard({
             <Field label="Workspace notes" error={formState.errors.notes?.message} hint="Optional analyst notes">
               <textarea className="field-textarea" placeholder="Project-specific assumptions or exclusions" {...form.register('notes')} />
             </Field>
-            <div className="flex flex-col gap-3 border-t border-border/65 pt-2 sm:flex-row sm:items-center sm:justify-end">
-              <Button type="button" variant="ghost" size="lg" onClick={() => form.reset(defaultValues)} disabled={isPending}>
+            <div className="flex flex-col gap-3 border-t border-accent/[0.08] pt-5 sm:flex-row sm:items-center sm:justify-end">
+              <Button type="button" variant="ghost" size="lg" onClick={() => form.reset(defaultValues)} disabled={isPending} className="w-full sm:w-auto">
                 Reset
               </Button>
-              <Button type="submit" size="lg" loading={isPending} disabled={formState.isSubmitting}>
+              <Button type="submit" size="lg" loading={isPending} disabled={formState.isSubmitting} className="w-full sm:w-auto">
                 Create workspace
               </Button>
             </div>

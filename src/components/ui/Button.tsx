@@ -12,19 +12,19 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles = {
   primary:
-    'border border-accent/25 bg-accent text-white shadow-[0_12px_28px_-8px_rgba(var(--accent-rgb),0.5)] hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-[0_16px_36px_-8px_rgba(var(--accent-rgb),0.6)]',
+    'border border-accent/30 bg-gradient-to-b from-accent to-[hsl(254_85%_58%)] text-white shadow-[0_12px_32px_-8px_rgba(var(--accent-rgb),0.55),0_4px_8px_-2px_rgba(var(--accent-rgb),0.2)] hover:-translate-y-0.5 hover:from-accent-hover hover:to-[hsl(254_90%_54%)] hover:shadow-[0_18px_42px_-8px_rgba(var(--accent-rgb),0.65),0_6px_12px_-2px_rgba(var(--accent-rgb),0.25)]',
   secondary:
-    'border border-border/80 bg-surface-raised/[0.84] text-text-primary hover:-translate-y-0.5 hover:border-accent/18 hover:bg-surface',
+    'border border-accent/15 bg-surface-raised/[0.88] text-text-primary shadow-elevation-1 hover:-translate-y-0.5 hover:border-accent/28 hover:bg-surface hover:shadow-[0_8px_20px_-6px_rgba(var(--accent-rgb),0.12)]',
   ghost:
-    'border border-transparent bg-transparent text-text-secondary hover:border-border/70 hover:bg-surface-raised/[0.72] hover:text-text-primary',
+    'border border-transparent bg-transparent text-text-secondary hover:border-accent/12 hover:bg-accent/[0.05] hover:text-text-primary',
   danger:
-    'border border-destructive/30 bg-destructive/10 text-destructive hover:-translate-y-0.5 hover:bg-destructive/15',
+    'border border-destructive/30 bg-destructive/10 text-destructive shadow-elevation-1 hover:-translate-y-0.5 hover:bg-destructive/15',
 };
 
 const sizeStyles = {
-  sm: 'min-h-[40px] px-3.5 py-2 text-xs',
-  md: 'min-h-[44px] px-4.5 py-2.5 text-sm',
-  lg: 'min-h-[48px] px-5.5 py-3 text-[0.95rem]',
+  sm: 'min-h-[40px] px-4 py-2 text-[0.8125rem]',
+  md: 'min-h-[44px] px-5 py-2.5 text-sm',
+  lg: 'min-h-[50px] px-6 py-3 text-[0.95rem]',
 };
 
 function Spinner() {
@@ -43,7 +43,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none',
+          'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-semibold tracking-[-0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none',
           sizeStyles[size],
           variantStyles[variant],
           className,

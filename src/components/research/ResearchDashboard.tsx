@@ -278,15 +278,16 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
               </Field>
             </div>
             <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined} hint="One competitor per line, or auto-discover below.">
-              <div className="space-y-4 rounded-xl border border-border/70 bg-surface-raised/55 p-4 sm:p-5">
+              <div className="space-y-4 rounded-xl border border-accent/[0.10] bg-accent/[0.02] p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="max-w-2xl">
+                  <div className="max-w-2xl min-w-0">
                     <p className="text-sm font-medium text-text-primary">Auto-discover competitors</p>
                     <p className="mt-1 text-sm leading-6 text-text-secondary">Scan your site profile and find relevant competitors in one step.</p>
                   </div>
                   <Button
                     type="button"
                     variant="secondary"
+                    size="md"
                     icon={<Radar className="h-4 w-4" />}
                     loading={isDiscoveringCompetitors}
                     onClick={handleAutoFindCompetitors}
@@ -328,14 +329,15 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => setUploadedFile(event.target.files?.[0] || null)} />
               </label>
             </Field>
-            <div className="flex flex-wrap gap-3 pt-1">
-              <Button type="submit" size="lg" loading={isPending}>
+            <div className="flex flex-col gap-3 border-t border-accent/[0.08] pt-5 sm:flex-row sm:flex-wrap">
+              <Button type="submit" size="lg" loading={isPending} className="w-full sm:w-auto">
                 Run research
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="lg"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   form.reset(buildDefaultValues(project));
                   setCompetitorDiscovery({ status: 'idle' });
@@ -391,7 +393,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                       <p className="mt-0.5 text-sm text-text-secondary truncate">{selectedRun.rows.length} rows generated &middot; {selectedRun.workbookName}</p>
                     </div>
                   </div>
-                  <Button type="button" variant="primary" size="sm" icon={<Download className="h-4 w-4" />} loading={isDownloading} onClick={handleDownload} className="w-full shrink-0 sm:w-auto">
+                  <Button type="button" variant="primary" size="md" icon={<Download className="h-4 w-4" />} loading={isDownloading} onClick={handleDownload} className="w-full shrink-0 sm:w-auto">
                     Download XLSX
                   </Button>
                 </div>
@@ -409,18 +411,20 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 <Metric label="Queued" value={formatDateTimeLabel(selectedRun.queuedAt)} helper={selectedRun.step || 'Awaiting updates'} />
               </div>
               <ResearchProcessTracker run={selectedRun} />
-              <div className="flex flex-wrap gap-3">
-                <Button type="button" variant="primary" icon={<Download className="h-4 w-4" />} disabled={!selectedRun.workbookName} loading={isDownloading} onClick={handleDownload}>
-                  Download XLSX
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <Button type="button" variant="primary" size="md" icon={<Download className="h-4 w-4" />} disabled={!selectedRun.workbookName} loading={isDownloading} onClick={handleDownload} className="w-full sm:w-auto">
+                   Download XLSX
                 </Button>
-                <Button type="button" variant="secondary" icon={<RefreshCcw className="h-4 w-4" />} loading={runQuery.isRefetching} onClick={() => runQuery.refetch()}>
+                <Button type="button" variant="secondary" size="md" icon={<RefreshCcw className="h-4 w-4" />} loading={runQuery.isRefetching} onClick={() => runQuery.refetch()} className="w-full sm:w-auto">
                   Refresh
                 </Button>
                 {selectedRun.status !== 'processing' ? (
                   <Button
                     type="button"
                     variant="ghost"
+                    size="md"
                     icon={<RefreshCcw className="h-4 w-4" />}
+                    className="w-full sm:w-auto"
                     onClick={async () => {
                       const response = await fetch(`/api/runs/${selectedRun.id}/retry`, { method: 'POST' });
                       if (!response.ok) {
@@ -495,7 +499,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 className={cn(
                   'list-card cursor-pointer transition-all',
                   selectedRunId === run.id
-                    ? 'border-accent/35 bg-accent/[0.06] ring-1 ring-accent/10'
+                    ? 'border-accent/40 bg-accent/[0.06] ring-2 ring-accent/15 shadow-[0_8px_24px_-8px_rgba(var(--accent-rgb),0.15)]'
                     : 'hover:border-accent/20 hover:-translate-y-0.5 hover:bg-surface',
                 )}
                 onClick={() => setSelectedRunId(run.id)}
@@ -513,7 +517,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                   <Metric label="Queued" value={formatDateTimeLabel(run.queuedAt)} helper={formatRelativeLabel(run.queuedAt)} compact />
                   <Metric label="Workbook" value={run.workbookName || 'Pending'} helper={run.errorMessage || run.step || 'No errors'} compact />
                 </div>
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2">
+                <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-3">
                   <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); setSelectedRunId(run.id); }}>
                     {selectedRunId === run.id ? 'Selected' : 'Open in workspace'}
                   </Button>
