@@ -15,9 +15,9 @@ export default async function HomePage() {
   if (user) redirect('/dashboard');
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16 relative">
-      <div className="pointer-events-none absolute top-0 left-1/4 h-[500px] w-[500px] rounded-full bg-accent/[0.06] blur-[150px]" />
-      <div className="pointer-events-none absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-info/[0.04] blur-[120px]" />
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16 relative overflow-hidden">
+      <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full bg-accent/[0.06] blur-[150px]" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/2 -translate-x-1/2 h-[400px] w-[400px] rounded-full bg-info/[0.04] blur-[120px]" />
 
       <div className="page-shell max-w-2xl w-full text-center relative">
         <div className="page-hero border-accent/12">
