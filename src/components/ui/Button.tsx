@@ -22,8 +22,8 @@ const variantStyles = {
 };
 
 const sizeStyles = {
-  sm: 'min-h-[38px] px-3.5 py-2 text-body-sm',
-  md: 'min-h-[42px] px-4.5 py-2.5 text-body',
+  sm: 'min-h-[44px] px-4 py-2 text-body-sm',
+  md: 'min-h-[44px] px-5 py-2.5 text-body',
   lg: 'min-h-[48px] px-6 py-3 text-body',
 };
 
@@ -43,7 +43,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold tracking-[-0.01em] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 disabled:pointer-events-none',
+          'inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold tracking-[-0.01em] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 disabled:pointer-events-none',
           sizeStyles[size],
           variantStyles[variant],
           className,

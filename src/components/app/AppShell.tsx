@@ -50,7 +50,7 @@ export function AppShell({
             </Badge>
           </div>
           <Link href="/dashboard" className="mt-3 block">
-            <span className="inline-flex w-full items-center justify-between gap-2 rounded-lg border border-white/8 px-3 py-2 text-body-sm font-medium text-sidebar-text/70 transition-all hover:border-white/12 hover:bg-white/[0.04] hover:text-white">
+            <span className="inline-flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-white/8 px-3 py-2 text-body-sm font-medium text-sidebar-text/70 transition-all hover:border-white/12 hover:bg-white/[0.04] hover:text-white">
               Switch site
               <ArrowLeftRight className="h-3 w-3" />
             </span>

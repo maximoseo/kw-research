@@ -55,7 +55,7 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={cn(
-               'relative min-h-tap whitespace-nowrap rounded-md px-4 py-2 text-body-sm font-semibold transition-all',
+               'relative min-h-tap cursor-pointer whitespace-nowrap rounded-md px-4 py-2 text-body-sm font-semibold transition-all',
                activeTab === tab.id
                  ? 'bg-surface text-accent shadow-elevation-1'
                  : 'text-text-muted hover:bg-surface/50 hover:text-text-primary',

@@ -20,7 +20,7 @@ const variantMap = {
   muted:
     'rounded-xl border border-border/40 bg-surface-raised shadow-elevation-1',
   interactive:
-    'rounded-xl border border-border/60 bg-surface shadow-elevation-1 hover:border-accent/25 hover:shadow-elevation-2 hover:-translate-y-px',
+    'rounded-xl border border-border/60 bg-surface shadow-elevation-1 cursor-pointer hover:border-accent/25 hover:shadow-elevation-2 hover:-translate-y-px',
   hero:
     'rounded-xl border border-accent/20 bg-surface shadow-elevation-2',
 };
