@@ -156,8 +156,7 @@ export function SiteSelectionDashboard({
                 </div>
               ))}
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={focusCreateSection}>
-              <SearchCheck className="h-3.5 w-3.5" />
+            <Button type="button" variant="ghost" size="sm" icon={<SearchCheck className="h-3.5 w-3.5" />} onClick={focusCreateSection}>
               Jump to create form
             </Button>
           </div>
