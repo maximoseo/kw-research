@@ -92,7 +92,7 @@ export function AppShell({
                   {project.brandName}
                 </h1>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="action-row">
                 <Link href="/dashboard" className="hidden sm:block">
                   <Button variant="ghost" size="sm">Switch site</Button>
                 </Link>

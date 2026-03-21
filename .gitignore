@@ -35,6 +35,12 @@ yarn-error.log*
 /.data/
 /.qa-logs/
 
+# dev artifacts
+dev.log
+prod-cookie.txt
+/.playwright-cli/
+/output/
+
 # vercel
 .vercel
 

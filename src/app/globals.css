@@ -74,7 +74,7 @@
     --surface-overlay: 228 38% 8%;
     --surface-inset: 228 40% 5%;
     --border: 250 20% 20%;
-    --border-subtle: 248 18% 14%;
+    --border-subtle: 248 18% 18%;
     --text-primary: 232 80% 97%;
     --text-secondary: 230 28% 70%;
     --text-muted: 232 16% 48%;
@@ -225,7 +225,7 @@
   }
 
   .section-header {
-    @apply flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between;
+    @apply flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between;
   }
 
   .section-title {
@@ -328,7 +328,11 @@
   }
 
   .stack-mobile {
-    @apply flex flex-col gap-3 sm:flex-row sm:flex-wrap;
+    @apply flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center;
+  }
+
+  .action-row {
+    @apply flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center;
   }
 
   .subtle-surface {

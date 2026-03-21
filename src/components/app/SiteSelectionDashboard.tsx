@@ -156,7 +156,7 @@ export function SiteSelectionDashboard({
                 </div>
               ))}
             </div>
-            <Button type="button" variant="ghost" size="sm" icon={<SearchCheck className="h-3.5 w-3.5" />} onClick={focusCreateSection}>
+            <Button type="button" variant="ghost" size="sm" icon={<SearchCheck className="h-3.5 w-3.5 shrink-0" />} onClick={focusCreateSection}>
               Jump to create form
             </Button>
           </div>
@@ -191,7 +191,7 @@ export function SiteSelectionDashboard({
               }}
             />
           ) : (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
               {orderedProjects.map((project) => {
                 const isLastSelected = project.id === lastSelectedProjectId;
                 const activityTime = project.latestRunQueuedAt || project.updatedAt;
@@ -321,7 +321,7 @@ export function SiteSelectionDashboard({
             <Field label="Workspace notes" error={formState.errors.notes?.message} hint="Optional analyst notes">
               <textarea className="field-textarea" placeholder="Project-specific assumptions or exclusions" {...form.register('notes')} />
             </Field>
-            <div className="flex flex-col gap-2.5 border-t border-border/40 pt-4 sm:flex-row sm:items-center sm:justify-end">
+            <div className="action-row border-t border-border/40 pt-4 sm:justify-end">
               <Button type="button" variant="ghost" size="md" onClick={() => form.reset(defaultValues)} disabled={isPending} className="w-full sm:w-auto">
                 Reset
               </Button>

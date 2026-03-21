@@ -12,7 +12,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles = {
   primary:
-    'border-0 bg-gradient-to-b from-accent to-[hsl(254_80%_56%)] text-white shadow-[0_1px_2px_rgba(0,0,0,0.15),0_6px_16px_-3px_rgba(var(--accent-rgb),0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:from-accent-hover hover:to-[hsl(254_85%_52%)] hover:-translate-y-px hover:shadow-[0_2px_4px_rgba(0,0,0,0.18),0_10px_24px_-4px_rgba(var(--accent-rgb),0.45),inset_0_1px_0_rgba(255,255,255,0.2)]',
+    'border-0 bg-gradient-to-b from-accent to-[hsl(254_80%_56%)] text-white shadow-[0_1px_2px_rgba(0,0,0,0.15),0_6px_16px_-3px_rgba(var(--accent-rgb),0.30),inset_0_1px_0_rgba(255,255,255,0.12)] hover:from-accent-hover hover:to-[hsl(254_85%_52%)] hover:-translate-y-px hover:shadow-[0_2px_4px_rgba(0,0,0,0.18),0_10px_24px_-4px_rgba(var(--accent-rgb),0.30),inset_0_1px_0_rgba(255,255,255,0.2)]',
   secondary:
     'border border-border bg-surface text-text-primary shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-accent/30 hover:bg-accent/[0.04] hover:shadow-[0_2px_8px_-2px_rgba(var(--accent-rgb),0.1)]',
   ghost:
@@ -24,7 +24,7 @@ const variantStyles = {
 const sizeStyles = {
   sm: 'h-9 min-h-[36px] px-3.5 py-1.5 text-[13px]',
   md: 'h-10 min-h-[40px] px-4 py-2 text-sm',
-  lg: 'h-11 min-h-[44px] px-6 py-2.5 text-sm',
+  lg: 'h-11 min-h-[44px] px-5 py-2.5 text-sm',
 };
 
 function Spinner() {

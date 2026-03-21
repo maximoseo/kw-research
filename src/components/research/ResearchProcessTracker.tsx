@@ -98,7 +98,7 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
             <div
               key={step.id}
               className={cn(
-                'rounded-lg border px-3.5 py-3 overflow-hidden min-w-0 transition-all',
+                'rounded-lg border px-3.5 py-3 overflow-hidden min-w-0 min-h-[160px] flex flex-col transition-all',
                 stepStateStyles[state],
                 state === 'current' ? 'ring-1 ring-info/15' : null,
               )}
@@ -137,8 +137,8 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
                         : 'Upcoming'}
                 </span>
               </div>
-              <p className="mt-3 text-body font-semibold text-text-primary leading-snug line-clamp-2">{step.label}</p>
-              <p className="mt-1 text-body-sm leading-relaxed text-text-secondary line-clamp-2">{step.description}</p>
+              <p className="mt-2 text-body-sm font-semibold text-text-primary leading-snug line-clamp-2">{step.label}</p>
+              <p className="mt-0.5 text-caption leading-relaxed text-text-secondary line-clamp-2">{step.description}</p>
             </div>
           );
         })}

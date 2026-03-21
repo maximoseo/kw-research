@@ -141,7 +141,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
               </div>
             </Field>
 
-            <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+            <div className="action-row pt-1">
               <Button type="submit" variant="primary" size="lg" className="w-full sm:flex-1" loading={isPending} disabled={isPending || googleLoading}>
                 {mode === 'login' ? 'Sign In' : 'Create Account'}
               </Button>

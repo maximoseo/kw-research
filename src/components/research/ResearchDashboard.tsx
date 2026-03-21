@@ -279,7 +279,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
             </div>
             <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined} hint="One per line, or auto-discover.">
               <div className="form-section space-y-3">
-                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
+                <div className="action-row sm:justify-between">
                   <div className="max-w-2xl min-w-0">
                     <p className="text-body font-medium text-text-primary">Auto-discover competitors</p>
                     <p className="mt-0.5 text-body-sm text-text-secondary">Scan your site profile and find relevant competitors.</p>
@@ -329,7 +329,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => setUploadedFile(event.target.files?.[0] || null)} />
               </label>
             </Field>
-            <div className="flex flex-col gap-2.5 border-t border-border/40 pt-4 sm:flex-row sm:flex-wrap">
+            <div className="action-row border-t border-border/40 pt-4">
               <Button type="submit" size="md" loading={isPending} className="w-full sm:w-auto">
                 Run research
               </Button>
@@ -383,7 +383,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
             <div className="space-y-4">
               {/* Success banner */}
               {selectedRun.status === 'completed' && selectedRun.workbookName ? (
-                <div className="flex flex-col gap-3 rounded-lg border border-success/20 bg-success/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="action-row rounded-lg border border-success/20 bg-success/[0.04] p-4 sm:justify-between">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-success/15 bg-success/[0.08]">
                       <CheckCircle2 className="h-4.5 w-4.5 text-success" />
@@ -411,7 +411,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 <Metric label="Queued" value={formatDateTimeLabel(selectedRun.queuedAt)} helper={selectedRun.step || 'Awaiting updates'} />
               </div>
               <ResearchProcessTracker run={selectedRun} />
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <div className="action-row">
                 <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} disabled={!selectedRun.workbookName} loading={isDownloading} onClick={handleDownload} className="w-full sm:w-auto">
                    Download XLSX
                 </Button>
@@ -492,7 +492,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
             description="Queue your first run above to get started."
           />
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
             {runsQuery.data.map((run) => (
               <article
                 key={run.id}
@@ -517,7 +517,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                   <Metric label="Queued" value={formatDateTimeLabel(run.queuedAt)} helper={formatRelativeLabel(run.queuedAt)} compact />
                   <Metric label="Workbook" value={run.workbookName || 'Pending'} helper={run.errorMessage || run.step || 'No errors'} compact />
                 </div>
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2">
+                <div className="mt-3 action-row">
                   <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); setSelectedRunId(run.id); }}>
                     {selectedRunId === run.id ? 'Selected' : 'Open in workspace'}
                   </Button>
