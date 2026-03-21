@@ -15,12 +15,12 @@ export default function Field({
 }) {
   return (
     <div className={cn('field-group', className)}>
-      <div className="flex items-center justify-between gap-3">
+      <div className="field-header">
         <label className="field-label">{label}</label>
-        {hint ? <span className="field-help">{hint}</span> : null}
+        {hint ? <span className="field-hint">{hint}</span> : null}
       </div>
       {children}
-      {error ? <p className="field-help text-destructive">{error}</p> : null}
+      {error ? <p className="field-error">{error}</p> : null}
     </div>
   );
 }

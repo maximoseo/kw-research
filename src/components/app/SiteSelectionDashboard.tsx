@@ -281,20 +281,20 @@ export function SiteSelectionDashboard({
             Required fields: homepage URL, about URL, and sitemap URL. Competitor URLs can be added later.
           </Alert>
 
-          <form id="new-site-form" onSubmit={handleCreateProject} className="mt-5 space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Homepage URL" error={formState.errors.homepageUrl?.message} hint="Example: https://example.com">
+          <form id="new-site-form" onSubmit={handleCreateProject} className="mt-5 space-y-5">
+            <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+              <Field label="Homepage URL" error={formState.errors.homepageUrl?.message} hint="https://example.com">
                 <input className="field-input" placeholder="https://example.com" {...form.register('homepageUrl')} />
               </Field>
               <Field label="About page URL" error={formState.errors.aboutUrl?.message} hint="Optional, useful for context">
                 <input className="field-input" placeholder="https://example.com/about" {...form.register('aboutUrl')} />
               </Field>
             </div>
-            <Field label="Sitemap URL" error={formState.errors.sitemapUrl?.message} hint="Example: https://example.com/sitemap.xml">
+            <Field label="Sitemap URL" error={formState.errors.sitemapUrl?.message} hint="https://example.com/sitemap.xml">
               <input className="field-input" placeholder="https://example.com/sitemap.xml" {...form.register('sitemapUrl')} />
             </Field>
-            <div className="grid gap-4 md:grid-cols-3">
-              <Field label="Brand name" error={formState.errors.brandName?.message} hint="Shown in cards">
+            <div className="grid gap-x-4 gap-y-5 sm:grid-cols-3">
+              <Field label="Brand name" error={formState.errors.brandName?.message} hint="Shown in workspace cards">
                 <input className="field-input" placeholder="Maximo SEO" {...form.register('brandName')} />
               </Field>
               <Field label="Language" error={formState.errors.language?.message} hint="Research language">
@@ -310,18 +310,18 @@ export function SiteSelectionDashboard({
             <Field
               label="Competitor URLs"
               error={formState.errors.competitorUrls?.message as string | undefined}
-              hint="Optional, commas or new lines"
+              hint="Optional — commas or new lines"
             >
               <textarea
                 className="field-textarea"
-                placeholder="https://competitor-a.com, https://competitor-b.com"
+                placeholder="https://competitor-a.com&#10;https://competitor-b.com"
                 {...form.register('competitorUrls')}
               />
             </Field>
             <Field label="Workspace notes" error={formState.errors.notes?.message} hint="Optional analyst notes">
-              <textarea className="field-textarea" placeholder="Project-specific assumptions or exclusions" {...form.register('notes')} />
+              <textarea className="field-textarea min-h-[100px]" placeholder="Project-specific assumptions or exclusions" {...form.register('notes')} />
             </Field>
-            <div className="action-row border-t border-border/40 pt-4 sm:justify-end">
+            <div className="flex flex-col gap-3 border-t border-border/40 pt-5 sm:flex-row sm:items-center sm:justify-end">
               <Button type="button" variant="ghost" size="md" onClick={() => form.reset(defaultValues)} disabled={isPending} className="w-full sm:w-auto">
                 Reset
               </Button>
