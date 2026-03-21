@@ -12,19 +12,19 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles = {
   primary:
-    'border border-accent/40 bg-accent text-white shadow-[0_1px_2px_rgba(0,0,0,0.1),0_4px_12px_-2px_rgba(var(--accent-rgb),0.35)] hover:bg-accent-hover hover:-translate-y-px hover:shadow-[0_2px_4px_rgba(0,0,0,0.12),0_8px_20px_-4px_rgba(var(--accent-rgb),0.4)]',
+    'border-0 bg-gradient-to-b from-accent to-[hsl(254_80%_56%)] text-white shadow-[0_1px_2px_rgba(0,0,0,0.15),0_6px_16px_-3px_rgba(var(--accent-rgb),0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:from-accent-hover hover:to-[hsl(254_85%_52%)] hover:-translate-y-px hover:shadow-[0_2px_4px_rgba(0,0,0,0.18),0_10px_24px_-4px_rgba(var(--accent-rgb),0.45),inset_0_1px_0_rgba(255,255,255,0.2)]',
   secondary:
-    'border border-border/70 bg-surface-raised text-text-primary shadow-elevation-1 hover:border-accent/20 hover:bg-surface hover:shadow-elevation-2',
+    'border border-border bg-surface text-text-primary shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-accent/30 hover:bg-accent/[0.04] hover:shadow-[0_2px_8px_-2px_rgba(var(--accent-rgb),0.1)]',
   ghost:
-    'border border-border/40 bg-transparent text-text-secondary hover:border-border/70 hover:bg-surface-raised hover:text-text-primary',
+    'border border-transparent bg-transparent text-text-secondary hover:border-border/60 hover:bg-surface-raised hover:text-text-primary',
   danger:
-    'border border-destructive/25 bg-destructive/[0.06] text-destructive shadow-elevation-1 hover:bg-destructive/[0.12]',
+    'border border-destructive/25 bg-destructive/[0.06] text-destructive hover:bg-destructive/[0.12] hover:border-destructive/40',
 };
 
 const sizeStyles = {
-  sm: 'min-h-[44px] px-4 py-2 text-body-sm',
-  md: 'min-h-[44px] px-5 py-2.5 text-body',
-  lg: 'min-h-[48px] px-6 py-3 text-body',
+  sm: 'h-9 min-h-[36px] px-3.5 py-1.5 text-[13px]',
+  md: 'h-10 min-h-[40px] px-4 py-2 text-sm',
+  lg: 'h-11 min-h-[44px] px-6 py-2.5 text-sm',
 };
 
 function Spinner() {
@@ -43,7 +43,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          'inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold tracking-[-0.01em] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 disabled:pointer-events-none',
+          'inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:pointer-events-none',
           sizeStyles[size],
           variantStyles[variant],
           className,

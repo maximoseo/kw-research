@@ -12,10 +12,10 @@ export default function Metric({
   compact?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-border/50 bg-surface-raised/80 px-4 py-3.5 overflow-hidden">
-      <p className="eyebrow">{label}</p>
-      <p className={cn('mt-1.5 font-semibold text-text-primary break-words', compact ? 'text-body' : 'text-heading-2')}>{value}</p>
-      <p className="mt-1 text-body-sm leading-5 text-text-muted line-clamp-2">{helper}</p>
+    <div className="rounded-xl border border-border/50 bg-surface-raised/60 px-4 py-3.5 overflow-hidden">
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-accent/60">{label}</p>
+      <p className={cn('mt-1 font-semibold text-text-primary break-words leading-snug', compact ? 'text-sm' : 'text-lg')}>{value}</p>
+      <p className="mt-0.5 text-xs leading-relaxed text-text-muted line-clamp-2">{helper}</p>
     </div>
   );
 }
