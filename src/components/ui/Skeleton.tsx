@@ -1,7 +1,7 @@
 export default function Skeleton({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`rounded-xl border border-border/60 bg-gradient-to-r from-surface-raised/90 via-surface-overlay/60 to-surface-raised/90 bg-[length:200%_100%] animate-shimmer ${className}`}
+      className={`rounded-lg border border-border/40 bg-gradient-to-r from-surface-raised via-surface-overlay to-surface-raised bg-[length:200%_100%] animate-shimmer ${className}`}
     />
   );
 }

@@ -219,30 +219,30 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   return (
     <div className="page-stack">
       {/* ── Hero section ── */}
-      <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card variant="hero" className="space-y-6">
+      <section className="animate-enter grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.05fr_0.95fr]">
+        <Card variant="hero" className="space-y-5">
           <div>
             <p className="eyebrow">Selected workspace</p>
-            <h1 className="mt-2.5 text-2xl font-semibold tracking-tight sm:text-3xl">{project.name}</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-text-secondary">
-              This workspace is scoped to a single validated site. Every run, log, preview, and export stays attached to {project.brandName}.
+            <h1 className="mt-2 text-heading-1 sm:text-2xl">{project.name}</h1>
+            <p className="mt-2 max-w-xl text-body leading-relaxed text-text-secondary">
+              This workspace is scoped to {project.brandName}. Every run, log, preview, and export stays attached to this site.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-3">
             <Metric label="Brand" value={project.brandName} helper={`${project.language} · ${project.market}`} />
-            <Metric label="Runs tracked" value={String(project.runCount)} helper={runsQuery.data?.[0] ? `Latest ${formatRelativeLabel(runsQuery.data[0].queuedAt)}` : 'No runs yet'} />
+            <Metric label="Runs" value={String(project.runCount)} helper={runsQuery.data?.[0] ? `Latest ${formatRelativeLabel(runsQuery.data[0].queuedAt)}` : 'No runs yet'} />
             <Metric label="Sitemap" value="Validated" helper={project.sitemapUrl} />
           </div>
         </Card>
-        <Card className="space-y-6">
+        <Card className="space-y-5">
           <div>
             <p className="eyebrow">Website profile</p>
-            <h2 className="mt-2.5 text-xl font-semibold tracking-tight">Locked profile inputs</h2>
-            <p className="mt-2 section-copy">These values are fixed for this workspace. Change them in the project selector if needed.</p>
+            <h2 className="mt-2 section-subtitle">Locked profile inputs</h2>
+            <p className="mt-1.5 section-copy">Fixed for this workspace. Change them in the project selector if needed.</p>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             <InfoRow label="Homepage" value={project.homepageUrl} />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               <InfoRow label="About page" value={project.aboutUrl} />
               <InfoRow label="Sitemap" value={project.sitemapUrl} />
             </div>
@@ -252,21 +252,21 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
       </section>
 
       {/* ── New run + Live run ── */}
-      <section id="new-research" className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.03fr_0.97fr]">
-        <Card className="space-y-6">
+      <section id="new-research" className="animate-enter-delayed grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.03fr_0.97fr]">
+        <Card className="space-y-5">
           <div className="section-header">
             <div>
-              <p className="eyebrow">New run for this site</p>
-              <h2 className="section-subtitle mt-2">Launch a project-scoped research run</h2>
-              <p className="section-copy mt-2">Update competitors, notes, mode, and output size, then queue a new run.</p>
+              <p className="eyebrow">New run</p>
+              <h2 className="section-subtitle mt-2">Launch a research run</h2>
+              <p className="section-copy mt-1.5">Update competitors, notes, mode, and output size.</p>
             </div>
-            <div className="toolbar-chip flex flex-wrap items-center gap-2 max-w-[13rem] sm:max-w-[15rem]">
+            <div className="toolbar-chip flex flex-wrap items-center gap-1.5 max-w-[12rem] sm:max-w-[14rem]">
               <UploadCloud className="h-3.5 w-3.5 shrink-0 text-text-muted" />
-              <span className="truncate min-w-0">{uploadedFile ? uploadedFile.name : 'No workbook uploaded'}</span>
+              <span className="truncate min-w-0 text-caption">{uploadedFile ? uploadedFile.name : 'No workbook'}</span>
             </div>
           </div>
-          <form id="new-run-form" onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
+          <form id="new-run-form" onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
               <Field label="Mode" error={form.formState.errors.mode?.message}>
                 <select className="field-select" {...form.register('mode')}>
                   <option value="fresh">Create completely fresh research</option>
@@ -277,18 +277,18 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 <input className="field-input" type="number" min={120} max={320} step={5} {...form.register('targetRows', { valueAsNumber: true })} />
               </Field>
             </div>
-            <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined} hint="One competitor per line, or auto-discover below.">
-              <div className="space-y-4 rounded-xl border border-accent/[0.10] bg-accent/[0.02] p-4 sm:p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <Field label="Competitor URLs" error={form.formState.errors.competitorUrls?.message as string | undefined} hint="One per line, or auto-discover.">
+              <div className="form-section space-y-3">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
                   <div className="max-w-2xl min-w-0">
-                    <p className="text-sm font-medium text-text-primary">Auto-discover competitors</p>
-                    <p className="mt-1 text-sm leading-6 text-text-secondary">Scan your site profile and find relevant competitors in one step.</p>
+                    <p className="text-body font-medium text-text-primary">Auto-discover competitors</p>
+                    <p className="mt-0.5 text-body-sm text-text-secondary">Scan your site profile and find relevant competitors.</p>
                   </div>
                   <Button
                     type="button"
                     variant="secondary"
-                    size="md"
-                    icon={<Radar className="h-4 w-4" />}
+                    size="sm"
+                    icon={<Radar className="h-3.5 w-3.5" />}
                     loading={isDiscoveringCompetitors}
                     onClick={handleAutoFindCompetitors}
                     className="w-full shrink-0 sm:w-auto"
@@ -301,7 +301,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                     {competitorDiscovery.message}
                   </Alert>
                 ) : competitorDiscovery.status === 'empty' ? (
-                  <Alert variant="warning" title="Discovery did not return results">
+                  <Alert variant="warning" title="No results">
                     {competitorDiscovery.message}
                   </Alert>
                 ) : competitorDiscovery.status === 'error' ? (
@@ -316,27 +316,27 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 />
               </div>
             </Field>
-            <Field label="Notes / instructions" error={form.formState.errors.notes?.message} hint="Optional instructions for coverage and tone.">
+            <Field label="Notes / instructions" error={form.formState.errors.notes?.message} hint="Optional.">
               <textarea className="field-textarea" placeholder="Add any research constraints, exclusions, or audience notes" {...form.register('notes')} />
             </Field>
-            <Field label="Existing keyword research workbook" hint="Upload to seed expansion mode or provide context.">
-              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed border-border/80 bg-surface-raised/50 px-4 py-3.5 text-sm text-text-secondary transition-all hover:border-accent/25 hover:bg-surface">
+            <Field label="Existing workbook" hint="Upload to seed expansion mode.">
+              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed border-border/60 bg-surface-raised/50 px-4 py-3 text-body text-text-secondary transition-all hover:border-accent/20 hover:bg-surface">
                 <div className="min-w-0">
                   <p className="font-medium text-text-primary truncate">{uploadedFile ? uploadedFile.name : 'Upload optional workbook'}</p>
-                  <p className="mt-1 text-xs text-text-muted">.xlsx, .xls, or .csv up to 10 MB</p>
+                  <p className="mt-0.5 text-caption text-text-muted">.xlsx, .xls, or .csv up to 10 MB</p>
                 </div>
-                <span className="toolbar-chip shrink-0 border-accent/20 bg-accent/[0.08] text-accent">{uploadedFile ? 'Replace' : 'Choose file'}</span>
+                <span className="toolbar-chip shrink-0 border-accent/15 bg-accent/[0.05] text-accent">{uploadedFile ? 'Replace' : 'Choose file'}</span>
                 <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(event) => setUploadedFile(event.target.files?.[0] || null)} />
               </label>
             </Field>
-            <div className="flex flex-col gap-3 border-t border-accent/[0.08] pt-5 sm:flex-row sm:flex-wrap">
-              <Button type="submit" size="lg" loading={isPending} className="w-full sm:w-auto">
+            <div className="flex flex-col gap-2.5 border-t border-border/40 pt-4 sm:flex-row sm:flex-wrap">
+              <Button type="submit" size="md" loading={isPending} className="w-full sm:w-auto">
                 Run research
               </Button>
               <Button
                 type="button"
                 variant="ghost"
-                size="lg"
+                size="md"
                 className="w-full sm:w-auto"
                 onClick={() => {
                   form.reset(buildDefaultValues(project));
@@ -350,27 +350,27 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
           </form>
         </Card>
 
-        <Card className="space-y-6">
+        <Card className="space-y-5">
           <div className="section-header">
             <div>
               <p className="eyebrow">Live run</p>
               <h2 className="section-subtitle mt-2">Status, logs, preview, and export</h2>
             </div>
             {selectedRun ? (
-              <Badge variant={statusBadgeMap[selectedRun.status].variant} className="rounded-full">
+              <Badge variant={statusBadgeMap[selectedRun.status].variant}>
                 {statusBadgeMap[selectedRun.status].label}
               </Badge>
             ) : (
-              <Badge variant="neutral" className="rounded-full">
+              <Badge variant="neutral">
                 No run selected
               </Badge>
             )}
           </div>
           {!selectedRun ? (
             <EmptyState
-              icon={<FileSpreadsheet className="h-10 w-10 text-text-muted" />}
+              icon={<FileSpreadsheet className="h-8 w-8 text-text-muted" />}
               title="No run selected"
-              description="Queue a new research run or select a previous run from the history below."
+              description="Queue a new research run or select from history below."
               action={{
                 label: 'Start a run',
                 onClick: () => {
@@ -380,20 +380,20 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
               }}
             />
           ) : (
-            <div className="space-y-5">
-              {/* Success banner when run is completed */}
+            <div className="space-y-4">
+              {/* Success banner */}
               {selectedRun.status === 'completed' && selectedRun.workbookName ? (
-                <div className="flex flex-col gap-3 rounded-xl border border-success/25 bg-success/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 rounded-lg border border-success/20 bg-success/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-success/20 bg-success/[0.12]">
-                      <CheckCircle2 className="h-5 w-5 text-success" />
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-success/15 bg-success/[0.08]">
+                      <CheckCircle2 className="h-4.5 w-4.5 text-success" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-text-primary">Research complete</p>
-                      <p className="mt-0.5 text-sm text-text-secondary truncate">{selectedRun.rows.length} rows generated &middot; {selectedRun.workbookName}</p>
+                      <p className="text-body font-semibold text-text-primary">Research complete</p>
+                      <p className="mt-0.5 text-body-sm text-text-secondary truncate">{selectedRun.rows.length} rows &middot; {selectedRun.workbookName}</p>
                     </div>
                   </div>
-                  <Button type="button" variant="primary" size="md" icon={<Download className="h-4 w-4" />} loading={isDownloading} onClick={handleDownload} className="w-full shrink-0 sm:w-auto">
+                  <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} loading={isDownloading} onClick={handleDownload} className="w-full shrink-0 sm:w-auto">
                     Download XLSX
                   </Button>
                 </div>
@@ -406,24 +406,24 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 </Alert>
               ) : null}
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2.5 sm:grid-cols-2">
                 <Metric label="Brand" value={selectedRun.brandName} helper={`${selectedRun.language} · ${selectedRun.market}`} />
                 <Metric label="Queued" value={formatDateTimeLabel(selectedRun.queuedAt)} helper={selectedRun.step || 'Awaiting updates'} />
               </div>
               <ResearchProcessTracker run={selectedRun} />
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Button type="button" variant="primary" size="md" icon={<Download className="h-4 w-4" />} disabled={!selectedRun.workbookName} loading={isDownloading} onClick={handleDownload} className="w-full sm:w-auto">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} disabled={!selectedRun.workbookName} loading={isDownloading} onClick={handleDownload} className="w-full sm:w-auto">
                    Download XLSX
                 </Button>
-                <Button type="button" variant="secondary" size="md" icon={<RefreshCcw className="h-4 w-4" />} loading={runQuery.isRefetching} onClick={() => runQuery.refetch()} className="w-full sm:w-auto">
+                <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={runQuery.isRefetching} onClick={() => runQuery.refetch()} className="w-full sm:w-auto">
                   Refresh
                 </Button>
                 {selectedRun.status !== 'processing' ? (
                   <Button
                     type="button"
                     variant="ghost"
-                    size="md"
-                    icon={<RefreshCcw className="h-4 w-4" />}
+                    size="sm"
+                    icon={<RefreshCcw className="h-3.5 w-3.5" />}
                     className="w-full sm:w-auto"
                     onClick={async () => {
                       const response = await fetch(`/api/runs/${selectedRun.id}/retry`, { method: 'POST' });
@@ -459,11 +459,11 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 selectedRun.synthesisSnapshot ? (
                   <ReportSynthesisView synthesis={selectedRun.synthesisSnapshot} />
                 ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-2.5 md:grid-cols-2">
                     <Metric label="Run status" value={selectedRun.status} helper={selectedRun.step || 'No step reported'} />
                     <Metric label="Workbook" value={selectedRun.workbookName || 'Pending'} helper={selectedRun.completedAt ? `Completed ${formatRelativeLabel(selectedRun.completedAt)}` : 'Not finished yet'} />
                     <Metric label="Rows" value={String(selectedRun.rows.length || 0)} helper="Generated research rows" />
-                    <Metric label="Mode" value={selectedRun.mode === 'expand' ? 'Expand existing research' : 'Fresh research'} helper={`Target ${selectedRun.targetRows} rows`} />
+                    <Metric label="Mode" value={selectedRun.mode === 'expand' ? 'Expand existing' : 'Fresh research'} helper={`Target ${selectedRun.targetRows} rows`} />
                   </div>
                 )
               ) : null}
@@ -473,51 +473,51 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
       </section>
 
       {/* ── History ── */}
-      <section id="history" className="section-shell space-y-5">
+      <section id="history" className="animate-enter-delayed-2 section-shell space-y-5">
         <div className="section-header">
           <div>
             <p className="eyebrow">Workspace history</p>
-            <h2 className="section-subtitle mt-2">Previous research runs for this site</h2>
-            <p className="section-copy mt-2">Reopen past results, review progress, and download completed workbooks.</p>
+            <h2 className="section-subtitle mt-2">Previous research runs</h2>
+            <p className="section-copy mt-1.5">Reopen past results, review progress, and download completed workbooks.</p>
           </div>
-          <div className="toolbar-chip flex items-center gap-2">
-            <History className="h-4 w-4" />
+          <div className="toolbar-chip flex items-center gap-1.5">
+            <History className="h-3.5 w-3.5" />
             {runsQuery.data?.length || 0} tracked
           </div>
         </div>
         {!runsQuery.data?.length ? (
           <EmptyState
-            icon={<History className="h-10 w-10 text-text-muted" />}
+            icon={<History className="h-8 w-8 text-text-muted" />}
             title="No research runs yet"
-            description="This workspace has no research runs. Queue your first run above to get started."
+            description="Queue your first run above to get started."
           />
         ) : (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             {runsQuery.data.map((run) => (
               <article
                 key={run.id}
                 className={cn(
-                  'list-card cursor-pointer transition-all',
+                  'list-card cursor-pointer',
                   selectedRunId === run.id
-                    ? 'border-accent/40 bg-accent/[0.06] ring-2 ring-accent/15 shadow-[0_8px_24px_-8px_rgba(var(--accent-rgb),0.15)]'
-                    : 'hover:border-accent/20 hover:-translate-y-0.5 hover:bg-surface',
+                    ? 'border-accent/30 bg-accent/[0.03] ring-1 ring-accent/12'
+                    : 'hover:border-accent/15 hover:-translate-y-px hover:shadow-elevation-2',
                 )}
                 onClick={() => setSelectedRunId(run.id)}
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-base font-semibold tracking-tight text-text-primary sm:text-lg">{run.projectName}</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.2em] text-text-muted">
+                    <p className="text-heading-3 text-text-primary">{run.projectName}</p>
+                    <p className="mt-1 text-caption uppercase tracking-[0.18em] text-text-muted">
                       {run.brandName} · {run.language} · {run.market}
                     </p>
                   </div>
                   <StatusBadge status={run.status} />
                 </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                   <Metric label="Queued" value={formatDateTimeLabel(run.queuedAt)} helper={formatRelativeLabel(run.queuedAt)} compact />
                   <Metric label="Workbook" value={run.workbookName || 'Pending'} helper={run.errorMessage || run.step || 'No errors'} compact />
                 </div>
-                <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-3">
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2">
                   <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); setSelectedRunId(run.id); }}>
                     {selectedRunId === run.id ? 'Selected' : 'Open in workspace'}
                   </Button>
@@ -536,10 +536,10 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
 
 function InfoRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
   return (
-    <div className="subtle-surface px-4 py-3">
+    <div className="subtle-surface px-4 py-2.5">
       <p className="eyebrow">{label}</p>
-      {multiline ? <p className="mt-2 text-sm leading-6 text-text-secondary break-words">{value}</p> : (
-        <a href={value} target="_blank" rel="noreferrer" className="mt-2 block truncate text-sm text-accent hover:underline" title={value}>
+      {multiline ? <p className="mt-1.5 text-body leading-relaxed text-text-secondary break-words">{value}</p> : (
+        <a href={value} target="_blank" rel="noreferrer" className="mt-1.5 block truncate text-body text-accent hover:underline" title={value}>
           {value}
         </a>
       )}
@@ -557,9 +557,9 @@ function PreviewTable({
   status: ResearchRunDetail['status'];
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70 bg-surface-raised/55">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3">
-        <div className="flex items-center gap-2 text-body font-medium text-text-primary">
+    <div className="overflow-hidden rounded-lg border border-border/50 bg-surface-raised/60">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 px-4 py-2.5">
+        <div className="flex items-center gap-2 text-body font-semibold text-text-primary">
           <TableProperties className="h-4 w-4 text-accent" />
           Output preview
         </div>
@@ -569,8 +569,8 @@ function PreviewTable({
       </div>
       <div className="max-h-[480px] overflow-x-auto overflow-y-auto">
         {!previewRows.length ? (
-          <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-            <TableProperties className="h-8 w-8 text-text-muted/50 mb-3" />
+          <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
+            <TableProperties className="h-7 w-7 text-text-muted/40 mb-2" />
             <p className="text-body font-medium text-text-primary">
               {status === 'completed' ? 'No preview rows were stored.' : 'Waiting for results'}
             </p>
@@ -580,48 +580,48 @@ function PreviewTable({
           </div>
         ) : (
           <table className="min-w-full text-left">
-            <thead className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_hsl(var(--border)/0.7)]">
+            <thead className="sticky top-0 z-10 bg-surface-raised shadow-[0_1px_0_hsl(var(--border)/0.5)]">
               <tr className="text-text-muted">
-                {['Existing Parent Page', 'Pillar', 'Cluster', 'Intent', 'Primary Keyword', 'Volume', 'CPC', 'Keywords'].map((label) => (
-                  <th key={label} className="px-4 py-3 text-caption font-semibold uppercase tracking-wider whitespace-nowrap">
+                {['Parent Page', 'Pillar', 'Cluster', 'Intent', 'Primary Keyword', 'Volume', 'CPC', 'Keywords'].map((label) => (
+                  <th key={label} className="px-3.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap">
                     {label}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/40">
+            <tbody className="divide-y divide-border/30">
               {previewRows.map((row, index) => (
-                <tr key={`${row.cluster}-${index}`} className={cn('align-top transition-colors hover:bg-accent/[0.03]', index % 2 === 1 && 'bg-surface-raised/30')}>
-                  <td className="max-w-[220px] truncate px-4 py-3 text-body text-text-secondary" title={row.existingParentPage}>
+                <tr key={`${row.cluster}-${index}`} className={cn('align-top transition-colors hover:bg-accent/[0.02]', index % 2 === 1 && 'bg-surface-inset/30')}>
+                  <td className="max-w-[200px] truncate px-3.5 py-2.5 text-body-sm text-text-secondary" title={row.existingParentPage}>
                     {row.existingParentPage}
                   </td>
-                  <td className="max-w-[170px] truncate px-4 py-3 font-medium text-body" title={row.pillar}>
+                  <td className="max-w-[160px] truncate px-3.5 py-2.5 font-medium text-body-sm" title={row.pillar}>
                     {row.pillar}
                   </td>
-                  <td className="max-w-[170px] truncate px-4 py-3 text-body text-text-secondary" title={row.cluster}>
+                  <td className="max-w-[160px] truncate px-3.5 py-2.5 text-body-sm text-text-secondary" title={row.cluster}>
                     {row.cluster}
                   </td>
-                  <td className="px-4 py-3" title={row.intent}>
+                  <td className="px-3.5 py-2.5" title={row.intent}>
                     <span className={cn(
                       'inline-block rounded-md px-2 py-0.5 text-caption font-medium',
-                      row.intent === 'Informational' && 'bg-info/[0.1] text-info',
-                      row.intent === 'Commercial' && 'bg-warning/[0.1] text-warning',
-                      row.intent === 'Transactional' && 'bg-success/[0.1] text-success',
-                      row.intent === 'Navigational' && 'bg-accent/[0.1] text-accent',
+                      row.intent === 'Informational' && 'bg-info/[0.08] text-info',
+                      row.intent === 'Commercial' && 'bg-warning/[0.08] text-warning',
+                      row.intent === 'Transactional' && 'bg-success/[0.08] text-success',
+                      row.intent === 'Navigational' && 'bg-accent/[0.08] text-accent',
                     )}>
                       {row.intent}
                     </span>
                   </td>
-                  <td className="max-w-[170px] truncate px-4 py-3 font-medium text-body" title={row.primaryKeyword}>
+                  <td className="max-w-[160px] truncate px-3.5 py-2.5 font-medium text-body-sm" title={row.primaryKeyword}>
                     {row.primaryKeyword}
                   </td>
-                  <td className="px-4 py-3 text-center font-mono text-body text-text-secondary" title={row.searchVolume != null ? String(row.searchVolume) : 'N/A'}>
+                  <td className="px-3.5 py-2.5 text-center font-mono text-body-sm text-text-secondary" title={row.searchVolume != null ? String(row.searchVolume) : 'N/A'}>
                     {row.searchVolume != null ? row.searchVolume.toLocaleString() : '-'}
                   </td>
-                  <td className="px-4 py-3 text-center font-mono text-body text-text-secondary" title={row.cpc != null ? String(row.cpc) : 'N/A'}>
+                  <td className="px-3.5 py-2.5 text-center font-mono text-body-sm text-text-secondary" title={row.cpc != null ? String(row.cpc) : 'N/A'}>
                     {row.cpc != null ? `$${row.cpc.toFixed(2)}` : '-'}
                   </td>
-                  <td className="max-w-[220px] truncate px-4 py-3 text-body text-text-secondary" title={row.keywords.join(', ')}>
+                  <td className="max-w-[200px] truncate px-3.5 py-2.5 text-body-sm text-text-secondary" title={row.keywords.join(', ')}>
                     {row.keywords.join(', ')}
                   </td>
                 </tr>
@@ -646,7 +646,7 @@ function RunLogs({
   if (!entries.length) {
     return (
       <Alert variant="info" title="Waiting for logs">
-        Logs will stream here as the worker advances through crawl, analysis, generation, and export stages.
+        Logs will stream here as the worker advances through stages.
       </Alert>
     );
   }
@@ -654,20 +654,20 @@ function RunLogs({
   const lastEntry = entries[entries.length - 1];
 
   return (
-    <div className="max-h-[400px] space-y-2.5 overflow-y-auto pr-1">
+    <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1">
       {entries.map((entry) => (
         <div
           key={entry.id}
-          className={cn('rounded-lg border border-border/70 bg-surface-raised/55 px-4 py-3', entry === lastEntry && status === 'processing' ? 'ring-1 ring-info/30' : null)}
+          className={cn('rounded-lg border border-border/40 bg-surface-raised/60 px-4 py-2.5', entry === lastEntry && status === 'processing' ? 'ring-1 ring-info/20' : null)}
         >
           <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-text-primary">
-              {status === 'processing' && entry === lastEntry ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-info" /> : <Search className="h-4 w-4 shrink-0 text-accent" />}
+            <div className="flex min-w-0 items-center gap-2 text-body-sm font-medium text-text-primary">
+              {status === 'processing' && entry === lastEntry ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-info" /> : <Search className="h-3.5 w-3.5 shrink-0 text-accent" />}
               <span className="truncate">{entry.message}</span>
             </div>
-            <span className="shrink-0 text-xs text-text-muted">{formatRelativeLabel(entry.createdAt)}</span>
+            <span className="shrink-0 text-caption text-text-muted">{formatRelativeLabel(entry.createdAt)}</span>
           </div>
-          <p className="mt-1.5 eyebrow">{entry.stage}</p>
+          <p className="mt-1 eyebrow">{entry.stage}</p>
         </div>
       ))}
     </div>
@@ -675,12 +675,11 @@ function RunLogs({
 }
 
 function StatusBadge({ status }: { status: ResearchRunSummary['status'] | ResearchRunDetail['status'] }) {
-  const copy = { queued: 'Queued', processing: 'Processing', completed: 'Completed', failed: 'Failed' }[status];
   const meta = statusBadgeMap[status];
 
   return (
-    <Badge variant={meta.variant} className="rounded-full">
-      {copy}
+    <Badge variant={meta.variant}>
+      {meta.label}
     </Badge>
   );
 }
@@ -703,15 +702,15 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
   const highestCpcKw = metricsAnalysis?.highestCpcKeyword as string | undefined;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {executiveSummary && (
-        <div className="rounded-xl border border-border/70 bg-surface-raised/55 p-5">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="rounded-lg border border-border/50 bg-surface-raised/60 p-5">
+          <div className="flex items-center gap-2 mb-2.5">
             <TrendingUp className="h-4 w-4 text-accent" />
             <h3 className="text-heading-3 text-text-primary">{String(executiveSummary.title ?? 'Keyword Research Report')}</h3>
           </div>
           <p className="text-body text-text-secondary">{String(executiveSummary.subtitle ?? '')}</p>
-          <div className="mt-3 flex flex-wrap gap-4 text-caption text-text-muted">
+          <div className="mt-2.5 flex flex-wrap gap-3 text-caption text-text-muted">
             <span>{String(executiveSummary.brandName ?? '')}</span>
             <span>·</span>
             <span>{String(executiveSummary.language ?? '')} · {String(executiveSummary.market ?? '')}</span>
@@ -724,30 +723,30 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
       )}
 
       {metricsAnalysis && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="p-4 text-center">
-            <p className="text-2xl font-bold text-accent tabular-nums">
+            <p className="text-xl font-bold text-accent tabular-nums">
               {totalVolume != null ? totalVolume.toLocaleString() : '-'}
             </p>
             <p className="mt-1 text-caption text-text-muted">Total Monthly Volume</p>
-            {highestVolKw &&             <p className="mt-1 text-caption text-text-secondary truncate" title={highestVolKw}>Top: {highestVolKw}</p>}
+            {highestVolKw && <p className="mt-1 text-caption text-text-secondary truncate" title={highestVolKw}>Top: {highestVolKw}</p>}
           </Card>
           <Card className="p-4 text-center">
-            <p className="text-2xl font-bold text-accent tabular-nums">
+            <p className="text-xl font-bold text-accent tabular-nums">
               {avgCpc != null ? `$${avgCpc.toFixed(2)}` : '-'}
             </p>
             <p className="mt-1 text-caption text-text-muted">Average CPC</p>
             {highestCpcKw && <p className="mt-1 text-caption text-text-secondary truncate" title={highestCpcKw}>Top: {highestCpcKw}</p>}
           </Card>
           <Card className="p-4 text-center">
-            <p className="text-2xl font-bold text-accent tabular-nums">
+            <p className="text-xl font-bold text-accent tabular-nums">
               {highVolumeCount > 0 ? highVolumeCount : '-'}
             </p>
             <p className="mt-1 text-caption text-text-muted">High-Volume Keywords</p>
             <p className="mt-1 text-caption text-text-secondary">&gt;1K monthly searches</p>
           </Card>
           <Card className="p-4 text-center">
-            <p className="text-2xl font-bold text-accent tabular-nums">
+            <p className="text-xl font-bold text-accent tabular-nums">
               {mainKeywordsTable.length}
             </p>
             <p className="mt-1 text-caption text-text-muted">Tracked Keywords</p>
@@ -757,8 +756,8 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
       )}
 
       {mainKeywordsTable.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-border/70 bg-surface-raised/55">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3">
+        <div className="overflow-hidden rounded-lg border border-border/50 bg-surface-raised/60">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 px-4 py-2.5">
             <div className="flex items-center gap-2 text-body font-semibold text-text-primary">
               <TableProperties className="h-4 w-4 text-accent" />
               Main Keywords — Volume &amp; CPC
@@ -767,51 +766,40 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
           </div>
           <div className="max-h-[400px] overflow-x-auto overflow-y-auto">
             <table className="min-w-full text-left">
-              <thead className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_hsl(var(--border)/0.7)]">
+              <thead className="sticky top-0 z-10 bg-surface-raised shadow-[0_1px_0_hsl(var(--border)/0.5)]">
                 <tr className="text-text-muted">
                   {['Keyword', 'Volume', 'CPC', 'Intent', 'Pillar', 'Priority'].map((label) => (
-                    <th key={label} className="px-4 py-3 text-caption font-semibold uppercase tracking-wider whitespace-nowrap">
+                    <th key={label} className="px-3.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap">
                       {label}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40">
+              <tbody className="divide-y divide-border/30">
                 {mainKeywordsTable.slice(0, 30).map((row, index) => (
-                  <tr key={`${String(row.keyword)}-${index}`} className={cn('align-top transition-colors hover:bg-accent/[0.03]', index % 2 === 1 && 'bg-surface-raised/30')}>
-                    <td className="px-4 py-3 font-medium text-text-primary" title={String(row.keyword ?? '')}>
+                  <tr key={`${String(row.keyword)}-${index}`} className={cn('align-top transition-colors hover:bg-accent/[0.02]', index % 2 === 1 && 'bg-surface-inset/30')}>
+                    <td className="px-3.5 py-2.5 font-medium text-text-primary" title={String(row.keyword ?? '')}>
                       {String(row.keyword ?? '')}
                     </td>
-                    <td className="px-4 py-3 font-mono text-body text-text-secondary tabular-nums">
+                    <td className="px-3.5 py-2.5 font-mono text-body-sm text-text-secondary tabular-nums">
                       {row.searchVolume != null ? Number(row.searchVolume).toLocaleString() : '-'}
                     </td>
-                    <td className="px-4 py-3 font-mono text-body text-text-secondary tabular-nums">
+                    <td className="px-3.5 py-2.5 font-mono text-body-sm text-text-secondary tabular-nums">
                       {row.cpc != null ? `$${Number(row.cpc).toFixed(2)}` : '-'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3.5 py-2.5">
                       <span className={cn(
                         'inline-block rounded-md px-2 py-0.5 text-caption font-medium',
-                        String(row.intent) === 'Informational' && 'bg-info/[0.1] text-info',
-                        String(row.intent) === 'Commercial' && 'bg-warning/[0.1] text-warning',
-                        String(row.intent) === 'Transactional' && 'bg-success/[0.1] text-success',
-                        String(row.intent) === 'Navigational' && 'bg-accent/[0.1] text-accent',
+                        String(row.intent) === 'Informational' && 'bg-info/[0.08] text-info',
+                        String(row.intent) === 'Commercial' && 'bg-warning/[0.08] text-warning',
+                        String(row.intent) === 'Transactional' && 'bg-success/[0.08] text-success',
+                        String(row.intent) === 'Navigational' && 'bg-accent/[0.08] text-accent',
                       )}>
                         {String(row.intent ?? '')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-text-secondary text-body max-w-[140px] truncate" title={String(row.pillar ?? '')}>
-                      {String(row.pillar ?? '')}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn(
-                        'inline-block rounded-md px-2 py-0.5 text-caption font-medium',
-                        String(row.priority) === 'high' && 'bg-success/[0.1] text-success',
-                        String(row.priority) === 'medium' && 'bg-warning/[0.1] text-warning',
-                        String(row.priority) === 'low' && 'bg-text-muted/[0.1] text-text-muted',
-                      )}>
-                        {String(row.priority ?? '')}
-                      </span>
-                    </td>
+                    <td className="px-3.5 py-2.5 text-body-sm text-text-secondary">{String(row.pillar ?? '')}</td>
+                    <td className="px-3.5 py-2.5 text-body-sm text-text-secondary">{String(row.priority ?? '')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -821,11 +809,11 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
       )}
 
       {keyInsights.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-body font-semibold text-text-primary">Key Insights</h4>
-          <ul className="space-y-1.5">
-            {keyInsights.slice(0, 6).map((insight, i) => (
-              <li key={i} className="flex items-start gap-2 text-body text-text-secondary">
+        <div className="rounded-lg border border-border/50 bg-surface-raised/60 p-5">
+          <h3 className="text-heading-3 text-text-primary mb-3">Key Insights</h3>
+          <ul className="space-y-2">
+            {keyInsights.map((insight, index) => (
+              <li key={index} className="flex items-start gap-2 text-body text-text-secondary">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                 {insight}
               </li>
@@ -834,21 +822,23 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
         </div>
       )}
 
-      {contentStrategy && (contentStrategy.topOpportunities as Array<SynthesisSnapshot>)?.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-body font-semibold text-text-primary">Top Opportunities</h4>
-          <ul className="space-y-1.5">
-            {(contentStrategy.topOpportunities as Array<SynthesisSnapshot>).slice(0, 5).map((opp, i) => (
-              <li key={i} className="flex items-start gap-2 text-body text-text-secondary">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
-                <span className="font-medium text-text-primary">{String(opp.keyword ?? '')}</span>
-                <span>— {String(opp.rationale ?? '')}</span>
-              </li>
-            ))}
-          </ul>
+      {contentStrategy && (
+        <div className="rounded-lg border border-border/50 bg-surface-raised/60 p-5">
+          <h3 className="text-heading-3 text-text-primary mb-3">Content Strategy</h3>
+          <p className="text-body text-text-secondary">{String(contentStrategy.overview ?? '')}</p>
+        </div>
+      )}
+
+      {intentDistribution && (
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          {Object.entries(intentDistribution).map(([intent, count]) => (
+            <div key={intent} className="rounded-lg border border-border/50 bg-surface-raised/60 p-3 text-center">
+              <p className="text-heading-3 text-accent tabular-nums">{String(count)}</p>
+              <p className="mt-0.5 text-caption text-text-muted">{intent}</p>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
-

@@ -16,105 +16,107 @@
 
   :root,
   .light {
-    --background: 232 28% 95%;
-    --surface: 240 22% 99%;
-    --surface-raised: 234 24% 96%;
+    --background: 234 30% 96%;
+    --surface: 240 24% 99%;
+    --surface-raised: 236 26% 97%;
     --surface-overlay: 240 22% 99%;
-    --border: 252 22% 82%;
-    --border-subtle: 250 20% 89%;
-    --text-primary: 232 32% 10%;
-    --text-secondary: 234 20% 28%;
-    --text-muted: 236 14% 46%;
+    --surface-inset: 234 22% 93%;
+    --border: 252 18% 84%;
+    --border-subtle: 250 16% 90%;
+    --text-primary: 232 36% 8%;
+    --text-secondary: 234 18% 32%;
+    --text-muted: 236 12% 50%;
     --text-inverted: 0 0% 100%;
-    --accent: 254 100% 66%;
-    --accent-hover: 254 100% 60%;
+    --accent: 254 100% 64%;
+    --accent-hover: 254 100% 58%;
     --accent-foreground: 0 0% 100%;
     --accent-muted: 254 60% 94%;
-    --accent-glow: 254 100% 66%;
-    --accent-rgb: 118, 82, 255;
+    --accent-glow: 254 100% 64%;
+    --accent-rgb: 112, 74, 255;
     --accent-surface: 254 80% 97%;
     --destructive: 0 78% 55%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 76% 30%;
+    --success: 152 72% 28%;
     --success-foreground: 0 0% 100%;
     --success-muted: 152 64% 93%;
     --warning: 34 91% 50%;
     --warning-foreground: 0 0% 100%;
     --warning-muted: 35 88% 93%;
-    --info: 217 95% 68%;
+    --info: 217 92% 62%;
     --info-foreground: 0 0% 100%;
     --info-muted: 217 80% 94%;
-    --input-bg: 240 22% 99%;
-    --input-border: 252 20% 80%;
-    --input-focus: 254 100% 66%;
-    --ring: 254 100% 66%;
+    --input-bg: 0 0% 100%;
+    --input-border: 252 18% 82%;
+    --input-focus: 254 100% 64%;
+    --ring: 254 100% 64%;
     --sidebar-bg: 230 44% 7%;
     --sidebar-active: 254 60% 22%;
     --sidebar-text: 232 22% 82%;
-    --tab-active: 254 100% 66%;
+    --tab-active: 254 100% 64%;
     --tab-inactive: 232 12% 52%;
     --scrollbar-track: 232 24% 94%;
     --scrollbar-thumb: 252 16% 72%;
     --radius-xs: 6px;
-    --radius-sm: 10px;
-    --radius-md: 14px;
-    --radius-lg: 18px;
-    --radius-xl: 24px;
-    --radius-2xl: 32px;
-    --elevation-1: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-    --elevation-2: 0 8px 28px rgba(80, 40, 180, 0.10), 0 4px 12px rgba(0, 0, 0, 0.08);
-    --elevation-3: 0 24px 56px rgba(80, 40, 180, 0.12), 0 8px 20px rgba(0, 0, 0, 0.10);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-2xl: 28px;
+    --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --elevation-2: 0 4px 16px rgba(80, 40, 180, 0.07), 0 2px 6px rgba(0, 0, 0, 0.05);
+    --elevation-3: 0 12px 40px rgba(80, 40, 180, 0.10), 0 4px 12px rgba(0, 0, 0, 0.06);
   }
 
   .dark {
     --background: 228 42% 6%;
-    --surface: 228 38% 10%;
-    --surface-raised: 228 32% 14%;
-    --surface-overlay: 228 40% 8%;
-    --border: 250 22% 20%;
-    --border-subtle: 248 20% 14%;
+    --surface: 228 36% 10%;
+    --surface-raised: 228 30% 13%;
+    --surface-overlay: 228 38% 8%;
+    --surface-inset: 228 40% 5%;
+    --border: 250 20% 20%;
+    --border-subtle: 248 18% 14%;
     --text-primary: 232 80% 97%;
-    --text-secondary: 230 30% 72%;
-    --text-muted: 232 18% 50%;
+    --text-secondary: 230 28% 70%;
+    --text-muted: 232 16% 48%;
     --text-inverted: 228 38% 7%;
-    --accent: 254 100% 70%;
-    --accent-hover: 254 100% 76%;
+    --accent: 254 100% 72%;
+    --accent-hover: 254 100% 78%;
     --accent-foreground: 0 0% 100%;
     --accent-muted: 254 50% 18%;
-    --accent-glow: 254 100% 70%;
-    --accent-rgb: 132, 102, 255;
-    --accent-surface: 254 40% 12%;
+    --accent-glow: 254 100% 72%;
+    --accent-rgb: 138, 108, 255;
+    --accent-surface: 254 38% 12%;
     --destructive: 0 80% 61%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 76% 37%;
+    --success: 152 72% 38%;
     --success-foreground: 0 0% 100%;
     --success-muted: 152 42% 16%;
     --warning: 36 96% 58%;
     --warning-foreground: 228 38% 7%;
     --warning-muted: 35 72% 17%;
-    --info: 217 95% 68%;
+    --info: 217 92% 66%;
     --info-foreground: 228 38% 7%;
     --info-muted: 217 46% 18%;
-    --input-bg: 228 34% 12%;
-    --input-border: 250 20% 24%;
-    --input-focus: 254 100% 70%;
-    --ring: 254 100% 70%;
+    --input-bg: 228 32% 11%;
+    --input-border: 250 18% 22%;
+    --input-focus: 254 100% 72%;
+    --ring: 254 100% 72%;
     --sidebar-bg: 230 46% 5%;
     --sidebar-active: 254 50% 18%;
     --sidebar-text: 230 26% 78%;
-    --tab-active: 254 100% 70%;
+    --tab-active: 254 100% 72%;
     --tab-inactive: 232 16% 46%;
     --scrollbar-track: 228 38% 8%;
     --scrollbar-thumb: 250 20% 22%;
     --radius-xs: 6px;
-    --radius-sm: 10px;
-    --radius-md: 14px;
-    --radius-lg: 18px;
-    --radius-xl: 24px;
-    --radius-2xl: 32px;
-    --elevation-1: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(120, 80, 255, 0.04);
-    --elevation-2: 0 12px 36px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(120, 80, 255, 0.06);
-    --elevation-3: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 48px rgba(120, 80, 255, 0.08);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-2xl: 28px;
+    --elevation-1: 0 2px 6px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(120, 80, 255, 0.04);
+    --elevation-2: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(120, 80, 255, 0.05);
+    --elevation-3: 0 20px 60px rgba(0, 0, 0, 0.45), 0 0 32px rgba(120, 80, 255, 0.06);
   }
 
   * {
@@ -198,7 +200,7 @@
 
 @layer utilities {
   .page-stack {
-    @apply flex flex-col gap-6 lg:gap-8;
+    @apply flex flex-col gap-8 lg:gap-10;
   }
 
   .page-shell {
@@ -206,11 +208,11 @@
   }
 
   .page-hero {
-    @apply relative overflow-hidden rounded-xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--surface))/0.98,hsl(var(--surface-raised))/0.94)] shadow-elevation-3;
+    @apply relative overflow-hidden rounded-xl border border-accent/[0.12] bg-[linear-gradient(180deg,hsl(var(--surface)),hsl(var(--surface-raised))/0.95)] shadow-elevation-3;
   }
 
   .page-hero-inner {
-    @apply relative flex flex-col gap-6 px-5 py-6 sm:px-7 sm:py-7 lg:gap-8;
+    @apply relative flex flex-col gap-5 px-5 py-6 sm:px-7 sm:py-7 lg:gap-7;
   }
 
   .section-header {
@@ -218,48 +220,48 @@
   }
 
   .section-title {
-    @apply text-2xl font-semibold tracking-tight text-text-primary sm:text-[2.2rem];
+    @apply text-heading-1 text-text-primary;
   }
 
   .section-subtitle {
-    @apply text-xl font-semibold tracking-tight text-text-primary;
+    @apply text-heading-2 text-text-primary;
   }
 
   .section-copy {
-    @apply max-w-2xl text-sm leading-6 text-text-secondary sm:text-[0.95rem];
+    @apply max-w-2xl text-body leading-relaxed text-text-secondary;
   }
 
   .panel {
-    @apply rounded-xl border border-border/80 bg-[linear-gradient(180deg,hsl(var(--surface))/0.98,hsl(var(--surface-raised))/0.94)] shadow-elevation-2 backdrop-blur-sm;
-    border-top: 1px solid hsl(var(--accent) / 0.08);
+    @apply rounded-xl border border-border/70 bg-surface shadow-elevation-2;
+    border-top: 1px solid hsl(var(--accent) / 0.06);
   }
 
   .panel-muted {
-    @apply rounded-xl border border-border/80 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.82,hsl(var(--surface-overlay))/0.8)];
+    @apply rounded-xl border border-border/60 bg-surface-raised;
   }
 
   .section-shell {
-    @apply panel p-4 sm:p-5 lg:p-7;
+    @apply panel p-5 sm:p-6 lg:p-8;
   }
 
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.24em] text-accent/70;
+    @apply text-[11px] font-semibold uppercase tracking-[0.22em] text-accent/65;
   }
 
   .stat-value {
-    @apply text-[2rem] font-semibold tracking-tight text-text-primary sm:text-[2.3rem];
+    @apply text-heading-1 text-text-primary;
   }
 
   .toolbar-chip {
-    @apply inline-flex items-center gap-2 rounded-full border border-accent/15 bg-accent/[0.04] px-3 py-1.5 text-[11px] font-semibold text-text-secondary backdrop-blur;
+    @apply inline-flex items-center gap-2 rounded-full border border-accent/[0.12] bg-accent/[0.04] px-3 py-1.5 text-[11px] font-semibold text-text-secondary;
   }
 
   .data-card {
-    @apply rounded-xl border border-border/70 bg-surface-raised/[0.62] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)];
+    @apply rounded-lg border border-border/60 bg-surface-raised px-4 py-4;
   }
 
   .list-card {
-    @apply rounded-xl border border-border/70 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.8,hsl(var(--surface-overlay))/0.82)] px-5 py-5 shadow-elevation-1 transition-all;
+    @apply rounded-xl border border-border/60 bg-surface px-5 py-5 shadow-elevation-1 transition-all;
   }
 
   .field-group {
@@ -275,11 +277,15 @@
   }
 
   .field-input {
-    @apply w-full rounded-lg border border-input-border/90 bg-input-bg/90 px-4 py-3 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted/60 focus:border-accent/50 focus:bg-surface focus:shadow-[0_0_0_3px_hsl(var(--accent)_/_0.18),0_0_16px_-4px_hsl(var(--accent)_/_0.12)];
+    @apply w-full rounded-lg border border-input-border bg-input-bg px-4 py-3 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted/50 focus:border-accent/50 focus:bg-surface focus:shadow-[0_0_0_3px_hsl(var(--accent)_/_0.12)];
   }
 
   .field-textarea {
     @apply field-input min-h-[120px] resize-y leading-6;
+  }
+
+  .form-section {
+    @apply rounded-xl border border-border/50 bg-surface-inset/50 p-4 sm:p-5;
   }
 
   .field-select {
@@ -298,7 +304,7 @@
   }
 
   .subtle-divider {
-    @apply border-t border-border/70;
+    @apply border-t border-border/50;
   }
 
   .bg-grid {
@@ -317,11 +323,11 @@
   }
 
   .subtle-surface {
-    @apply rounded-xl border border-accent/[0.08] bg-surface-raised/[0.52];
+    @apply rounded-lg border border-border/50 bg-surface-raised/80;
   }
 
   .interactive-surface {
-    @apply rounded-xl border border-border/75 bg-[linear-gradient(180deg,hsl(var(--surface-raised))/0.82,hsl(var(--surface-overlay))/0.82)] transition-all;
+    @apply rounded-xl border border-border/60 bg-surface transition-all;
   }
 
   .section-gap {
@@ -329,7 +335,7 @@
   }
 
   .accent-glow {
-    box-shadow: 0 0 48px -12px hsl(var(--accent-glow) / 0.30), 0 0 20px -8px hsl(var(--accent-glow) / 0.15);
+    box-shadow: 0 0 40px -12px hsl(var(--accent-glow) / 0.20), 0 0 16px -8px hsl(var(--accent-glow) / 0.10);
   }
 
   .accent-border-top {

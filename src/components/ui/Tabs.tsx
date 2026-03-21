@@ -43,11 +43,11 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
   return (
     <div className="relative">
       {showFadeLeft && (
-        <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-8 bg-gradient-to-r from-[hsl(var(--surface-overlay))] to-transparent" />
+        <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-8 bg-gradient-to-r from-surface to-transparent" />
       )}
       <div
         ref={containerRef}
-        className="flex overflow-x-auto rounded-lg border border-border/70 bg-surface-overlay/85 p-1.5 scrollbar-none"
+        className="flex overflow-x-auto rounded-lg border border-border/50 bg-surface-inset/60 p-1 scrollbar-none"
         style={{ scrollbarWidth: 'none' }}
       >
         {tabs.map((tab) => (
@@ -55,10 +55,10 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={cn(
-               'relative min-h-tap whitespace-nowrap rounded-lg px-5 py-2.5 text-sm font-semibold transition-all',
+               'relative min-h-tap whitespace-nowrap rounded-md px-4 py-2 text-body-sm font-semibold transition-all',
                activeTab === tab.id
-                 ? 'bg-accent/[0.12] text-accent shadow-[0_2px_8px_-2px_rgba(var(--accent-rgb),0.2)] ring-1 ring-accent/25'
-                 : 'text-tab-inactive hover:bg-accent/[0.05] hover:text-text-primary',
+                 ? 'bg-surface text-accent shadow-elevation-1'
+                 : 'text-text-muted hover:bg-surface/50 hover:text-text-primary',
              )}
           >
             {tab.label}
@@ -69,7 +69,7 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
         ))}
       </div>
       {showFadeRight && (
-        <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-8 bg-gradient-to-l from-[hsl(var(--surface-overlay))] to-transparent" />
+        <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-8 bg-gradient-to-l from-surface to-transparent" />
       )}
     </div>
   );

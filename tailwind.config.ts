@@ -16,6 +16,7 @@ const config: Config = {
           DEFAULT: 'hsl(var(--surface))',
           raised: 'hsl(var(--surface-raised))',
           overlay: 'hsl(var(--surface-overlay))',
+          inset: 'hsl(var(--surface-inset))',
         },
         border: {
           DEFAULT: 'hsl(var(--border))',
@@ -104,6 +105,9 @@ const config: Config = {
         'slide-down': 'slideDown 0.2s ease-out',
         'slide-up': 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         'shimmer': 'shimmer 2s ease-in-out infinite',
+        'enter': 'enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'enter-delayed': 'enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both',
+        'enter-delayed-2': 'enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both',
       },
       keyframes: {
         fadeIn: {
@@ -121,6 +125,10 @@ const config: Config = {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        enter: {
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },

@@ -10,26 +10,26 @@ interface CardProps {
 const paddingMap = {
   none: '',
   sm: 'p-3.5',
-  md: 'p-4 sm:p-5',
-  lg: 'p-5 sm:p-6 lg:p-7',
+  md: 'p-5 sm:p-6',
+  lg: 'p-6 sm:p-7 lg:p-8',
 };
 
 const variantMap = {
   default:
-    'rounded-xl border border-border/75 bg-[linear-gradient(180deg,hsl(var(--surface))/0.98,hsl(var(--surface-raised))/0.95)] shadow-elevation-2',
+    'rounded-xl border border-border/60 bg-surface shadow-elevation-1',
   muted:
-    'rounded-xl border border-accent/[0.08] bg-surface-raised/[0.72] shadow-elevation-1',
+    'rounded-xl border border-border/40 bg-surface-raised shadow-elevation-1',
   interactive:
-    'rounded-xl border border-border/75 bg-[linear-gradient(180deg,hsl(var(--surface))/0.98,hsl(var(--surface-raised))/0.95)] shadow-elevation-1 hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-[0_28px_72px_-46px_rgba(var(--accent-rgb),0.22)]',
+    'rounded-xl border border-border/60 bg-surface shadow-elevation-1 hover:border-accent/25 hover:shadow-elevation-2 hover:-translate-y-px',
   hero:
-    'rounded-xl border border-accent/[0.15] bg-[linear-gradient(180deg,hsl(var(--surface))/0.99,hsl(var(--accent-surface))/0.4)] shadow-elevation-3',
+    'rounded-xl border border-accent/20 bg-surface shadow-elevation-2',
 };
 
 export default function Card({ children, className = '', padding = 'md', variant = 'default' }: CardProps) {
   return (
     <div
       className={cn(
-        'relative isolate overflow-visible backdrop-blur-xl before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[hsl(var(--accent)/0.15)] before:to-transparent transition-all duration-300',
+        'relative transition-all duration-200',
         variantMap[variant],
         paddingMap[padding],
         className,

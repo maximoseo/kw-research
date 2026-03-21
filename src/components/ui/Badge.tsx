@@ -9,18 +9,18 @@ interface BadgeProps {
 }
 
 const variantStyles = {
-  success: 'border-success/30 bg-success/[0.12] text-success shadow-[0_1px_4px_rgba(0,0,0,0.04)]',
-  warning: 'border-warning/30 bg-warning/[0.12] text-warning shadow-[0_1px_4px_rgba(0,0,0,0.04)]',
-  error: 'border-destructive/30 bg-destructive/[0.12] text-destructive shadow-[0_1px_4px_rgba(0,0,0,0.04)]',
-  info: 'border-accent/30 bg-accent/[0.12] text-accent shadow-[0_1px_4px_rgba(var(--accent-rgb),0.08)]',
-  neutral: 'border-accent/10 bg-surface-raised/70 text-text-secondary shadow-[0_1px_4px_rgba(0,0,0,0.04)]',
+  success: 'border-success/25 bg-success/[0.08] text-success',
+  warning: 'border-warning/25 bg-warning/[0.08] text-warning',
+  error: 'border-destructive/25 bg-destructive/[0.08] text-destructive',
+  info: 'border-accent/25 bg-accent/[0.08] text-accent',
+  neutral: 'border-border/60 bg-surface-raised text-text-secondary',
 };
 
 export default function Badge({ variant, children, pulse, dot = true, className = '' }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]',
+        'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]',
         variantStyles[variant],
         className,
       )}

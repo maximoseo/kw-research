@@ -80,10 +80,10 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
   };
 
   const variantStyles = {
-    success: 'border-success/25 bg-[linear-gradient(135deg,hsl(var(--success))/0.18,hsl(var(--surface))/0.98)] text-text-primary',
-    error: 'border-destructive/25 bg-[linear-gradient(135deg,hsl(var(--destructive))/0.18,hsl(var(--surface))/0.98)] text-text-primary',
-    warning: 'border-warning/25 bg-[linear-gradient(135deg,hsl(var(--warning))/0.18,hsl(var(--surface))/0.98)] text-text-primary',
-    info: 'border-info/25 bg-[linear-gradient(135deg,hsl(var(--info))/0.18,hsl(var(--surface))/0.98)] text-text-primary',
+    success: 'border-success/20 bg-surface text-text-primary',
+    error: 'border-destructive/20 bg-surface text-text-primary',
+    warning: 'border-warning/20 bg-surface text-text-primary',
+    info: 'border-accent/20 bg-surface text-text-primary',
   };
 
   const iconStyles = {
@@ -96,16 +96,16 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
   return (
     <div
       className={cn(
-        'pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-4 shadow-elevation-3 backdrop-blur-md transition-all duration-200 ease-out',
+        'pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3.5 shadow-elevation-3 backdrop-blur-md transition-all duration-200 ease-out',
         variantStyles[toast.variant],
         isLeaving ? 'translate-x-4 scale-95 opacity-0' : 'translate-x-0 scale-100 opacity-100',
       )}
     >
-      <span className={cn('mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-current/15 bg-current/[0.08]', iconStyles[toast.variant])}>
-        {toast.variant === 'success' && <CheckCircle2 className="h-5 w-5" />}
-        {toast.variant === 'error' && <XCircle className="h-5 w-5" />}
-        {toast.variant === 'warning' && <AlertTriangle className="h-5 w-5" />}
-        {toast.variant === 'info' && <Info className="h-5 w-5" />}
+      <span className={cn('mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg', iconStyles[toast.variant])}>
+        {toast.variant === 'success' && <CheckCircle2 className="h-4.5 w-4.5" />}
+        {toast.variant === 'error' && <XCircle className="h-4.5 w-4.5" />}
+        {toast.variant === 'warning' && <AlertTriangle className="h-4.5 w-4.5" />}
+        {toast.variant === 'info' && <Info className="h-4.5 w-4.5" />}
       </span>
       <div className="flex-1">
         <p className="text-sm font-semibold text-text-primary">
