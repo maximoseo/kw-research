@@ -155,7 +155,8 @@ export async function POST(request: Request) {
       projectId: created.projectId,
     });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Unable to create the research run.' }, { status: 500 });
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error('[POST /api/runs] Failed to create research run:', detail, error);
+    return NextResponse.json({ error: `Unable to create the research run: ${detail}` }, { status: 500 });
   }
 }

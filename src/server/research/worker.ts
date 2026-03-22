@@ -44,6 +44,7 @@ export function startResearchWorker() {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Research pipeline failed.';
+      console.error(`[worker:${workerId}] Pipeline failed for run ${claimed.id}:`, message, error);
       await addResearchLog({
         runId: claimed.id,
         stage: 'system',
