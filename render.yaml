@@ -19,9 +19,9 @@ services:
       - key: DATA_DIR
         value: /var/data
       - key: AI_REQUEST_TIMEOUT_MS
-        value: 15000
+        value: 60000
       - key: AI_MAX_RETRIES
-        value: 1
+        value: 3
       - key: CRAWL_MAX_SITEMAPS
         value: 20
       - key: CRAWL_MAX_URLS
