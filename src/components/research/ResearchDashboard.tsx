@@ -247,7 +247,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   };
 
   return (
-    <div className="page-stack">
+    <div className="min-w-0 page-stack">
       {/* ── Hero section ── */}
       <section className="animate-enter grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.05fr_0.95fr]">
         <Card variant="hero" className="space-y-5">
@@ -628,10 +628,10 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
 
 function InfoRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
   return (
-    <div className="subtle-surface px-4 py-2.5">
+    <div className="subtle-surface min-w-0 px-4 py-2.5">
       <p className="eyebrow">{label}</p>
       {multiline ? <p className="mt-1.5 text-body leading-relaxed text-text-secondary break-words">{value}</p> : (
-        <a href={value} target="_blank" rel="noreferrer" className="mt-1.5 block truncate text-body text-accent hover:underline" title={value}>
+        <a href={value} target="_blank" rel="noreferrer" className="mt-1.5 block truncate text-body text-accent hover:underline break-all" title={value}>
           {value}
         </a>
       )}
@@ -681,11 +681,11 @@ function PreviewTable({
             </p>
           </div>
         ) : (
-          <table className="min-w-full text-left">
+          <table className="min-w-[800px] w-full text-left">
             <thead className="sticky top-0 z-10 bg-surface-raised shadow-[0_1px_0_hsl(var(--border)/0.5)]">
               <tr className="text-text-muted">
                 {['Parent Page', 'Pillar', 'Cluster', 'Intent', 'Primary Keyword', 'Volume', 'CPC', 'Keywords'].map((label) => (
-                  <th key={label} className="px-3.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap">
+                  <th key={label} className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5">
                     {label}
                   </th>
                 ))}
@@ -694,16 +694,16 @@ function PreviewTable({
             <tbody className="divide-y divide-border/30">
               {previewRows.map((row, index) => (
                 <tr key={`${row.cluster}-${index}`} className={cn('align-top transition-colors hover:bg-accent/[0.02]', index % 2 === 1 && 'bg-surface-inset/30')}>
-                  <td className="max-w-[200px] truncate px-3.5 py-2.5 text-body-sm text-text-secondary" title={row.existingParentPage}>
+                  <td className="max-w-[140px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[200px]" title={row.existingParentPage}>
                     {row.existingParentPage}
                   </td>
-                  <td className="max-w-[160px] truncate px-3.5 py-2.5 font-medium text-body-sm" title={row.pillar}>
+                  <td className="max-w-[120px] truncate px-2.5 py-2.5 font-medium text-body-sm sm:px-3.5 md:max-w-[160px]" title={row.pillar}>
                     {row.pillar}
                   </td>
-                  <td className="max-w-[160px] truncate px-3.5 py-2.5 text-body-sm text-text-secondary" title={row.cluster}>
+                  <td className="max-w-[120px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[160px]" title={row.cluster}>
                     {row.cluster}
                   </td>
-                  <td className="px-3.5 py-2.5" title={row.intent}>
+                  <td className="px-2.5 py-2.5 sm:px-3.5" title={row.intent}>
                     <span className={cn(
                       'inline-block rounded-md px-2 py-0.5 text-caption font-medium',
                       row.intent === 'Informational' && 'bg-info/[0.08] text-info',
@@ -714,16 +714,16 @@ function PreviewTable({
                       {row.intent}
                     </span>
                   </td>
-                  <td className="max-w-[160px] truncate px-3.5 py-2.5 font-medium text-body-sm" title={row.primaryKeyword}>
+                  <td className="max-w-[120px] truncate px-2.5 py-2.5 font-medium text-body-sm sm:px-3.5 md:max-w-[160px]" title={row.primaryKeyword}>
                     {row.primaryKeyword}
                   </td>
-                  <td className="px-3.5 py-2.5 text-center font-mono text-body-sm text-text-secondary" title={row.searchVolume != null ? String(row.searchVolume) : 'N/A'}>
+                  <td className="px-2.5 py-2.5 text-center font-mono text-body-sm text-text-secondary sm:px-3.5" title={row.searchVolume != null ? String(row.searchVolume) : 'N/A'}>
                     {row.searchVolume != null ? row.searchVolume.toLocaleString() : '—'}
                   </td>
-                  <td className="px-3.5 py-2.5 text-center font-mono text-body-sm text-text-secondary" title={row.cpc != null ? String(row.cpc) : 'N/A'}>
+                  <td className="px-2.5 py-2.5 text-center font-mono text-body-sm text-text-secondary sm:px-3.5" title={row.cpc != null ? String(row.cpc) : 'N/A'}>
                     {row.cpc != null ? `$${row.cpc.toFixed(2)}` : '—'}
                   </td>
-                  <td className="max-w-[200px] truncate px-3.5 py-2.5 text-body-sm text-text-secondary" title={row.keywords.join(', ')}>
+                  <td className="max-w-[140px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[200px]" title={row.keywords.join(', ')}>
                     {row.keywords.join(', ')}
                   </td>
                 </tr>
@@ -904,11 +904,11 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
             <span className="text-caption text-text-muted">{mainKeywordsTable.length} keywords</span>
           </div>
           <div className="max-h-[400px] overflow-x-auto overflow-y-auto">
-            <table className="min-w-full text-left">
+            <table className="min-w-[600px] w-full text-left">
               <thead className="sticky top-0 z-10 bg-surface-raised shadow-[0_1px_0_hsl(var(--border)/0.5)]">
                 <tr className="text-text-muted">
                   {['Keyword', 'Volume', 'CPC', 'Intent', 'Pillar', 'Priority'].map((label) => (
-                    <th key={label} className="px-3.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap">
+                    <th key={label} className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5">
                       {label}
                     </th>
                   ))}
@@ -917,16 +917,16 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
               <tbody className="divide-y divide-border/30">
                 {mainKeywordsTable.slice(0, 30).map((row, index) => (
                   <tr key={`${String(row.keyword)}-${index}`} className={cn('align-top transition-colors hover:bg-accent/[0.02]', index % 2 === 1 && 'bg-surface-inset/30')}>
-                    <td className="px-3.5 py-2.5 font-medium text-text-primary" title={String(row.keyword ?? '')}>
+                    <td className="max-w-[180px] truncate px-2.5 py-2.5 font-medium text-text-primary sm:px-3.5 md:max-w-[240px]" title={String(row.keyword ?? '')}>
                       {String(row.keyword ?? '')}
                     </td>
-                    <td className="px-3.5 py-2.5 font-mono text-body-sm text-text-secondary tabular-nums">
+                    <td className="px-2.5 py-2.5 font-mono text-body-sm text-text-secondary tabular-nums sm:px-3.5">
                       {row.searchVolume != null ? Number(row.searchVolume).toLocaleString() : '-'}
                     </td>
-                    <td className="px-3.5 py-2.5 font-mono text-body-sm text-text-secondary tabular-nums">
+                    <td className="px-2.5 py-2.5 font-mono text-body-sm text-text-secondary tabular-nums sm:px-3.5">
                       {row.cpc != null ? `$${Number(row.cpc).toFixed(2)}` : '-'}
                     </td>
-                    <td className="px-3.5 py-2.5">
+                    <td className="px-2.5 py-2.5 sm:px-3.5">
                       <span className={cn(
                         'inline-block rounded-md px-2 py-0.5 text-caption font-medium',
                         String(row.intent) === 'Informational' && 'bg-info/[0.08] text-info',
@@ -937,8 +937,8 @@ function ReportSynthesisView({ synthesis }: { synthesis: SynthesisSnapshot }) {
                         {String(row.intent ?? '')}
                       </span>
                     </td>
-                    <td className="px-3.5 py-2.5 text-body-sm text-text-secondary">{String(row.pillar ?? '')}</td>
-                    <td className="px-3.5 py-2.5 text-body-sm text-text-secondary">{String(row.priority ?? '')}</td>
+                    <td className="max-w-[120px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5">{String(row.pillar ?? '')}</td>
+                    <td className="px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5">{String(row.priority ?? '')}</td>
                   </tr>
                 ))}
               </tbody>

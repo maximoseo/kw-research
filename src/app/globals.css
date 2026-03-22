@@ -159,7 +159,6 @@
     font-family: var(--font-body), var(--font-sans), sans-serif;
     color: hsl(var(--text-primary));
     min-height: 100vh;
-    overflow-x: hidden;
     overflow-wrap: break-word;
   }
 
@@ -212,7 +211,7 @@
   }
 
   .page-shell {
-    @apply mx-auto w-full max-w-[1480px];
+    @apply mx-auto w-full min-w-0 max-w-[1480px];
   }
 
   .page-hero {
@@ -281,7 +280,7 @@
   }
 
   .field-label {
-    @apply text-[0.8125rem] font-semibold leading-5 text-text-primary whitespace-nowrap;
+    @apply text-[0.8125rem] font-semibold leading-5 text-text-primary;
   }
 
   .field-hint {

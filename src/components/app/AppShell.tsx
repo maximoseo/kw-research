@@ -84,9 +84,9 @@ export function AppShell({
       </aside>
 
       {/* ── Main content ── */}
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-border/40 bg-surface/90 backdrop-blur-lg">
-          <div className="page-shell flex flex-col gap-2.5 px-4 py-3 sm:px-6 sm:py-3.5">
+          <div className="page-shell flex min-w-0 flex-col gap-2.5 px-4 py-3 sm:px-6 sm:py-3.5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="text-heading-2 text-text-primary truncate">
@@ -130,7 +130,7 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="page-shell flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+        <main className="page-shell flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-6 sm:px-6 sm:py-8">{children}</main>
       </div>
     </div>
   );
