@@ -586,6 +586,33 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                   <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); setSelectedRunId(run.id); }}>
                     {selectedRunId === run.id ? 'Selected' : 'Open in workspace'}
                   </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    icon={<RefreshCcw className="h-3.5 w-3.5" />}
+                    className="w-full sm:w-auto"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const payload = new FormData();
+                      payload.set('projectId', project.id);
+                      payload.set('competitorUrls', project.competitorUrls.join('\n'));
+                      payload.set('notes', project.notes || '');
+                      payload.set('mode', 'fresh');
+                      payload.set('targetRows', String(run.targetRows));
+                      const response = await fetch('/api/runs', { method: 'POST', body: payload });
+                      const result = await response.json().catch(() => null);
+                      if (!response.ok) {
+                        addToast(result?.error || 'Unable to start rerun.', 'error');
+                        return;
+                      }
+                      addToast('Rerun queued successfully.', 'success');
+                      setSelectedRunId(result.runId);
+                      await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
+                    }}
+                  >
+                    Rerun
+                  </Button>
                   <Button type="button" variant="ghost" size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); router.push(buildProjectRunPath(project.id, run.id)); }}>
                     Full page
                   </Button>

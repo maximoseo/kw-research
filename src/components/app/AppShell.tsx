@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeftRight, Compass, FolderKanban, History, SearchCheck } from 'lucide-react';
+import { ArrowLeftRight, Compass, FolderKanban, History, LayoutDashboard, SearchCheck } from 'lucide-react';
 import type { ResearchProjectDetail } from '@/lib/research';
 import { buildProjectDashboardPath } from '@/lib/project-context';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ export function AppShell({
   const pathname = usePathname();
   const dashboardPath = buildProjectDashboardPath(project.id);
   const navItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, active: pathname === '/dashboard' },
     { href: dashboardPath, label: 'Overview', icon: Compass, active: pathname === dashboardPath || pathname.startsWith(`${dashboardPath}/`) },
     { href: `${dashboardPath}#new-research`, label: 'New run', icon: SearchCheck, active: false },
     { href: `${dashboardPath}#history`, label: 'History', icon: History, active: false },
