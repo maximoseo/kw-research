@@ -69,6 +69,7 @@ export type CreateProjectRunInput = z.infer<typeof createProjectRunSchema>;
  * will auto-discover them via buildSiteEvidence() when they are missing.
  */
 export const competitorDiscoverySchema = z.object({
+  projectId: z.string().min(1),
   homepageUrl: urlSchema,
   aboutUrl: z.string().trim().default('').transform((v) => (v === '' ? '' : v)),
   sitemapUrl: z.string().trim().default('').transform((v) => (v === '' ? '' : v)),

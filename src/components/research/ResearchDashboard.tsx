@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, Download, FileSpreadsheet, History, Loader2, Radar, RefreshCcw, Search, TableProperties, TrendingUp, UploadCloud } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Download, FileSpreadsheet, History, Loader2, Radar, RefreshCcw, Search, TableProperties, Trash2, TrendingUp, UploadCloud } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -84,6 +84,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   const [isPending, startTransition] = useTransition();
   const [isDiscoveringCompetitors, startCompetitorDiscovery] = useTransition();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const [competitorDiscovery, setCompetitorDiscovery] = useState<CompetitorDiscoveryState>({
     status: 'idle',
@@ -137,7 +138,18 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   }, []);
 
   const selectedRun = runQuery.data;
-  const previewRows = useMemo(() => selectedRun?.rows.slice(0, 50) || [], [selectedRun?.rows]);
+
+  const [previewPage, setPreviewPage] = useState(0);
+  const [previewPageSize, setPreviewPageSize] = useState<number>(50);
+
+  const allRows = useMemo(() => selectedRun?.rows ?? [], [selectedRun?.rows]);
+  const totalPages = Math.max(1, Math.ceil(allRows.length / previewPageSize));
+  const previewRows = useMemo(
+    () => allRows.slice(previewPage * previewPageSize, (previewPage + 1) * previewPageSize),
+    [allRows, previewPage, previewPageSize],
+  );
+
+  useEffect(() => { setPreviewPage(0); }, [selectedRunId]);
   const formatDateTimeLabel = (value: string | number | Date | null | undefined, fallback = 'Syncing time...') =>
     hasMounted ? formatDateTime(value, fallback) : fallback;
   const formatRelativeLabel = (value: string | number | Date | null | undefined, fallback = 'Syncing...') =>
@@ -184,6 +196,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
+            projectId: project.id,
             homepageUrl: project.homepageUrl,
             aboutUrl: project.aboutUrl,
             sitemapUrl: project.sitemapUrl,
@@ -217,6 +230,20 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
         addToast(message, 'error');
       }
     });
+  };
+
+  const handleDeleteRun = async (runId: string) => {
+    try {
+      const res = await fetch(`/api/runs/${runId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      if (selectedRunId === runId) setSelectedRunId(null);
+      await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
+      addToast('Run deleted successfully.', 'success');
+    } catch {
+      addToast('Failed to delete run.', 'error');
+    } finally {
+      setDeletingRunId(null);
+    }
   };
 
   return (
@@ -462,7 +489,16 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 ]}
               />
               {activeTab === 'preview' ? (
-                <PreviewTable previewRows={previewRows} rowCount={selectedRun.rows.length} status={selectedRun.status} />
+                <PreviewTable
+                  previewRows={previewRows}
+                  rowCount={allRows.length}
+                  status={selectedRun.status}
+                  currentPage={previewPage}
+                  totalPages={totalPages}
+                  pageSize={previewPageSize}
+                  onPageChange={setPreviewPage}
+                  onPageSizeChange={(size) => { setPreviewPageSize(size); setPreviewPage(0); }}
+                />
               ) : null}
               {activeTab === 'logs' ? (
                 <RunLogs entries={selectedRun.logs} status={selectedRun.status} formatRelativeLabel={formatRelativeLabel} />
@@ -523,8 +559,25 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                       {run.brandName} · {run.language} · {run.market}
                     </p>
                   </div>
-                  <StatusBadge status={run.status} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={run.status} />
+                    <button
+                      type="button"
+                      className="rounded p-1 text-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setDeletingRunId(run.id); }}
+                      title="Delete run"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
+                {deletingRunId === run.id && (
+                  <div className="mt-2 flex items-center gap-2 rounded border border-red-500/20 bg-red-500/5 px-3 py-2 text-sm" onClick={(e) => e.stopPropagation()}>
+                    <span className="flex-1 text-text-secondary">Delete this run?</span>
+                    <button type="button" className="text-text-muted hover:text-text-primary" onClick={() => setDeletingRunId(null)}>Cancel</button>
+                    <button type="button" className="font-medium text-red-500 hover:text-red-600" onClick={() => handleDeleteRun(run.id)}>Delete</button>
+                  </div>
+                )}
                 <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                   <Metric label="Queued" value={formatDateTimeLabel(run.queuedAt)} helper={formatRelativeLabel(run.queuedAt)} compact />
                   <Metric label="Workbook" value={run.workbookName || 'Pending'} helper={run.errorMessage || run.step || 'No errors'} compact />
@@ -563,11 +616,21 @@ function PreviewTable({
   previewRows,
   rowCount,
   status,
+  currentPage,
+  totalPages,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
 }: {
   previewRows: ResearchRunDetail['rows'];
   rowCount: number;
   status: ResearchRunDetail['status'];
-}) {
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}){
   return (
     <div className="overflow-hidden rounded-lg border border-border/50 bg-surface-raised/60">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 px-4 py-2.5">
@@ -576,7 +639,7 @@ function PreviewTable({
           Output preview
         </div>
         <span className="text-caption text-text-muted">
-          Showing {Math.min(previewRows.length, 50)} of {rowCount} rows
+          Showing {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, rowCount)} of {rowCount} rows
         </span>
       </div>
       <div className="max-h-[480px] overflow-x-auto overflow-y-auto">
@@ -628,10 +691,10 @@ function PreviewTable({
                     {row.primaryKeyword}
                   </td>
                   <td className="px-3.5 py-2.5 text-center font-mono text-body-sm text-text-secondary" title={row.searchVolume != null ? String(row.searchVolume) : 'N/A'}>
-                    {row.searchVolume != null ? row.searchVolume.toLocaleString() : '-'}
+                    {row.searchVolume != null ? row.searchVolume.toLocaleString() : '—'}
                   </td>
                   <td className="px-3.5 py-2.5 text-center font-mono text-body-sm text-text-secondary" title={row.cpc != null ? String(row.cpc) : 'N/A'}>
-                    {row.cpc != null ? `$${row.cpc.toFixed(2)}` : '-'}
+                    {row.cpc != null ? `$${row.cpc.toFixed(2)}` : '—'}
                   </td>
                   <td className="max-w-[200px] truncate px-3.5 py-2.5 text-body-sm text-text-secondary" title={row.keywords.join(', ')}>
                     {row.keywords.join(', ')}
@@ -642,6 +705,43 @@ function PreviewTable({
           </table>
         )}
       </div>
+      {previewRows.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-caption text-text-muted">Rows per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              className="rounded-md border border-border/50 bg-surface-raised px-2 py-1 text-caption text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+            >
+              {[25, 50, 100].map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-caption text-text-muted">
+              Page {currentPage + 1} of {totalPages} ({rowCount} rows)
+            </span>
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 0}
+              className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+              className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Next page"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

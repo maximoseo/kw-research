@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import fs from 'node:fs/promises';
 import { and, asc, desc, eq, inArray, lt, or } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { projects, researchLogs, researchRuns, uploadedFiles } from '@/server/db/schema';
@@ -155,6 +156,54 @@ export async function createProject(params: {
   });
 
   return { projectId };
+}
+
+export async function deleteProject(projectId: string, userId: string): Promise<boolean> {
+  // Verify user owns the project
+  const project = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+    .get();
+
+  if (!project) return false;
+
+  // Delete uploaded files from disk for this project's runs
+  const runs = await db
+    .select({ workbookPath: researchRuns.workbookPath })
+    .from(researchRuns)
+    .where(eq(researchRuns.projectId, projectId))
+    .all();
+
+  for (const run of runs) {
+    if (run.workbookPath) {
+      try { await fs.unlink(run.workbookPath); } catch { /* ignore */ }
+    }
+  }
+
+  // Delete the project (cascades to runs, logs)
+  await db.delete(projects).where(eq(projects.id, projectId));
+  return true;
+}
+
+export async function updateProjectDiscovery(
+  projectId: string,
+  userId: string,
+  updates: { aboutUrl?: string; sitemapUrl?: string },
+): Promise<boolean> {
+  const project = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+    .get();
+  if (!project) return false;
+
+  const setValues: Record<string, unknown> = { updatedAt: Date.now() };
+  if (updates.aboutUrl) setValues.aboutUrl = updates.aboutUrl;
+  if (updates.sitemapUrl) setValues.sitemapUrl = updates.sitemapUrl;
+
+  await db.update(projects).set(setValues).where(eq(projects.id, projectId));
+  return true;
 }
 
 export async function getProjectForUser(userId: string, projectId: string): Promise<ResearchProjectDetail | null> {
@@ -675,6 +724,26 @@ export async function failRun(runId: string, errorMessage: string) {
       updatedAt: Date.now(),
     })
     .where(eq(researchRuns.id, runId));
+}
+
+export async function deleteRun(runId: string, userId: string): Promise<boolean> {
+  const run = await db
+    .select({ id: researchRuns.id, workbookPath: researchRuns.workbookPath })
+    .from(researchRuns)
+    .where(and(eq(researchRuns.id, runId), eq(researchRuns.userId, userId)))
+    .get();
+
+  if (!run) return false;
+
+  if (run.workbookPath) {
+    try {
+      const fs = await import('node:fs/promises');
+      await fs.unlink(run.workbookPath);
+    } catch { /* ignore missing file */ }
+  }
+
+  await db.delete(researchRuns).where(eq(researchRuns.id, runId));
+  return true;
 }
 
 export async function getUploadedFileSummary(fileId: string | null | undefined) {

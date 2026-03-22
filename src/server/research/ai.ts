@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { getAiMaxRetries, getAiRequestTimeoutMs, getConfiguredModels } from '@/lib/env';
 
-export type ModelTier = 'opus' | 'sonnet' | 'haiku' | 'openai-fast' | 'openai-mini';
+export type ModelTier = 'opus' | 'sonnet' | 'haiku';
 
 function extractJsonPayload(content: string) {
   const fenced = content.match(/```json\s*([\s\S]*?)```/i);
@@ -33,10 +33,10 @@ function buildAnthropicCandidates(tier?: ModelTier) {
     return [anthropicModel];
   }
   switch (tier) {
-    case 'opus': return ['claude-opus-4-1-20250805'];
-    case 'sonnet': return ['claude-3-7-sonnet-latest', 'claude-opus-4-1-20250805'];
-    case 'haiku': return ['claude-3-5-haiku-latest', 'claude-3-7-sonnet-latest'];
-    default: return ['claude-opus-4-1-20250805', 'claude-3-7-sonnet-latest'];
+    case 'opus': return ['claude-opus-4-20250115'];
+    case 'sonnet': return ['claude-sonnet-4-20250514'];
+    case 'haiku': return ['claude-sonnet-4-20250514']; // no haiku tier, use sonnet
+    default: return ['claude-opus-4-20250115', 'claude-sonnet-4-20250514'];
   }
 }
 
@@ -90,6 +90,7 @@ async function callAnthropic<T>(params: {
   return null;
 }
 
+/** @deprecated OpenAI fallback is disabled — Anthropic is the sole provider. */
 async function callOpenAi<T>(params: {
   schema: z.ZodSchema<T>;
   system: string;
@@ -136,19 +137,10 @@ export async function callAiJson<T>(params: {
   maxTokens?: number;
   modelTier?: ModelTier;
 }) {
-  try {
-    const anthropicResult = await callAnthropic(params);
-    if (anthropicResult) {
-      return anthropicResult;
-    }
-  } catch (error) {
-    console.warn('Anthropic request failed, falling back to OpenAI.', error);
+  const result = await callAnthropic(params);
+  if (result) {
+    return result;
   }
 
-  const openAiResult = await callOpenAi(params);
-  if (openAiResult) {
-    return openAiResult;
-  }
-
-  throw new Error('No AI provider is configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.');
+  throw new Error('Anthropic API failed. Ensure ANTHROPIC_API_KEY is set.');
 }

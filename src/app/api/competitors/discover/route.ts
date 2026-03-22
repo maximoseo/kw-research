@@ -7,6 +7,7 @@ import {
   type AiAvailabilityState,
 } from '@/server/research/pipeline';
 import { fetchWithTimeout } from '@/server/research/http';
+import { updateProjectDiscovery } from '@/server/research/repository';
 
 function normalizeComparableUrl(value: string) {
   try {
@@ -61,6 +62,17 @@ export async function POST(request: Request) {
     };
     const aiState: AiAvailabilityState = { enabled: true };
     const { sitemapUrls, pageSnapshots, existingContentMap, discoveryMeta } = await buildSiteEvidence(input);
+
+    // Persist auto-discovered URLs back to the project
+    if (parsed.data.projectId && discoveryMeta) {
+      const discoveryUpdates: { aboutUrl?: string; sitemapUrl?: string } = {};
+      if (discoveryMeta.aboutUrl) discoveryUpdates.aboutUrl = discoveryMeta.aboutUrl;
+      if (discoveryMeta.sitemapUrl) discoveryUpdates.sitemapUrl = discoveryMeta.sitemapUrl;
+      if (Object.keys(discoveryUpdates).length > 0) {
+        await updateProjectDiscovery(parsed.data.projectId, user.id, discoveryUpdates);
+      }
+    }
+
     const discovery = await analyzeCompetitiveLandscape({
       input,
       pageSnapshots,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUserOrNull } from '@/server/auth/guards';
-import { createProject, listProjectsForUser } from '@/server/research/repository';
+import { createProject, deleteProject, listProjectsForUser } from '@/server/research/repository';
 import { parseProjectInput, validateProjectSources } from '@/server/research/preflight';
 
 export async function GET() {
@@ -11,6 +11,26 @@ export async function GET() {
 
   const projects = await listProjectsForUser(user.id);
   return NextResponse.json({ projects });
+}
+
+export async function DELETE(request: Request) {
+  const user = await getAuthenticatedUserOrNull();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const projectId = searchParams.get('projectId');
+  if (!projectId) {
+    return NextResponse.json({ error: 'Missing projectId parameter.' }, { status: 400 });
+  }
+
+  const deleted = await deleteProject(projectId, user.id);
+  if (!deleted) {
+    return NextResponse.json({ error: 'Project not found or access denied.' }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function POST(request: Request) {

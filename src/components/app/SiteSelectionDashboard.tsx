@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Layers3, Plus, SearchCheck, Globe } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, Layers3, Plus, SearchCheck, Globe, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Badge, Button, Card, EmptyState, Field, Metric } from '@/components/ui';
@@ -48,8 +49,11 @@ export function SiteSelectionDashboard({
   projects: ResearchProjectSummary[];
 }) {
   const { addToast } = useToast();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [lastSelectedProjectId, setLastSelectedProjectId] = useState<string | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const form = useForm<CreateProjectFormInput>({
     resolver: zodResolver(createProjectFormSchema),
     defaultValues,
@@ -101,6 +105,22 @@ export function SiteSelectionDashboard({
       window.location.assign(nextPath);
     });
   });
+
+  const handleDeleteProject = async (projectId: string) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/projects?projectId=${encodeURIComponent(projectId)}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        addToast(result?.error || 'Failed to delete workspace.', 'error');
+      } else {
+        router.refresh();
+      }
+    } finally {
+      setIsDeleting(false);
+      setDeletingProjectId(null);
+    }
+  };
 
   const focusCreateSection = () => {
     if (typeof window === 'undefined') {
@@ -196,66 +216,114 @@ export function SiteSelectionDashboard({
                 const isLastSelected = project.id === lastSelectedProjectId;
                 const activityTime = project.latestRunQueuedAt || project.updatedAt;
                 const status = getStatusVisual(project.latestRunStatus);
+                const isConfirming = deletingProjectId === project.id;
+
+                const cardContent = (
+                  <>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-heading-3 text-text-primary">{project.name}</p>
+                        <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-body-sm text-text-muted">
+                          <Globe className="h-3.5 w-3.5" />
+                          <span className="truncate">
+                            {project.brandName} · {project.language} · {project.market}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {isLastSelected ? <Badge variant="success" dot={false}>Last used</Badge> : null}
+                        <Badge variant={status.variant}>{status.label}</Badge>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
+                      <Metric label="Runs" value={String(project.runCount)} helper="Total executions" compact />
+                      <Metric
+                        label="Activity"
+                        value={formatRelative(activityTime)}
+                        helper={formatDateTime(activityTime)}
+                        compact
+                      />
+                      <Metric label="Competitors" value={String(project.competitorUrls.length)} helper="Seeded URLs" compact />
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      <span className="max-w-full truncate rounded-md border border-border/40 bg-surface-raised px-2.5 py-1 text-caption text-text-muted">
+                        {project.homepageUrl}
+                      </span>
+                      {project.sitemapUrl ? (
+                        <span className="max-w-full truncate rounded-md border border-border/40 bg-surface-raised px-2.5 py-1 text-caption text-text-muted">
+                          {project.sitemapUrl}
+                        </span>
+                      ) : null}
+                    </div>
+                  </>
+                );
 
                 return (
-                  <Link
-                    key={project.id}
-                    href={buildProjectDashboardPath(project.id)}
-                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  >
-                    <Card
-                      variant="interactive"
-                      className={cn(
-                        'h-full',
-                        isLastSelected && 'border-accent/25 bg-accent/[0.03]',
-                      )}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-heading-3 text-text-primary">{project.name}</p>
-                          <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-body-sm text-text-muted">
-                            <Globe className="h-3.5 w-3.5" />
-                            <span className="truncate">
-                              {project.brandName} · {project.language} · {project.market}
-                            </span>
-                          </p>
+                  <div key={project.id} className="group relative">
+                    {isConfirming ? (
+                      <Card
+                        variant="interactive"
+                        className={cn('h-full border-red-500/30 bg-red-500/[0.03]')}
+                      >
+                        {cardContent}
+                        <div className="mt-4 flex items-center justify-between rounded-lg border border-red-500/20 bg-red-500/[0.04] px-3 py-2 text-caption">
+                          <span className="font-medium text-red-600 dark:text-red-400">Delete this workspace?</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setDeletingProjectId(null)}
+                              disabled={isDeleting}
+                              className="rounded px-2 py-1 text-caption font-medium text-text-muted hover:text-text-primary disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProject(project.id)}
+                              disabled={isDeleting}
+                              className="rounded bg-red-600 px-2.5 py-1 text-caption font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                            >
+                              {isDeleting ? 'Deleting…' : 'Delete'}
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {isLastSelected ? <Badge variant="success" dot={false}>Last used</Badge> : null}
-                          <Badge variant={status.variant}>{status.label}</Badge>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
-                        <Metric label="Runs" value={String(project.runCount)} helper="Total executions" compact />
-                        <Metric
-                          label="Activity"
-                          value={formatRelative(activityTime)}
-                          helper={formatDateTime(activityTime)}
-                          compact
-                        />
-                        <Metric label="Competitors" value={String(project.competitorUrls.length)} helper="Seeded URLs" compact />
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-1.5">
-                        <span className="max-w-full truncate rounded-md border border-border/40 bg-surface-raised px-2.5 py-1 text-caption text-text-muted">
-                          {project.homepageUrl}
-                        </span>
-                        {project.sitemapUrl ? (
-                          <span className="max-w-full truncate rounded-md border border-border/40 bg-surface-raised px-2.5 py-1 text-caption text-text-muted">
-                            {project.sitemapUrl}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="mt-4 flex items-center justify-between rounded-lg border border-accent/[0.06] bg-accent/[0.02] px-3 py-2 text-caption">
-                        <span className="font-medium text-text-muted">Open workspace</span>
-                        <span className="inline-flex items-center gap-1 text-accent">
-                          <span className="font-semibold">Enter</span>
-                          <ArrowRight className="h-3 w-3" />
-                        </span>
-                      </div>
-                    </Card>
-                  </Link>
+                      </Card>
+                    ) : (
+                      <>
+                        <Link
+                          href={buildProjectDashboardPath(project.id)}
+                          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        >
+                          <Card
+                            variant="interactive"
+                            className={cn(
+                              'h-full',
+                              isLastSelected && 'border-accent/25 bg-accent/[0.03]',
+                            )}
+                          >
+                            {cardContent}
+                            <div className="mt-4 flex items-center justify-between rounded-lg border border-accent/[0.06] bg-accent/[0.02] px-3 py-2 text-caption">
+                              <span className="font-medium text-text-muted">Open workspace</span>
+                              <span className="inline-flex items-center gap-1 text-accent">
+                                <span className="font-semibold">Enter</span>
+                                <ArrowRight className="h-3 w-3" />
+                              </span>
+                            </div>
+                          </Card>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); setDeletingProjectId(project.id); }}
+                          className="absolute right-2 top-2 rounded-md p-1.5 text-text-muted opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-500 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 group-hover:opacity-100 [.group:hover_&]:opacity-100"
+                          aria-label="Delete workspace"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 );
               })}
             </div>

@@ -3,6 +3,7 @@ import { competitorDiscoverySchema } from '@/lib/validation';
 
 describe('competitorDiscoverySchema', () => {
   const basePayload = {
+    projectId: 'test-project-id',
     homepageUrl: 'https://example.com',
     brandName: 'Test Brand',
     language: 'English' as const,
