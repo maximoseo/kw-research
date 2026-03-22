@@ -21,7 +21,7 @@ services:
       - key: AI_REQUEST_TIMEOUT_MS
         value: 15000
       - key: AI_MAX_RETRIES
-        value: 0
+        value: 1
       - key: CRAWL_MAX_SITEMAPS
         value: 20
       - key: CRAWL_MAX_URLS
@@ -43,6 +43,10 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
+        sync: false
+      - key: FIRECRAWL_API_KEY
+        sync: false
+      - key: KEYWORDS_EVERYWHERE_API_KEY
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false

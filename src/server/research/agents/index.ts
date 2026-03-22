@@ -4,3 +4,7 @@ export { enrichKeywordMetrics, generateKeywordAnalysisWithAI } from './keyword-m
 export type { KeywordEnrichmentResult } from './keyword-metrics-agent';
 export { synthesizeReport, runSwarmPipeline } from './report-synthesis-agent';
 export type { ReportSynthesis } from './report-synthesis-agent';
+export { runCompetitorGenerationAgent } from './competitor-generation-agent';
+export type { GeneratedCompetitors } from './competitor-generation-agent';
+export { runSerpIntentAgent } from './serp-intent-agent';
+export type { SerpIntentAnalysis } from './serp-intent-agent';

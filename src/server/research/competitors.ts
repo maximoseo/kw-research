@@ -53,6 +53,9 @@ const RESULT_SELECTORS = [
   '.links_main a',
   'a[data-testid="result-title-a"]',
   '.web-result a.result-title',
+  '.result a[href^="http"]',
+  'article a[href^="http"]',
+  'ol.react-results--main a[href^="http"]',
 ];
 
 const COMMON_SUBDOMAINS = new Set([

@@ -31,6 +31,8 @@ import { callSwarmAgent, planSwarmExecution, selectModelForTask, synthesizeAgent
 import { runSiteProfileAgent, type SiteProfile } from './agents/site-profile-agent';
 import { runCompetitorValidationAgent } from './agents/competitor-validation-agent';
 import { runJudgeAgent } from './agents/judge-agent';
+import { runCompetitorGenerationAgent } from './agents/competitor-generation-agent';
+import { runSerpIntentAgent } from './agents/serp-intent-agent';
 
 const siteUnderstandingSchema = z.object({
   businessSummary: z.string(),
@@ -633,7 +635,7 @@ function mergeSuggestedCompetitors(params: {
     });
   }
 
-  return merged.slice(0, 5);
+  return merged.slice(0, 10);
 }
 
 async function log(runId: string, stage: string, message: string, metadata?: Record<string, unknown>) {
@@ -832,16 +834,18 @@ export async function analyzeCompetitiveLandscape(params: {
   );
 
   const manualCompetitorUrls = params.manualCompetitorUrls ?? params.input.competitorUrls;
+
+  // Always run DuckDuckGo discovery — existing competitors are used for dedup only
+  const discoveryQueries =
+    siteUnderstanding.competitorQueries.length > 0
+      ? siteUnderstanding.competitorQueries
+      : siteUnderstanding.offerings.map((offering) => `${offering} ${params.input.market}`);
+
   const discoveredCompetitors = await discoverCompetitors({
     homepageUrl: params.input.homepageUrl,
     language: params.input.language,
     market: params.input.market,
-    suggestedQueries:
-      manualCompetitorUrls.length > 0
-        ? []
-        : siteUnderstanding.competitorQueries.length > 0
-          ? siteUnderstanding.competitorQueries
-          : siteUnderstanding.offerings.map((offering) => `${offering} ${params.input.market}`),
+    suggestedQueries: discoveryQueries,
   })
     .then((result) => result.candidates)
     .catch((error) => {
@@ -875,6 +879,45 @@ export async function analyzeCompetitiveLandscape(params: {
     console.warn('[swarm] Site profile agent failed, continuing without:', error instanceof Error ? error.message : error);
   }
 
+  // --- Swarm Agent: AI Competitor Candidate Generation ---
+  if (siteProfile) {
+    try {
+      const existingDomains = new Set(discoveredCompetitors.map((c) => c.domain));
+      const aiGenerated = await runCompetitorGenerationAgent({
+        siteProfile: {
+          businessName: siteProfile.businessName,
+          businessType: siteProfile.businessType,
+          primaryServices: siteProfile.primaryServices,
+          serviceArea: siteProfile.serviceArea,
+          niche: siteProfile.niche,
+          city: siteProfile.city,
+          state: siteProfile.state,
+          country: siteProfile.country,
+        },
+        market: params.input.market,
+        language: params.input.language,
+        existingCompetitorDomains: [...existingDomains],
+      });
+      console.info(`[swarm] AI competitor generation: ${aiGenerated.competitors.length} candidates (strategy: ${aiGenerated.searchStrategy})`);
+
+      for (const gen of aiGenerated.competitors) {
+        if (gen.confidence >= 0.4 && !existingDomains.has(gen.domain)) {
+          discoveredCompetitors.push({
+            name: gen.name,
+            url: gen.url,
+            domain: gen.domain,
+            snippet: gen.reasoning,
+            confidence: Math.round(gen.confidence * 100),
+            sources: ['ai-generation'],
+          });
+          existingDomains.add(gen.domain);
+        }
+      }
+    } catch (error) {
+      console.warn('[swarm] AI competitor generation failed (non-fatal):', error instanceof Error ? error.message : error);
+    }
+  }
+
   // --- Swarm Agent: Competitor Validation ---
   let validationResult: Awaited<ReturnType<typeof runCompetitorValidationAgent>> | null = null;
   if (siteProfile && discoveredCompetitors.length > 0) {
@@ -896,7 +939,41 @@ export async function analyzeCompetitiveLandscape(params: {
       });
       console.info('[swarm] Competitor validation:', validationResult.overallQuality, `(${validationResult.validatedCompetitors.filter((v) => v.isRelevant).length} relevant)`);
 
+      // --- Swarm Agent: SERP Intent Similarity ---
+      try {
+        const relevantCompetitors = validationResult.validatedCompetitors.filter((v) => v.isRelevant);
+        if (relevantCompetitors.length > 0) {
+          const serpAnalysis = await runSerpIntentAgent({
+            targetBusiness: {
+              businessName: siteProfile.businessName,
+              businessType: siteProfile.businessType,
+              primaryServices: siteProfile.primaryServices,
+              serviceArea: siteProfile.serviceArea,
+              niche: siteProfile.niche,
+            },
+            competitors: relevantCompetitors.map((v) => {
+              const matched = discoveredCompetitors.find((c) => c.domain === v.domain || c.url === v.url);
+              return { url: v.url, domain: v.domain, name: matched?.name || v.domain, snippet: matched?.snippet };
+            }),
+            market: params.input.market,
+            language: params.input.language,
+          });
+          console.info(`[swarm] SERP intent analysis: ${serpAnalysis.topKeywordThemes.length} contested themes`);
+
+          // Boost confidence of competitors with high search intent overlap
+          for (const scored of serpAnalysis.scoredCompetitors) {
+            const match = validationResult.validatedCompetitors.find((v) => v.domain === scored.domain || v.url === scored.url);
+            if (match && scored.intentOverlapScore > 0.6) {
+              match.confidence = Math.min(1, match.confidence + 0.1);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('[swarm] SERP intent agent failed (non-fatal):', error instanceof Error ? error.message : error);
+      }
+
       // --- Swarm Agent: Judge / Quality Control ---
+      let shouldRetryDiscovery = false;
       try {
         const judgment = await runJudgeAgent({
           siteProfile: {
@@ -913,8 +990,61 @@ export async function analyzeCompetitiveLandscape(params: {
           totalCandidatesBeforeFiltering: discoveredCompetitors.length,
         });
         console.info('[swarm] Judge verdict:', judgment.competitorQuality, `score=${judgment.overallScore}/10, passesGate=${judgment.passesQualityGate}`);
+        shouldRetryDiscovery = judgment.shouldRetry === true && !judgment.passesQualityGate;
       } catch (error) {
         console.warn('[swarm] Judge agent failed (non-fatal):', error instanceof Error ? error.message : error);
+      }
+
+      // --- Retry: broader discovery when judge says quality is poor ---
+      if (shouldRetryDiscovery) {
+        console.info('[swarm] Judge triggered retry — running broader fallback discovery');
+        try {
+          const fallbackQueries = [
+            ...siteUnderstanding.offerings.map((o) => `best ${o} ${params.input.market}`),
+            ...siteUnderstanding.offerings.map((o) => `${o} companies near me`),
+            `${siteProfile.businessType} ${params.input.market}`,
+            `${siteProfile.niche} companies ${siteProfile.serviceArea || params.input.market}`,
+          ].slice(0, 6);
+
+          const retryResults = await discoverCompetitors({
+            homepageUrl: params.input.homepageUrl,
+            language: params.input.language,
+            market: params.input.market,
+            suggestedQueries: fallbackQueries,
+          }).then((r) => r.candidates).catch(() => [] as CompetitorCandidate[]);
+
+          if (retryResults.length > 0) {
+            console.info(`[swarm] Fallback discovery found ${retryResults.length} additional candidates`);
+            discoveredCompetitors.push(...retryResults);
+
+            // Re-run validation on new candidates
+            const newValidation = await runCompetitorValidationAgent({
+              siteProfile: {
+                businessName: siteProfile.businessName,
+                businessType: siteProfile.businessType,
+                primaryServices: siteProfile.primaryServices,
+                serviceArea: siteProfile.serviceArea,
+                niche: siteProfile.niche,
+              },
+              candidates: retryResults.map((c) => ({
+                url: c.url,
+                domain: c.domain,
+                name: c.name,
+                snippet: c.snippet,
+              })),
+            });
+
+            // Merge new validated results
+            const existingUrls = new Set(validationResult.validatedCompetitors.map((v) => v.url));
+            for (const v of newValidation.validatedCompetitors) {
+              if (!existingUrls.has(v.url)) {
+                validationResult.validatedCompetitors.push(v);
+              }
+            }
+          }
+        } catch (retryError) {
+          console.warn('[swarm] Retry discovery failed (non-fatal):', retryError instanceof Error ? retryError.message : retryError);
+        }
       }
     } catch (error) {
       console.warn('[swarm] Competitor validation agent failed, continuing with unvalidated results:', error instanceof Error ? error.message : error);

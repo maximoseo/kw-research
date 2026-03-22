@@ -64,14 +64,27 @@ export const createProjectRunSchema = z.object({
 
 export type CreateProjectRunInput = z.infer<typeof createProjectRunSchema>;
 
-export const competitorDiscoverySchema = createResearchSchema.pick({
-  homepageUrl: true,
-  aboutUrl: true,
-  sitemapUrl: true,
-  brandName: true,
-  language: true,
-  market: true,
-  competitorUrls: true,
+/**
+ * For competitor discovery, aboutUrl and sitemapUrl are optional — the pipeline
+ * will auto-discover them via buildSiteEvidence() when they are missing.
+ */
+export const competitorDiscoverySchema = z.object({
+  homepageUrl: urlSchema,
+  aboutUrl: z.string().trim().default('').transform((v) => (v === '' ? '' : v)),
+  sitemapUrl: z.string().trim().default('').transform((v) => (v === '' ? '' : v)),
+  brandName: z.string().trim().min(2, 'Brand name is required.'),
+  language: z.enum(['English', 'Hebrew']),
+  market: z.string().trim().min(2, 'Market is required.'),
+  competitorUrls: z
+    .string()
+    .default('')
+    .transform((value) =>
+      value
+        .split(/\r?\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.string()).max(8, 'Add up to 8 competitor URLs.')),
 });
 
 export type CompetitorDiscoveryInput = z.infer<typeof competitorDiscoverySchema>;

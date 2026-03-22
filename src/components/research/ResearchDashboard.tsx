@@ -203,7 +203,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
         const discoveredUrls = (result?.competitors || []).map((competitor: { url: string }) => competitor.url);
         const nextValue = [...new Set([...values.competitorUrls.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean), ...discoveredUrls])].join('\n');
         form.setValue('competitorUrls', nextValue, { shouldDirty: true, shouldValidate: true });
-        const discoveryMeta = result?.metadata ?? undefined;
+        const discoveryMeta = result?.metadata ?? result?.discoveryMeta ?? undefined;
         setCompetitorDiscovery({
           status: discoveredUrls.length ? 'success' : 'empty',
           message: discoveredUrls.length

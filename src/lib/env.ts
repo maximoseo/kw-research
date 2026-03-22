@@ -7,7 +7,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().optional(),
   DATA_DIR: z.string().optional(),
   AI_REQUEST_TIMEOUT_MS: z.coerce.number().min(5000).default(15_000),
-  AI_MAX_RETRIES: z.coerce.number().min(0).max(5).default(0),
+  AI_MAX_RETRIES: z.coerce.number().min(0).max(5).default(1),
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_MODEL: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),

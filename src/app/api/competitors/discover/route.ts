@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { competitorDiscoverySchema } from '@/lib/validation';
 import { getAuthenticatedUserOrNull } from '@/server/auth/guards';
-import { validateResearchSourceUrls } from '@/server/research/preflight';
 import {
   analyzeCompetitiveLandscape,
   buildSiteEvidence,
   type AiAvailabilityState,
 } from '@/server/research/pipeline';
+import { fetchWithTimeout } from '@/server/research/http';
 
 function normalizeComparableUrl(value: string) {
   try {
@@ -16,6 +16,17 @@ function normalizeComparableUrl(value: string) {
     return `${url.origin}${normalizedPath}${url.search}`;
   } catch {
     return value.trim();
+  }
+}
+
+/** Lightweight homepage reachability check — only blocks on the homepage. */
+async function validateHomepageReachable(homepageUrl: string): Promise<string | null> {
+  try {
+    const response = await fetchWithTimeout(homepageUrl, { timeoutMs: 12_000 });
+    if (!response.ok) return `Homepage URL returned HTTP ${response.status}.`;
+    return null;
+  } catch (error) {
+    return `Homepage could not be fetched. ${error instanceof Error ? error.message : ''}`.trim();
   }
 }
 
@@ -35,9 +46,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const issues = await validateResearchSourceUrls(parsed.data);
-    if (issues.length) {
-      return NextResponse.json({ error: issues[0], issues }, { status: 400 });
+    // Only validate homepage reachability — about/sitemap will be auto-discovered
+    const homepageIssue = await validateHomepageReachable(parsed.data.homepageUrl);
+    if (homepageIssue) {
+      return NextResponse.json({ error: homepageIssue, issues: [homepageIssue] }, { status: 400 });
     }
 
     const input = {
@@ -63,6 +75,14 @@ export async function POST(request: Request) {
       alreadyIncluded: existingUrls.has(normalizeComparableUrl(competitor.url)),
     }));
 
+    const totalCandidates = discovery.discoveredCompetitors?.length ?? competitors.length;
+    const methods: string[] = [];
+    if (discoveryMeta?.sitemapSource) methods.push(`sitemap: ${discoveryMeta.sitemapSource}`);
+    if (discoveryMeta?.aboutSource) methods.push(`about: ${discoveryMeta.aboutSource}`);
+    if (totalCandidates > 0) methods.push('DuckDuckGo search');
+    if (discovery.siteProfile) methods.push('AI site profiling');
+    if (discovery.validationResult) methods.push('AI competitor validation');
+
     return NextResponse.json({
       competitors,
       competitorUrls: discovery.competitorUrls,
@@ -76,6 +96,7 @@ export async function POST(request: Request) {
         pageEvidenceCount: pageSnapshots.length,
       },
       discoveryMeta: discoveryMeta ?? null,
+      metadata: { methods, totalCandidates },
       aiUsed: aiState.enabled,
     });
   } catch (error) {
