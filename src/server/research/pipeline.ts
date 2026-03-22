@@ -27,6 +27,8 @@ import {
   jaccardSimilarity,
 } from './utils';
 import { buildWorkbook } from './workbook';
+import { type BlockerContext, runAllBlockers, isMetadataCategory, isScrapedPageTitle } from './blockers';
+import { type RelevanceContext, scoreCandidates } from './relevance';
 import { callSwarmAgent, planSwarmExecution, selectModelForTask, synthesizeAgentResults, synthesizeReport, type AgentResult } from './agents';
 import { runSiteProfileAgent, type SiteProfile } from './agents/site-profile-agent';
 import { runCompetitorValidationAgent } from './agents/competitor-validation-agent';
@@ -192,13 +194,8 @@ function cleanSeed(value: string, brandName: string, language: SiteLanguage) {
   );
 }
 
-function buildSupportingKeywords(input: ResearchInputSnapshot, primaryKeyword: string, extras: string[]) {
-  const fallbackTerms =
-    input.language === 'Hebrew'
-      ? ['מדריך', 'השוואה', 'שירות']
-      : ['guide', 'comparison', 'service'];
-
-  return dedupeStrings([primaryKeyword, ...extras, input.market, ...fallbackTerms]).slice(0, 6);
+function buildSupportingKeywords(_input: ResearchInputSnapshot, primaryKeyword: string, extras: string[]) {
+  return dedupeStrings([primaryKeyword, ...extras].filter(Boolean)).slice(0, 6);
 }
 
 function extractTopicSeeds(params: {
@@ -398,82 +395,44 @@ function buildPillarCandidatesFallback(params: {
   competitorIntelligence: CompetitorIntelligence;
   desiredCount: number;
 }) {
-  const seeds = dedupeStrings([
+  const rawSeeds = dedupeStrings([
     ...params.siteUnderstanding.offerings,
     ...params.competitorIntelligence.opportunityThemes,
-  ]).slice(0, 6);
-  const audiences = params.siteUnderstanding.audiences.slice(0, 3);
+  ]);
+
+  // Validate seeds: reject metadata categories, scraped page titles, and overly long strings
+  const seeds = rawSeeds
+    .filter((seed) => !isMetadataCategory(seed).blocked)
+    .filter((seed) => !isScrapedPageTitle(seed, 6).blocked)
+    .filter((seed) => seed.split(/\s+/).length <= 6)
+    .slice(0, 6);
+
+  const audiences = params.siteUnderstanding.audiences
+    .filter((a) => !isMetadataCategory(a).blocked)
+    .slice(0, 3);
+
+  const painPoints = params.siteUnderstanding.painPoints.slice(0, 3);
   const candidates: PillarCandidate[] = [];
 
   const pushCandidate = (candidate: PillarCandidate) => {
     if (candidates.some((entry) => entry.title.toLowerCase() === candidate.title.toLowerCase())) {
       return;
     }
-
     candidates.push(candidate);
   };
 
+  // Context-aware pillar generation: use the seed as a meaningful topic, not a template prefix
   for (const seed of seeds) {
-    if (params.input.language === 'Hebrew') {
-      pushCandidate({
-        title: `מדריך ${seed}`,
-        intent: 'Informational',
-        primaryKeyword: `מדריך ${seed}`,
-        supportingKeywords: buildSupportingKeywords(params.input, `מדריך ${seed}`, [seed, `פתרונות ${seed}`]),
-        rationale: 'נגזר מהשירותים המרכזיים ומהביקוש המחקרי של האתר.',
-      });
-      pushCandidate({
-        title: `מחיר ${seed}`,
-        intent: 'Commercial',
-        primaryKeyword: `מחיר ${seed}`,
-        supportingKeywords: buildSupportingKeywords(params.input, `מחיר ${seed}`, [seed, `עלות ${seed}`]),
-        rationale: 'מכסה כוונת חיפוש מסחרית סביב תמחור והשוואת אפשרויות.',
-      });
-      pushCandidate({
-        title: `תחזוקת ${seed}`,
-        intent: 'Informational',
-        primaryKeyword: `תחזוקת ${seed}`,
-        supportingKeywords: buildSupportingKeywords(params.input, `תחזוקת ${seed}`, [seed, `שירות ${seed}`]),
-        rationale: 'מייצר הזדמנות תוכן שאינה חופפת ישירות לעמודי מוצר קיימים.',
-      });
-      pushCandidate({
-        title: `איך לבחור ${seed}`,
-        intent: 'Commercial',
-        primaryKeyword: `איך לבחור ${seed}`,
-        supportingKeywords: buildSupportingKeywords(params.input, `איך לבחור ${seed}`, [seed, 'השוואת אפשרויות']),
-        rationale: 'מתאים לחיפושי השוואה ובחירה בשלבי אמצע המשפך.',
-      });
-    } else {
-      pushCandidate({
-        title: `${seed} buying guide`,
-        intent: 'Informational',
-        primaryKeyword: `${seed} buying guide`,
-        supportingKeywords: buildSupportingKeywords(params.input, `${seed} buying guide`, [seed, `${seed} options`]),
-        rationale: 'Derived from the site’s core service areas and early-stage research intent.',
-      });
-      pushCandidate({
-        title: `${seed} pricing`,
-        intent: 'Commercial',
-        primaryKeyword: `${seed} pricing`,
-        supportingKeywords: buildSupportingKeywords(params.input, `${seed} pricing`, [seed, `${seed} cost`]),
-        rationale: 'Captures commercial research intent around budgets and vendor evaluation.',
-      });
-      pushCandidate({
-        title: `${seed} maintenance`,
-        intent: 'Informational',
-        primaryKeyword: `${seed} maintenance`,
-        supportingKeywords: buildSupportingKeywords(params.input, `${seed} maintenance`, [seed, `${seed} service`]),
-        rationale: 'Expands into lifecycle and retention topics without duplicating service pages.',
-      });
-      pushCandidate({
-        title: `best ${seed}`,
-        intent: 'Commercial',
-        primaryKeyword: `best ${seed}`,
-        supportingKeywords: buildSupportingKeywords(params.input, `best ${seed}`, [seed, `${seed} comparison`]),
-        rationale: 'Targets shortlist and comparison-driven search behavior.',
-      });
-    }
+    // The seed itself is a meaningful pillar (e.g., "chimney inspection", "fireplace repair")
+    pushCandidate({
+      title: seed,
+      intent: 'Commercial',
+      primaryKeyword: seed,
+      supportingKeywords: buildSupportingKeywords(params.input, seed, []),
+      rationale: 'Direct service/offering from business evidence.',
+    });
 
+    // Audience-specific variants
     for (const audience of audiences) {
       if (params.input.language === 'Hebrew') {
         pushCandidate({
@@ -481,7 +440,7 @@ function buildPillarCandidatesFallback(params: {
           intent: 'Commercial',
           primaryKeyword: `${seed} ל${audience}`,
           supportingKeywords: buildSupportingKeywords(params.input, `${seed} ל${audience}`, [seed, audience]),
-          rationale: 'מקשר בין השירותים המרכזיים לבין סגמנט קהל יעד אמיתי של העסק.',
+          rationale: 'Connects offering to a real customer segment.',
         });
       } else {
         pushCandidate({
@@ -492,13 +451,26 @@ function buildPillarCandidatesFallback(params: {
             seed,
             audience,
           ]),
-          rationale: 'Connects the offering to a real customer segment found on the site.',
+          rationale: 'Connects offering to a real customer segment.',
         });
       }
     }
+
+    // Pain-point-driven variants
+    for (const pain of painPoints) {
+      const title =
+        params.input.language === 'Hebrew' ? `${pain} - ${seed}` : `${seed} ${pain.toLowerCase()}`;
+      pushCandidate({
+        title,
+        intent: 'Informational',
+        primaryKeyword: title,
+        supportingKeywords: buildSupportingKeywords(params.input, title, [seed, pain]),
+        rationale: 'Addresses a known customer pain point.',
+      });
+    }
   }
 
-  return candidates.slice(0, params.desiredCount + 6);
+  return candidates.slice(0, params.desiredCount + 2);
 }
 
 function extractBaseKeyword(primaryKeyword: string, language: SiteLanguage) {
@@ -518,10 +490,14 @@ function extractBaseKeyword(primaryKeyword: string, language: SiteLanguage) {
 function buildClusterCandidatesFallback(params: {
   input: ResearchInputSnapshot;
   pillar: PillarCandidate;
+  siteUnderstanding?: SiteUnderstanding;
   desiredCount: number;
 }) {
   const base = extractBaseKeyword(params.pillar.primaryKeyword, params.input.language) || params.pillar.primaryKeyword;
   const candidates: ClusterCandidate[] = [];
+  const audiences = params.siteUnderstanding?.audiences?.slice(0, 2) ?? [];
+  const painPoints = params.siteUnderstanding?.painPoints?.slice(0, 2) ?? [];
+  const differentiators = params.siteUnderstanding?.differentiators?.slice(0, 2) ?? [];
 
   const pushCandidate = (candidate: ClusterCandidate) => {
     if (candidates.some((entry) => entry.title.toLowerCase() === candidate.title.toLowerCase())) {
@@ -530,54 +506,56 @@ function buildClusterCandidatesFallback(params: {
     candidates.push(candidate);
   };
 
-  const definitions =
-    params.input.language === 'Hebrew'
-      ? [
-          [`איך ${base} עובד`, 'Informational', ['תהליך עבודה', base]],
-          [`מחיר ${base}`, 'Commercial', ['עלות מערכת', base]],
-          [`התקנת ${base}`, 'Commercial', ['שירות התקנה', base]],
-          [`תחזוקת ${base}`, 'Informational', ['שירות תחזוקה', base]],
-          [`השוואת ${base}`, 'Commercial', ['השוואת אפשרויות', base]],
-          [`${base} לעסקים`, 'Commercial', ['פתרונות לעסקים', base]],
-          [`${base} לבתים`, 'Commercial', ['פתרונות לבית', base]],
-          [`יתרונות ${base}`, 'Informational', ['תועלות מרכזיות', base]],
-          [`בעיות נפוצות עם ${base}`, 'Informational', ['תקלות נפוצות', base]],
-          [`שאלות נפוצות על ${base}`, 'Informational', ['מדריך שאלות', base]],
-          [`שירות מקומי עבור ${base}`, 'Commercial', ['שירות אזורי', base]],
-          [`המלצות עבור ${base}`, 'Commercial', ['בחירת ספק', base]],
-        ]
-      : [
-          [`${params.pillar.title}: How it works`, 'Informational', ['process overview', base]],
-          [`${params.pillar.title}: Cost`, 'Commercial', ['pricing', base]],
-          [`${params.pillar.title}: Installation`, 'Commercial', ['setup', base]],
-          [`${params.pillar.title}: Maintenance`, 'Informational', ['service plan', base]],
-          [`${params.pillar.title}: Comparison`, 'Commercial', ['alternatives', base]],
-          [`${params.pillar.title}: For businesses`, 'Commercial', ['commercial use', base]],
-          [`${params.pillar.title}: For homes`, 'Commercial', ['residential use', base]],
-          [`${params.pillar.title}: Benefits`, 'Informational', ['advantages', base]],
-          [`${params.pillar.title}: Problems`, 'Informational', ['troubleshooting', base]],
-          [`${params.pillar.title}: FAQ`, 'Informational', ['questions', base]],
-          [`${params.pillar.title}: Local service`, 'Commercial', ['near me', base]],
-          [`${params.pillar.title}: Reviews`, 'Commercial', ['provider evaluation', base]],
-        ];
+  // Context-driven cluster definitions instead of fixed 12-template approach
+  const definitions: Array<[string, string, string[]]> = [];
+
+  if (params.input.language === 'Hebrew') {
+    definitions.push(
+      [`${base} מוסבר`, 'Informational', ['הסבר', base]],
+      [`אפשרויות ${base}`, 'Commercial', ['סוגים', base]],
+      [`בחירת ${base}`, 'Commercial', ['בחירה', base]],
+    );
+    for (const audience of audiences.filter((a) => !isMetadataCategory(a).blocked)) {
+      definitions.push([`${base} ל${audience}`, 'Commercial', [audience, base]]);
+    }
+    for (const pain of painPoints) {
+      definitions.push([`${pain} ב${base}`, 'Informational', [pain, base]]);
+    }
+    for (const diff of differentiators) {
+      definitions.push([`${diff} ${base}`, 'Informational', [diff, base]]);
+    }
+  } else {
+    definitions.push(
+      [`${base} explained`, 'Informational', ['overview', base]],
+      [`${base} options`, 'Commercial', ['types', base]],
+      [`choosing ${base}`, 'Commercial', ['selection', base]],
+    );
+    for (const audience of audiences.filter((a) => !isMetadataCategory(a).blocked)) {
+      definitions.push([`${base} for ${audience.toLowerCase()}`, 'Commercial', [audience, base]]);
+    }
+    for (const pain of painPoints) {
+      definitions.push([`${base} ${pain.toLowerCase()}`, 'Informational', [pain, base]]);
+    }
+    for (const diff of differentiators) {
+      definitions.push([`${base} ${diff.toLowerCase()}`, 'Informational', [diff, base]]);
+    }
+  }
 
   for (const [title, intent, extras] of definitions) {
-    const englishSuffix = params.input.language === 'Hebrew' ? '' : String(title).split(': ')[1]!.toLowerCase();
-    const primaryKeyword = params.input.language === 'Hebrew' ? String(title) : `${base} ${englishSuffix}`;
     pushCandidate({
       title: String(title),
       intent: intent as ResearchIntent,
-      primaryKeyword,
-      supportingKeywords: buildSupportingKeywords(params.input, primaryKeyword, extras as string[]),
+      primaryKeyword: String(title),
+      supportingKeywords: buildSupportingKeywords(params.input, String(title), extras),
       rationale: localize(
         params.input.language,
-        'Generated from the pillar angle while keeping a distinct search intent.',
-        'נגזר מהפילר עם כוונת חיפוש נפרדת כדי לצמצם קניבליזציה.',
+        'Context-derived cluster with distinct search intent.',
+        'אשכול נגזר מהקשר עם כוונת חיפוש נפרדת.',
       ),
     });
   }
 
-  return candidates.slice(0, params.desiredCount + 4);
+  return candidates.slice(0, params.desiredCount + 2);
 }
 
 function keepPageSnapshot(value: PageSnapshot | null): value is PageSnapshot {
@@ -1192,6 +1170,13 @@ async function generatePillars(params: {
         'Each pillar needs a distinct primary keyword and intent.',
         'Avoid near-duplicate pillar ideas.',
         'Do not invent services or products that are not supported by the supplied business evidence.',
+        'NEVER use generic SEO template patterns as pillar titles. Patterns like "X buying guide", "X pricing", "X maintenance", "X FAQ", "X benefits", "X problems", "X for businesses", "X for homes", "X comparison" are explicitly prohibited.',
+        'Each pillar title must be specific and descriptive — it should make sense as an article topic that a real person would search for, not a category label.',
+        'Do NOT include competitor brand names, competitor page titles, or competitor URLs in pillar titles, keywords, or supporting keywords.',
+        'Do NOT include city names or geographic locations in pillar titles unless the brief specifically requires location-based topics.',
+        'Each pillar must be semantically distinct from every other pillar — they should not be the same topic with a different suffix.',
+        'Supporting keywords must be real search queries that users actually type, not generic modifiers like "guide", "comparison", or "service".',
+        'Do NOT use internal analytical labels like "customer pain points", "target audience", or "value proposition" as pillar topics.',
       ],
       outputContract: {
         pillars: [
@@ -1269,6 +1254,7 @@ async function runSwarmClusterGeneration(params: {
         const fallback = buildClusterCandidatesFallback({
           input: params.input,
           pillar,
+          siteUnderstanding: params.siteUnderstanding,
           desiredCount: params.desiredClustersPerPillar + 2,
         });
         return {
@@ -1281,8 +1267,10 @@ async function runSwarmClusterGeneration(params: {
       const filteredClusters = rawClusters.filter(
         (cluster, index, all) =>
           !overlapWithExisting(cluster, params.existingTopics) &&
-          jaccardSimilarity(cluster.primaryKeyword, pillar.primaryKeyword) < 0.85 &&
-          all.findIndex((entry) => entry.title.toLowerCase() === cluster.title.toLowerCase()) === index,
+          jaccardSimilarity(cluster.primaryKeyword, pillar.primaryKeyword) < 0.7 &&
+          all.findIndex((entry) => entry.title.toLowerCase() === cluster.title.toLowerCase()) === index &&
+          !isMetadataCategory(cluster.title).blocked &&
+          !isScrapedPageTitle(cluster.title).blocked,
       );
 
       return {
@@ -1447,9 +1435,64 @@ export async function runResearchPipeline(params: {
       all.findIndex((entry) => entry.title.toLowerCase() === pillar.title.toLowerCase()) === index,
   );
 
-  const pillars = pillarCandidates.slice(0, desiredPillarCount);
+  // Build blocker and relevance contexts for downstream filtering
+  const blockerContext: BlockerContext = {
+    language: input.language,
+    competitorBrands: competitorIntelligence.competitors?.map((c) => c.name) ?? [],
+    ownBrandName: input.brandName,
+    geographySignals: siteUnderstanding.geographySignals ?? [],
+    notes: input.notes ?? '',
+    excludedTopics: siteUnderstanding.excludedTopics ?? [],
+  };
+
+  const relevanceContext: RelevanceContext = {
+    offerings: siteUnderstanding.offerings,
+    audiences: siteUnderstanding.audiences,
+    painPoints: siteUnderstanding.painPoints,
+    coveredTopics: siteUnderstanding.coveredTopics,
+    excludedTopics: siteUnderstanding.excludedTopics,
+    brandName: input.brandName,
+    competitorBrands: blockerContext.competitorBrands,
+    existingPages: existingContentMap.pages.map((p) => ({
+      title: p.title ?? '',
+      path: p.url ?? '',
+      headings: p.headings ?? [],
+    })),
+    language: input.language,
+    notes: input.notes ?? '',
+  };
+
+  // Run blockers on pillar candidates
+  const unblockedPillars = pillarCandidates.filter((pillar) => {
+    const result = runAllBlockers(
+      { title: pillar.title, primaryKeyword: pillar.primaryKeyword, supportingKeywords: pillar.supportingKeywords },
+      blockerContext,
+    );
+    if (result.blocked) {
+      addResearchLog({
+        runId,
+        stage: 'pillars',
+        level: 'info',
+        message: `Blocked pillar candidate: ${result.reason}`,
+      });
+    }
+    return !result.blocked;
+  });
+
+  // Score and rank remaining pillar candidates
+  let minScore = 25;
+  let scoredPillars = scoreCandidates(unblockedPillars, relevanceContext, { minScore });
+  if (scoredPillars.length < desiredPillarCount && unblockedPillars.length >= desiredPillarCount) {
+    minScore = 15;
+    scoredPillars = scoreCandidates(unblockedPillars, relevanceContext, { minScore });
+  }
+  if (scoredPillars.length < desiredPillarCount) {
+    scoredPillars = scoreCandidates(unblockedPillars, relevanceContext, { minScore: 0 });
+  }
+
+  const pillars = scoredPillars.slice(0, desiredPillarCount);
   if (!pillars.length) {
-    throw new Error('No viable pillar candidates were generated after overlap filtering.');
+    throw new Error('No viable pillar candidates were generated after overlap filtering and relevance scoring.');
   }
 
   const pillarBundles: Array<PillarCandidate & { clusters: ClusterCandidate[] }> = [];
@@ -1495,7 +1538,11 @@ export async function runResearchPipeline(params: {
   }
 
   await log(runId, 'qa', 'Validating and normalizing generated rows');
-  const normalized = validateAndNormalizeRows(rawRows, input.brandName);
+  const normalized = validateAndNormalizeRows(rawRows, input.brandName, {
+    context: relevanceContext,
+    blockerContext,
+    strictMode: true,
+  });
   if (normalized.issues.length) {
     await addResearchLog({
       runId,

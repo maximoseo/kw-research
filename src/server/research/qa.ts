@@ -1,8 +1,27 @@
 import ExcelJS from 'exceljs';
 import type { ResearchRow } from '@/lib/research';
+import {
+  type BlockerContext,
+  isGenericTopic,
+  isMetadataCategory,
+  isScrapedPageTitle,
+  hasCompetitorBrandContamination,
+} from './blockers';
+import type { RelevanceContext } from './relevance';
+import { scoreCandidate } from './relevance';
 import { ensureBrandFirst, jaccardSimilarity, topKeywordFingerprint } from './utils';
 
-export function validateAndNormalizeRows(rows: ResearchRow[], brandName: string) {
+export type QaOptions = {
+  context?: RelevanceContext;
+  blockerContext?: BlockerContext;
+  strictMode?: boolean;
+};
+
+export function validateAndNormalizeRows(
+  rows: ResearchRow[],
+  brandName: string,
+  options?: QaOptions,
+) {
   const issues: string[] = [];
   const seen = new Set<string>();
   const normalized: ResearchRow[] = [];
@@ -35,17 +54,95 @@ export function validateAndNormalizeRows(rows: ResearchRow[], brandName: string)
     normalized.push(normalizedRow);
   }
 
+  // --- Blocker-based filtering (when context provided) ---
+  let afterBlockers = normalized;
+
+  if (options?.blockerContext) {
+    const ctx = options.blockerContext;
+    afterBlockers = [];
+
+    for (const row of normalized) {
+      const metaResult = isMetadataCategory(row.pillar);
+      if (metaResult.blocked) {
+        issues.push(`Blocked pillar "${row.pillar}": ${metaResult.reason}`);
+        continue;
+      }
+
+      const titleResult = isScrapedPageTitle(row.pillar);
+      if (titleResult.blocked) {
+        issues.push(`Blocked pillar "${row.pillar}": ${titleResult.reason}`);
+        continue;
+      }
+
+      const genericResult = isGenericTopic(row.cluster, row.primaryKeyword, ctx.language);
+      if (genericResult.blocked) {
+        issues.push(`Blocked "${row.cluster}": ${genericResult.reason}`);
+        continue;
+      }
+
+      const competitorResult = hasCompetitorBrandContamination(
+        row.cluster,
+        row.primaryKeyword,
+        row.keywords,
+        ctx.competitorBrands,
+        ctx.ownBrandName,
+      );
+      if (competitorResult.blocked) {
+        issues.push(`Blocked "${row.cluster}": ${competitorResult.reason}`);
+        continue;
+      }
+
+      afterBlockers.push(row);
+    }
+  }
+
+  // --- Cross-pillar primary keyword dedup (RC-13) ---
+  const kwPillarMap = new Map<string, { pillar: string; count: number }>();
+  const pillarSizes = new Map<string, number>();
+
+  for (const row of afterBlockers) {
+    pillarSizes.set(row.pillar, (pillarSizes.get(row.pillar) ?? 0) + 1);
+  }
+
+  for (const row of afterBlockers) {
+    if (row.rowType === 'pillar') continue;
+    const kwKey = row.primaryKeyword.toLowerCase();
+    const existing = kwPillarMap.get(kwKey);
+    if (!existing) {
+      kwPillarMap.set(kwKey, { pillar: row.pillar, count: pillarSizes.get(row.pillar) ?? 0 });
+    }
+  }
+
+  const afterCrossDedup: ResearchRow[] = [];
+  for (const row of afterBlockers) {
+    if (row.rowType === 'pillar') {
+      afterCrossDedup.push(row);
+      continue;
+    }
+    const kwKey = row.primaryKeyword.toLowerCase();
+    const owner = kwPillarMap.get(kwKey);
+    if (owner && owner.pillar !== row.pillar) {
+      const mySize = pillarSizes.get(row.pillar) ?? 0;
+      if (mySize < owner.count) {
+        issues.push(
+          `Cross-pillar duplicate keyword "${row.primaryKeyword}" removed from "${row.pillar}" (kept in "${owner.pillar}").`,
+        );
+        continue;
+      }
+    }
+    afterCrossDedup.push(row);
+  }
+
+  // --- Group by pillar ---
   const grouped = new Map<string, ResearchRow[]>();
-  for (const row of normalized) {
+  for (const row of afterCrossDedup) {
     const bucket = grouped.get(row.pillar) || [];
     bucket.push(row);
     grouped.set(row.pillar, bucket);
   }
 
   for (const [pillar, group] of grouped) {
-    if (!group.length) {
-      continue;
-    }
+    if (!group.length) continue;
 
     const first = group[0];
     if (first.rowType !== 'pillar' || first.cluster !== pillar || first.existingParentPage !== '-') {
@@ -66,23 +163,127 @@ export function validateAndNormalizeRows(rows: ResearchRow[], brandName: string)
       }
     }
 
-    for (let leftIndex = 0; leftIndex < group.length; leftIndex += 1) {
-      for (let rightIndex = leftIndex + 1; rightIndex < group.length; rightIndex += 1) {
-        const left = group[leftIndex];
-        const right = group[rightIndex];
-        if (left.cluster === right.cluster) {
-          continue;
+    // --- Pillar-cluster distinctiveness (lowered from 0.85 to 0.7) ---
+    const pillarRow = group.find((r) => r.rowType === 'pillar');
+    if (pillarRow && options?.context) {
+      const toRemove = new Set<number>();
+      for (let i = 1; i < group.length; i++) {
+        const cluster = group[i];
+        const sim = jaccardSimilarity(cluster.primaryKeyword, pillarRow.primaryKeyword);
+        if (sim >= 0.7) {
+          issues.push(
+            `Removed near-duplicate cluster "${cluster.cluster}" (Jaccard ${sim.toFixed(2)} with pillar).`,
+          );
+          toRemove.add(i);
         }
-        const similarity = jaccardSimilarity(left.primaryKeyword, right.primaryKeyword);
-        if (similarity >= 0.8) {
-          issues.push(`High keyword overlap detected between "${left.cluster}" and "${right.cluster}".`);
+      }
+      if (toRemove.size) {
+        const kept = group.filter((_, i) => !toRemove.has(i));
+        group.length = 0;
+        group.push(...kept);
+      }
+    }
+
+    // --- Sibling cluster overlap (threshold 0.65, remove duplicate) ---
+    if (options?.context) {
+      const siblingRemove = new Set<number>();
+      for (let li = 1; li < group.length; li++) {
+        if (siblingRemove.has(li)) continue;
+        for (let ri = li + 1; ri < group.length; ri++) {
+          if (siblingRemove.has(ri)) continue;
+          const left = group[li];
+          const right = group[ri];
+          const sim = jaccardSimilarity(left.primaryKeyword, right.primaryKeyword);
+          if (sim >= 0.65) {
+            issues.push(
+              `Removed sibling duplicate "${right.cluster}" (Jaccard ${sim.toFixed(2)} with "${left.cluster}").`,
+            );
+            siblingRemove.add(ri);
+          }
+        }
+      }
+      if (siblingRemove.size) {
+        const kept = group.filter((_, i) => !siblingRemove.has(i));
+        group.length = 0;
+        group.push(...kept);
+      }
+    }
+
+    // --- Legacy overlap warning (for backward compat when no context) ---
+    if (!options?.context) {
+      for (let leftIndex = 0; leftIndex < group.length; leftIndex += 1) {
+        for (let rightIndex = leftIndex + 1; rightIndex < group.length; rightIndex += 1) {
+          const left = group[leftIndex];
+          const right = group[rightIndex];
+          if (left.cluster === right.cluster) continue;
+          const similarity = jaccardSimilarity(left.primaryKeyword, right.primaryKeyword);
+          if (similarity >= 0.8) {
+            issues.push(`High keyword overlap detected between "${left.cluster}" and "${right.cluster}".`);
+          }
         }
       }
     }
   }
 
+  // --- Remove empty pillar groups ---
+  if (options?.context) {
+    for (const [pillar, group] of grouped) {
+      const clusters = group.filter((r) => r.rowType === 'cluster');
+      if (clusters.length === 0) {
+        issues.push(`Removed pillar "${pillar}" — no clusters remaining after filtering.`);
+        grouped.delete(pillar);
+      }
+    }
+  }
+
+  // --- Relevance scoring gate ---
+  let finalRows = [...grouped.values()].flat();
+
+  if (options?.context) {
+    const scoredRows: ResearchRow[] = [];
+    const siblings = finalRows.map((r) => ({ title: r.cluster, primaryKeyword: r.primaryKeyword }));
+
+    for (const row of finalRows) {
+      if (row.rowType === 'pillar') {
+        scoredRows.push(row);
+        continue;
+      }
+
+      const score = scoreCandidate(
+        { title: row.cluster, primaryKeyword: row.primaryKeyword, supportingKeywords: row.keywords },
+        options.context,
+        siblings.filter((s) => s.primaryKeyword !== row.primaryKeyword),
+      );
+
+      if (score.total < 25) {
+        issues.push(`Low relevance (${score.total}) for "${row.cluster}": ${score.flags.join(', ')}`);
+        continue;
+      }
+
+      scoredRows.push(row);
+    }
+
+    finalRows = scoredRows;
+
+    // Re-check for empty pillar groups after scoring
+    const finalGrouped = new Map<string, ResearchRow[]>();
+    for (const row of finalRows) {
+      const bucket = finalGrouped.get(row.pillar) || [];
+      bucket.push(row);
+      finalGrouped.set(row.pillar, bucket);
+    }
+    for (const [pillar, group] of finalGrouped) {
+      const clusters = group.filter((r) => r.rowType === 'cluster');
+      if (clusters.length === 0) {
+        issues.push(`Removed pillar "${pillar}" after relevance scoring — no clusters remaining.`);
+        finalGrouped.delete(pillar);
+      }
+    }
+    finalRows = [...finalGrouped.values()].flat();
+  }
+
   return {
-    rows: [...grouped.values()].flat(),
+    rows: finalRows,
     issues,
   };
 }

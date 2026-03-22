@@ -3,10 +3,15 @@ export function normalizeWhitespace(value: string) {
 }
 
 export function normalizeKeyword(value: string) {
+  // Keep: Latin, Hebrew, Arabic, Cyrillic, CJK, digits, spaces
+  // Strip: punctuation, symbols, special chars
   return normalizeWhitespace(value)
     .toLowerCase()
-    .replace(/['’"]/g, '')
-    .replace(/[^a-z0-9\u0590-\u05ff]+/g, ' ')
+    .replace(
+      /[^a-z0-9\u00C0-\u024F\u0400-\u04FF\u0590-\u05FF\u0600-\u06FF\u0900-\u097F\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\s]+/g,
+      ' ',
+    )
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -40,8 +45,10 @@ export function ensureBrandFirst(brandName: string, keywords: string[]) {
 }
 
 export function buildSlugPath(value: string, language: 'English' | 'Hebrew') {
+  const normalized = normalizeWhitespace(value);
+
   if (language === 'Hebrew') {
-    const slug = normalizeWhitespace(value)
+    const slug = normalized
       .replace(/[^\u0590-\u05ff0-9\s-]+/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
@@ -49,10 +56,10 @@ export function buildSlugPath(value: string, language: 'English' | 'Hebrew') {
     return `/${slug || 'pillar'}/`;
   }
 
-  const slug = normalizeWhitespace(value)
+  const slug = normalized
     .toLowerCase()
     .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9\s-]+/g, '')
+    .replace(/[^a-z0-9\u00C0-\u024F\u0400-\u04FF\u0590-\u05FF\u0600-\u06FF\s-]+/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
@@ -65,4 +72,33 @@ export function topKeywordFingerprint(values: string[]) {
     .filter(Boolean)
     .sort()
     .join('|');
+}
+
+export function ngramTokens(value: string, n = 3): Set<string> {
+  const norm = normalizeKeyword(value).replace(/\s+/g, '');
+  const grams = new Set<string>();
+  for (let i = 0; i <= norm.length - n; i++) {
+    grams.add(norm.slice(i, i + n));
+  }
+  return grams;
+}
+
+export function ngramSimilarity(left: string, right: string, n = 3): number {
+  const leftGrams = ngramTokens(left, n);
+  const rightGrams = ngramTokens(right, n);
+  if (!leftGrams.size || !rightGrams.size) return 0;
+
+  const intersection = [...leftGrams].filter((g) => rightGrams.has(g)).length;
+  const union = new Set([...leftGrams, ...rightGrams]).size;
+  return union === 0 ? 0 : intersection / union;
+}
+
+export function containsAny(haystack: string, needles: string[]): string | null {
+  const lower = haystack.toLowerCase();
+  for (const needle of needles) {
+    if (needle && lower.includes(needle.toLowerCase())) {
+      return needle;
+    }
+  }
+  return null;
 }
