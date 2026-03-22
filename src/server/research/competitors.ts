@@ -62,6 +62,59 @@ const COMMON_SUBDOMAINS = new Set([
   'www', 'www2', 'www3', 'm', 'mobile', 'en', 'blog', 'shop', 'store', 'app',
 ]);
 
+const QUERY_TEMPLATES = [
+  (service: string, market: string) => `best ${service} in ${market}`,
+  (service: string, market: string) => `${service} companies ${market}`,
+  (service: string, market: string) => `top ${service} providers ${market}`,
+];
+
+/**
+ * Enrich user-supplied queries with template-based variations and ensure
+ * every query includes the geo market for local relevance.
+ * Always returns at least 6 diverse queries.
+ */
+function enrichQueries(suggested: string[], market: string, brandName?: string): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  const add = (q: string) => {
+    const key = q.toLowerCase().trim();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      result.push(q.trim());
+    }
+  };
+
+  // 1. Add suggested queries, appending market if missing
+  for (const q of suggested) {
+    const hasMarket = market && q.toLowerCase().includes(market.toLowerCase());
+    add(hasMarket ? q : `${q} ${market}`);
+  }
+
+  // 2. Add "alternatives to {brand}" if brand is known
+  if (brandName) {
+    add(`alternatives to ${brandName}`);
+  }
+
+  // 3. Expand templates from any service-like terms in the suggested queries
+  const serviceTerms = suggested
+    .map((q) => q.replace(new RegExp(market.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim())
+    .filter((t) => t.length >= 3);
+  for (const service of serviceTerms) {
+    for (const tpl of QUERY_TEMPLATES) {
+      add(tpl(service, market));
+    }
+  }
+
+  // 4. Guarantee at least 6 queries by adding generic fallback patterns
+  if (result.length < 6 && serviceTerms.length > 0) {
+    add(`${serviceTerms[0]} services ${market}`);
+    add(`${serviceTerms[0]} near ${market}`);
+  }
+
+  return result;
+}
+
 const MAX_QUERIES = 6;
 const MAX_RESULTS_PER_QUERY = 8;
 const MAX_FINAL_RESULTS = 15;
@@ -259,10 +312,15 @@ export async function discoverCompetitors(params: {
   homepageUrl: string;
   language: 'English' | 'Hebrew';
   market: string;
+  brandName?: string;
   suggestedQueries: string[];
 }): Promise<DiscoveryResult> {
   const ownDomain = extractDomain(params.homepageUrl);
-  const queries = params.suggestedQueries.slice(0, MAX_QUERIES);
+
+  // Enrich with diverse query templates for better coverage
+  const enriched = enrichQueries(params.suggestedQueries, params.market, params.brandName);
+  const queries = enriched.slice(0, MAX_QUERIES);
+  console.info(`[competitors] Running ${queries.length} discovery queries (${params.suggestedQueries.length} suggested, ${enriched.length} after enrichment)`);
 
   const diagnostics: DiscoveryDiagnostics = {
     queriesAttempted: queries.length,

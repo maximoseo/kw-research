@@ -20,19 +20,27 @@ export async function runJudgeAgent(params: {
   const relevantCount = params.competitors.filter((c) => c.isRelevant).length;
   const highConfCount = params.competitors.filter((c) => c.confidence >= 0.7).length;
 
+  // Check source diversity: count unique sources across competitors
+  const uniqueDomains = new Set(params.competitors.map((c) => {
+    try { return new URL(c.url).hostname.replace(/^www\./, ''); } catch { return c.url; }
+  }));
+
   return callAiJson({
-    system: `You are a Quality Control Judge for a competitor discovery system. Your job is to assess whether the discovery results are good enough to show to the user.
+    system: `You are a strict Quality Control Judge for a competitor discovery system. Your job is to assess whether the discovery results are good enough to show to the user. Apply these hard rules BEFORE your subjective assessment:
 
-Quality criteria:
-- At least 3 relevant competitors found for "good" quality
-- At least 5 relevant competitors found for "excellent" quality
-- High confidence scores (>0.7) on at least half the results for "good" quality
-- All competitors should be in the same niche as the target business
-- Geographic relevance matters for local businesses
+HARD RULES (override your subjective judgment):
+1. MINIMUM 3 relevant competitors required to pass the quality gate. If fewer than 3 are relevant, set passesQualityGate=false and shouldRetry=true.
+2. If fewer than 3 HIGH-CONFIDENCE competitors (confidence ≥ 0.7), set shouldRetry=true even if passesQualityGate might be true — we need more signal.
+3. SOURCE DIVERSITY matters: if all relevant competitors come from the same discovery source (e.g. all from ai-generation or all from a single search query), penalize the score by 2 points — the system needs breadth.
+4. All competitors should be in the same niche as the target business.
+5. Geographic relevance matters for local businesses.
 
-If quality is "poor" or "failed", set shouldRetry=true so the system can try alternative approaches.
-If fewer than 2 relevant competitors, this is "failed".
-If 2-3 relevant competitors with decent confidence, this is "acceptable".`,
+QUALITY TIERS:
+- "excellent": ≥ 5 relevant competitors, ≥ 3 high-confidence, good diversity
+- "good": ≥ 3 relevant competitors, ≥ 2 high-confidence
+- "acceptable": 3 relevant competitors with moderate confidence
+- "poor": 2 relevant competitors (shouldRetry=true)
+- "failed": 0-1 relevant competitors (shouldRetry=true)`,
     prompt: `Target: ${params.siteProfile.businessName} (${params.siteProfile.businessType}, ${params.siteProfile.niche})
 Service Area: ${params.siteProfile.serviceArea || 'Not specified'}
 
@@ -41,11 +49,12 @@ Discovery Results:
 - Validated competitors: ${params.competitors.length}
 - Relevant: ${relevantCount}
 - High confidence (>0.7): ${highConfCount}
+- Unique domains: ${uniqueDomains.size}
 
 Competitor details:
 ${params.competitors.map((c, i) => `${i + 1}. ${c.url} — relevant: ${c.isRelevant}, confidence: ${c.confidence}`).join('\n')}
 
-Assess overall quality and whether this should be shown to the user or retried.`,
+Apply the hard rules first, then assess overall quality and whether this should be shown to the user or retried.`,
     schema: qualityJudgmentSchema,
     modelTier: 'sonnet',
     maxTokens: 2000,

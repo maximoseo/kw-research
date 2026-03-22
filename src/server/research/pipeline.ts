@@ -109,7 +109,7 @@ interface ResolveWithAiFallbackParams<T, TStage extends 'analysis' | 'competitor
   task: () => Promise<T>;
   fallback: () => T;
   onFallback?: (stage: TStage, error: unknown) => MaybePromise<void>;
-  modelTier?: 'opus' | 'sonnet' | 'haiku' | 'openai-fast' | 'openai-mini';
+  modelTier?: 'opus' | 'sonnet' | 'haiku';
 }
 
 async function resolveWithAiFallback<T, TStage extends 'analysis' | 'competitors' | 'pillars' | 'clusters'>(params: ResolveWithAiFallbackParams<T, TStage>): Promise<T> {
@@ -128,6 +128,16 @@ async function resolveWithAiFallback<T, TStage extends 'analysis' | 'competitors
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+/** Normalize a URL to its root domain for deduplication (www vs non-www, http vs https, trailing slashes). */
+function normalizeForDedup(url: string): string {
+  try {
+    const u = new URL(url);
+    return u.hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return url.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/+$/, '');
+  }
 }
 
 function clip(value: string, maxLength: number) {
@@ -657,11 +667,13 @@ export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'home
   // Try provided sitemap, fallback to auto-discovery
   let sitemapUrls = input.sitemapUrl ? await fetchSitemapUrls(input.sitemapUrl).catch(() => [] as string[]) : [];
   let sitemapSource = input.sitemapUrl ? 'provided' : 'none';
+  let resolvedSitemapUrl = input.sitemapUrl || '';
   if (sitemapUrls.length === 0 && input.homepageUrl) {
     const { discoverSitemapUrl } = await import('./discovery');
     const discovered = await discoverSitemapUrl(input.homepageUrl).catch(() => null);
     if (discovered) {
       sitemapUrls = await fetchSitemapUrls(discovered).catch(() => [] as string[]);
+      resolvedSitemapUrl = discovered;
       sitemapSource = 'auto-discovered';
       console.info(`[discovery] Sitemap auto-discovered: ${discovered} (${sitemapUrls.length} URLs)`);
     }
@@ -705,7 +717,7 @@ export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'home
     sitemapUrls,
     pageSnapshots,
     existingContentMap,
-    discoveryMeta: { sitemapSource, aboutSource, aboutUrl, pageCount: pageSnapshots.length },
+    discoveryMeta: { sitemapSource, aboutSource, aboutUrl, sitemapUrl: resolvedSitemapUrl, pageCount: pageSnapshots.length },
   };
 }
 
@@ -817,6 +829,7 @@ export async function analyzeCompetitiveLandscape(params: {
   const handleCompetitorFallback = params.onAiFallback
     ? (error: unknown) => params.onAiFallback?.('competitors', error)
     : undefined;
+  const pipelineStart = Date.now();
 
   const siteUnderstanding = normalizeSiteUnderstanding(
     await resolveWithAiFallback({
@@ -845,6 +858,7 @@ export async function analyzeCompetitiveLandscape(params: {
     homepageUrl: params.input.homepageUrl,
     language: params.input.language,
     market: params.input.market,
+    brandName: params.input.brandName,
     suggestedQueries: discoveryQueries,
   })
     .then((result) => result.candidates)
@@ -857,14 +871,23 @@ export async function analyzeCompetitiveLandscape(params: {
     console.warn('[competitors] No competitors found from any source. Results will be limited.');
   }
 
-  const competitorUrls = dedupeStrings([
-    ...manualCompetitorUrls,
-    ...discoveredCompetitors.map((entry) => entry.url),
-  ]).slice(0, 10);
+  // Deduplicate competitor URLs by root domain (normalizes www, protocol, trailing slashes)
+  const seenDomains = new Set<string>();
+  const dedupedCompetitorUrls: string[] = [];
+  for (const url of [...manualCompetitorUrls, ...discoveredCompetitors.map((entry) => entry.url)]) {
+    const normalized = normalizeForDedup(url);
+    if (normalized && !seenDomains.has(normalized)) {
+      seenDomains.add(normalized);
+      dedupedCompetitorUrls.push(url);
+    }
+  }
+  const competitorUrls = dedupedCompetitorUrls.slice(0, 10);
+  console.info(`[pipeline] Competitor URLs after domain-level dedup: ${competitorUrls.length} (from ${manualCompetitorUrls.length} manual + ${discoveredCompetitors.length} discovered)`);
 
   // --- Swarm Agent: Site Profile Discovery ---
   let siteProfile: SiteProfile | null = null;
   try {
+    console.info('[swarm] Running site-profile-agent (model: sonnet)');
     siteProfile = await runSiteProfileAgent({
       homepage: params.input.homepageUrl,
       pageEvidence: params.pageSnapshots.map((s) => ({
@@ -882,6 +905,7 @@ export async function analyzeCompetitiveLandscape(params: {
   // --- Swarm Agent: AI Competitor Candidate Generation ---
   if (siteProfile) {
     try {
+      console.info('[swarm] Running competitor-generation-agent (model: opus)');
       const existingDomains = new Set(discoveredCompetitors.map((c) => c.domain));
       const aiGenerated = await runCompetitorGenerationAgent({
         siteProfile: {
@@ -913,6 +937,9 @@ export async function analyzeCompetitiveLandscape(params: {
           existingDomains.add(gen.domain);
         }
       }
+      const accepted = aiGenerated.competitors.filter((g) => g.confidence >= 0.4 && existingDomains.has(g.domain)).length;
+      const rejected = aiGenerated.competitors.length - accepted;
+      console.info(`[swarm] AI generation: ${accepted} accepted, ${rejected} rejected (low confidence or duplicate)`);
     } catch (error) {
       console.warn('[swarm] AI competitor generation failed (non-fatal):', error instanceof Error ? error.message : error);
     }
@@ -922,6 +949,7 @@ export async function analyzeCompetitiveLandscape(params: {
   let validationResult: Awaited<ReturnType<typeof runCompetitorValidationAgent>> | null = null;
   if (siteProfile && discoveredCompetitors.length > 0) {
     try {
+      console.info(`[swarm] Running competitor-validation-agent (model: sonnet) on ${discoveredCompetitors.length} candidates`);
       validationResult = await runCompetitorValidationAgent({
         siteProfile: {
           businessName: siteProfile.businessName,
@@ -938,11 +966,17 @@ export async function analyzeCompetitiveLandscape(params: {
         })),
       });
       console.info('[swarm] Competitor validation:', validationResult.overallQuality, `(${validationResult.validatedCompetitors.filter((v) => v.isRelevant).length} relevant)`);
+      // Log rejected candidates summary
+      const rejected = validationResult.validatedCompetitors.filter((v) => !v.isRelevant);
+      if (rejected.length > 0) {
+        console.info(`[swarm] Rejected ${rejected.length} candidates: ${rejected.map((v) => `${v.domain} (${v.reasoning.slice(0, 60)})`).join('; ')}`);
+      }
 
       // --- Swarm Agent: SERP Intent Similarity ---
       try {
         const relevantCompetitors = validationResult.validatedCompetitors.filter((v) => v.isRelevant);
         if (relevantCompetitors.length > 0) {
+          console.info(`[swarm] Running serp-intent-agent (model: sonnet) on ${relevantCompetitors.length} relevant competitors`);
           const serpAnalysis = await runSerpIntentAgent({
             targetBusiness: {
               businessName: siteProfile.businessName,
@@ -975,6 +1009,7 @@ export async function analyzeCompetitiveLandscape(params: {
       // --- Swarm Agent: Judge / Quality Control ---
       let shouldRetryDiscovery = false;
       try {
+        console.info('[swarm] Running judge-agent (model: sonnet)');
         const judgment = await runJudgeAgent({
           siteProfile: {
             businessName: siteProfile.businessName,
@@ -990,6 +1025,9 @@ export async function analyzeCompetitiveLandscape(params: {
           totalCandidatesBeforeFiltering: discoveredCompetitors.length,
         });
         console.info('[swarm] Judge verdict:', judgment.competitorQuality, `score=${judgment.overallScore}/10, passesGate=${judgment.passesQualityGate}`);
+        if (judgment.issues.length > 0) {
+          console.info(`[swarm] Judge issues: ${judgment.issues.join('; ')}`);
+        }
         shouldRetryDiscovery = judgment.shouldRetry === true && !judgment.passesQualityGate;
       } catch (error) {
         console.warn('[swarm] Judge agent failed (non-fatal):', error instanceof Error ? error.message : error);
@@ -1052,14 +1090,29 @@ export async function analyzeCompetitiveLandscape(params: {
   }
 
   // Filter competitor URLs: prefer validated relevant ones, fall back to unvalidated
-  const filteredCompetitorUrls = validationResult
-    ? dedupeStrings([
-        ...manualCompetitorUrls,
-        ...validationResult.validatedCompetitors
-          .filter((v) => v.isRelevant && v.confidence >= 0.3)
-          .map((v) => v.url),
-      ]).slice(0, 10)
-    : competitorUrls;
+  // Use domain-level dedup for the final filtered set too
+  let filteredCompetitorUrls: string[];
+  if (validationResult) {
+    const validatedUrls = [
+      ...manualCompetitorUrls,
+      ...validationResult.validatedCompetitors
+        .filter((v) => v.isRelevant && v.confidence >= 0.3)
+        .map((v) => v.url),
+    ];
+    const seenFilteredDomains = new Set<string>();
+    filteredCompetitorUrls = [];
+    for (const url of validatedUrls) {
+      const norm = normalizeForDedup(url);
+      if (norm && !seenFilteredDomains.has(norm)) {
+        seenFilteredDomains.add(norm);
+        filteredCompetitorUrls.push(url);
+      }
+    }
+    filteredCompetitorUrls = filteredCompetitorUrls.slice(0, 10);
+  } else {
+    filteredCompetitorUrls = competitorUrls;
+  }
+  console.info(`[pipeline] Final competitor URLs for page evidence: ${filteredCompetitorUrls.length}`);
 
   const concurrency = pLimit(4);
   const competitorPageEvidence = (
@@ -1088,6 +1141,9 @@ export async function analyzeCompetitiveLandscape(params: {
     }),
   );
 
+  const pipelineDuration = ((Date.now() - pipelineStart) / 1000).toFixed(1);
+  console.info(`[pipeline] Competitive landscape analysis complete in ${pipelineDuration}s — ${filteredCompetitorUrls.length} competitors, ${competitorIntelligence.competitors.length} intelligence entries`);
+
   return {
     siteUnderstanding,
     discoveredCompetitors,
@@ -1109,7 +1165,7 @@ async function generatePillars(params: {
   competitorIntelligence: CompetitorIntelligence;
   existingTopics: string[];
   desiredCount: number;
-  modelTier?: 'opus' | 'sonnet' | 'haiku' | 'openai-fast' | 'openai-mini';
+  modelTier?: 'opus' | 'sonnet' | 'haiku';
 }): Promise<z.output<typeof pillarSchema>> {
   const response = await callAiJson({
     schema: pillarSchema,

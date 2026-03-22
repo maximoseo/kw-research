@@ -6,9 +6,14 @@ const validatedCompetitorSchema = z.object({
   domain: z.string(),
   isRelevant: z.boolean().describe('Is this a real business competitor in the same niche?'),
   confidence: z.number().min(0).max(1).describe('Confidence score 0-1'),
+  relevanceScore: z.number().min(0).max(1).describe('Composite relevance score: avg of businessTypeScore, serviceOverlapScore, geoOverlapScore, intentOverlapScore'),
   businessTypeMatch: z.boolean().describe('Same type of business?'),
+  businessTypeScore: z.number().min(0).max(1).describe('How closely the business type matches (0-1)'),
   serviceOverlap: z.boolean().describe('Offers similar services?'),
+  serviceOverlapScore: z.number().min(0).max(1).describe('Degree of service overlap (0-1)'),
   geoRelevance: z.boolean().describe('Serves same geographic area?'),
+  geoOverlapScore: z.number().min(0).max(1).describe('Degree of geographic overlap (0-1)'),
+  intentOverlapScore: z.number().min(0).max(1).describe('How much search intent overlaps (0-1)'),
   reasoning: z.string().describe('Brief reasoning for this assessment'),
 });
 
@@ -35,26 +40,36 @@ export async function runCompetitorValidationAgent(params: {
     .join('\n');
 
   return callAiJson({
-    system: `You are a Competitor Validation Agent. Your job is to validate whether candidate competitor domains are REAL business competitors of the target site.
+    system: `You are a strict Competitor Validation Agent. Your job is to validate whether candidate competitor domains are REAL business competitors of the target site. Be aggressive about rejecting non-competitors.
 
-REJECT these types of results:
-- Directory sites (Yelp, Yellow Pages, G2, Capterra, etc.)
-- Social media platforms (LinkedIn, Facebook, Twitter, etc.)
-- Marketplaces (Amazon, eBay, Etsy, etc.)
-- News/media sites (Forbes, Bloomberg, CNN, etc.)
-- Wikipedia, Quora, Reddit, Medium, or other content platforms
+HARD REJECT (isRelevant=false, relevanceScore ≤ 0.1) — these are NEVER competitors:
+- Directory / aggregator / listing sites (Yelp, Yellow Pages, G2, Capterra, Angi, HomeAdvisor, Thumbtack, Houzz, Bark, etc.)
+- Social media profiles or pages (LinkedIn, Facebook, Twitter/X, Instagram, YouTube, TikTok, Pinterest)
+- Marketplaces (Amazon, eBay, Etsy, Walmart, Alibaba)
+- News / media / blog platforms (Forbes, Bloomberg, CNN, Medium, Substack)
+- User-generated content sites (Wikipedia, Quora, Reddit, WikiHow)
 - Government (.gov) or educational (.edu) sites
 - The target business's own domain or subdomains
-- Businesses in completely different industries
-- Generic national brands with no local/service overlap
+- Job boards (Indeed, Glassdoor)
+- Review sites (Trustpilot, BBB)
 
-ACCEPT competitors that:
-- Offer the same or very similar services
-- Serve the same geographic area (if local)
-- Target the same customer segments
-- Would compete for the same search keywords
+REJECT (isRelevant=false, relevanceScore ≤ 0.2):
+- Businesses in a completely different industry with no service overlap
+- National or global brands that do NOT serve the same local market and have no evidence of operating in the target's service area
+- Businesses that share an industry label but provide fundamentally different services (e.g. a software company vs a plumbing company both labeled "tech")
 
-Score confidence from 0 to 1, where:
+REQUIRE to accept (isRelevant=true):
+- There must be evidence of SAME-SERVICE overlap (not just same broad industry)
+- For local businesses: candidate must plausibly serve the same geographic area
+- Candidate must target the same customer segment
+
+SCORING — compute four sub-scores and average them for relevanceScore:
+- businessTypeScore (0-1): How closely the business type/model matches
+- serviceOverlapScore (0-1): Degree of overlap in actual services offered
+- geoOverlapScore (0-1): Degree of geographic overlap (1.0 = same city, 0.5 = same state/region, 0.2 = same country only, 0.0 = no overlap)
+- intentOverlapScore (0-1): Would they compete for the same search keywords?
+
+Confidence scoring (separate from relevanceScore):
 - 0.8-1.0: Strong competitor (same niche, same area, same services)
 - 0.5-0.8: Moderate competitor (some overlap)
 - 0.2-0.5: Weak competitor (tangential overlap)
