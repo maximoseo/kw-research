@@ -84,6 +84,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   const [isPending, startTransition] = useTransition();
   const [isDiscoveringCompetitors, startCompetitorDiscovery] = useTransition();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isRerunning, setIsRerunning] = useState(false);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const [competitorDiscovery, setCompetitorDiscovery] = useState<CompetitorDiscoveryState>({
@@ -159,6 +160,33 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
     if (!selectedRun?.workbookName) return;
     triggerDownload(selectedRun.id, addToast, setIsDownloading);
   }, [selectedRun?.id, selectedRun?.workbookName, addToast]);
+
+  const handleRerun = useCallback(async () => {
+    if (!selectedRun?.input) return;
+    setIsRerunning(true);
+    try {
+      const input = selectedRun.input;
+      const payload = new FormData();
+      payload.set('projectId', project.id);
+      payload.set('competitorUrls', (input.competitorUrls ?? []).join('\n'));
+      payload.set('notes', input.notes || '');
+      payload.set('mode', input.mode || 'fresh');
+      payload.set('targetRows', String(input.targetRows ?? 220));
+
+      const response = await fetch('/api/runs', { method: 'POST', body: payload });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        addToast(result?.error || 'Unable to start rerun.', 'error');
+        return;
+      }
+      addToast('Rerun queued — starting fresh research.', 'success');
+      setSelectedRunId(result.runId);
+      await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
+      await queryClient.invalidateQueries({ queryKey: ['run', project.id, result.runId] });
+    } finally {
+      setIsRerunning(false);
+    }
+  }, [selectedRun?.input, project.id, addToast, queryClient]);
 
   const handleSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
@@ -435,14 +463,22 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                   <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} loading={isDownloading} onClick={handleDownload} className="w-full shrink-0 sm:w-auto">
                     Download XLSX
                   </Button>
+                  <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={isRerunning} onClick={handleRerun} className="w-full shrink-0 sm:w-auto">
+                    Rerun
+                  </Button>
                 </div>
               ) : null}
 
               {/* Failed banner */}
               {selectedRun.status === 'failed' ? (
-                <Alert variant="error" title="Run failed">
-                  {selectedRun.errorMessage || 'An unexpected error occurred during processing. You can retry this run.'}
-                </Alert>
+                <div className="space-y-3">
+                  <Alert variant="error" title="Run failed">
+                    {selectedRun.errorMessage || 'An unexpected error occurred during processing.'}
+                  </Alert>
+                  <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={isRerunning} onClick={handleRerun} className="w-full sm:w-auto">
+                    Rerun with same settings
+                  </Button>
+                </div>
               ) : null}
 
               <div className="grid gap-2.5 sm:grid-cols-2">
@@ -454,15 +490,19 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} disabled={!selectedRun.workbookName} loading={isDownloading} onClick={handleDownload} className="w-full sm:w-auto">
                    Download XLSX
                 </Button>
+                {(selectedRun.status === 'completed' || selectedRun.status === 'failed') ? (
+                  <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={isRerunning} onClick={handleRerun} className="w-full sm:w-auto">
+                    Rerun
+                  </Button>
+                ) : null}
                 <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={runQuery.isRefetching} onClick={() => runQuery.refetch()} className="w-full sm:w-auto">
                   Refresh
                 </Button>
-                {selectedRun.status !== 'processing' ? (
+                {selectedRun.status === 'failed' ? (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    icon={<RefreshCcw className="h-3.5 w-3.5" />}
                     className="w-full sm:w-auto"
                     onClick={async () => {
                       const response = await fetch(`/api/runs/${selectedRun.id}/retry`, { method: 'POST' });
@@ -475,7 +515,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                       await runQuery.refetch();
                     }}
                   >
-                    Retry
+                    Retry same run
                   </Button>
                 ) : null}
               </div>
