@@ -24,6 +24,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   KEYWORDS_EVERYWHERE_API_KEY: z.string().optional(),
+  FIRECRAWL_API_KEY: z.string().optional(),
 });
 
 const env = envSchema.parse(process.env);
@@ -108,4 +109,8 @@ export function isGoogleOAuthConfigured() {
 
 export function getKeywordsEverywhereApiKey() {
   return env.KEYWORDS_EVERYWHERE_API_KEY;
+}
+
+export function getFirecrawlApiKey() {
+  return env.FIRECRAWL_API_KEY;
 }

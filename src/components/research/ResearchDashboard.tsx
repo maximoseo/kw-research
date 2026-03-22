@@ -18,6 +18,7 @@ import ResearchProcessTracker from './ResearchProcessTracker';
 type CompetitorDiscoveryState = {
   status: 'idle' | 'success' | 'empty' | 'error';
   message?: string;
+  metadata?: { methods?: string[]; totalCandidates?: number; [key: string]: unknown };
 };
 
 function buildRunsUrl(projectId: string) {
@@ -202,11 +203,13 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
         const discoveredUrls = (result?.competitors || []).map((competitor: { url: string }) => competitor.url);
         const nextValue = [...new Set([...values.competitorUrls.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean), ...discoveredUrls])].join('\n');
         form.setValue('competitorUrls', nextValue, { shouldDirty: true, shouldValidate: true });
+        const discoveryMeta = result?.metadata ?? undefined;
         setCompetitorDiscovery({
           status: discoveredUrls.length ? 'success' : 'empty',
           message: discoveredUrls.length
-            ? `Added ${discoveredUrls.length} discovered competitor URLs.`
-            : 'No high-confidence competitors were found automatically.',
+            ? `Found ${discoveredUrls.length} competitor${discoveredUrls.length === 1 ? '' : 's'} and added to the list.`
+            : 'No strong competitors found. The system tried multiple discovery approaches but couldn\u2019t find relevant competitors for this niche.',
+          metadata: discoveryMeta,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to discover competitors automatically.';
@@ -290,6 +293,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                     size="sm"
                     icon={<Radar className="h-3.5 w-3.5" />}
                     loading={isDiscoveringCompetitors}
+                    disabled={isDiscoveringCompetitors}
                     onClick={handleAutoFindCompetitors}
                     className="w-full shrink-0 sm:w-auto"
                   >
@@ -298,14 +302,22 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 </div>
                 {competitorDiscovery.status === 'success' ? (
                   <Alert variant="success" title="Discovery complete">
-                    {competitorDiscovery.message}
+                    <p>{competitorDiscovery.message}</p>
+                    {competitorDiscovery.metadata?.methods && (
+                      <p className="mt-1 text-body-sm text-text-secondary">
+                        Methods used: {competitorDiscovery.metadata.methods.join(', ')}
+                        {competitorDiscovery.metadata.totalCandidates != null && (
+                          <> &middot; {competitorDiscovery.metadata.totalCandidates} candidates evaluated</>
+                        )}
+                      </p>
+                    )}
                   </Alert>
                 ) : competitorDiscovery.status === 'empty' ? (
                   <Alert variant="warning" title="No results">
                     {competitorDiscovery.message}
                   </Alert>
                 ) : competitorDiscovery.status === 'error' ? (
-                  <Alert variant="error" title="Discovery issue">
+                  <Alert variant="error" title="Discovery failed">
                     {competitorDiscovery.message}
                   </Alert>
                 ) : null}

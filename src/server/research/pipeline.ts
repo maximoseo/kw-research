@@ -28,6 +28,9 @@ import {
 } from './utils';
 import { buildWorkbook } from './workbook';
 import { callSwarmAgent, planSwarmExecution, selectModelForTask, synthesizeAgentResults, synthesizeReport, type AgentResult } from './agents';
+import { runSiteProfileAgent, type SiteProfile } from './agents/site-profile-agent';
+import { runCompetitorValidationAgent } from './agents/competitor-validation-agent';
+import { runJudgeAgent } from './agents/judge-agent';
 
 const siteUnderstandingSchema = z.object({
   businessSummary: z.string(),
@@ -611,6 +614,8 @@ function mergeSuggestedCompetitors(params: {
       domain: resolvedDomain,
       url: resolvedUrl,
       snippet: matchedCandidate?.snippet || '',
+      confidence: matchedCandidate?.confidence ?? 60,
+      sources: matchedCandidate?.sources ?? [],
       whyRelevant:
         competitor.whyRelevant ||
         matchedCandidate?.snippet ||
@@ -646,21 +651,59 @@ async function log(runId: string, stage: string, message: string, metadata?: Rec
 export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'homepageUrl' | 'aboutUrl' | 'sitemapUrl'>) {
   const crawlLimits = getCrawlLimits();
   const concurrency = pLimit(4);
-  const sitemapUrls = await fetchSitemapUrls(input.sitemapUrl);
-  const baseEvidenceUrls = dedupeStrings([input.homepageUrl, input.aboutUrl, ...sitemapUrls]).slice(
-    0,
-    crawlLimits.maxPageFetches,
-  );
+
+  // Try provided sitemap, fallback to auto-discovery
+  let sitemapUrls = input.sitemapUrl ? await fetchSitemapUrls(input.sitemapUrl).catch(() => [] as string[]) : [];
+  let sitemapSource = input.sitemapUrl ? 'provided' : 'none';
+  if (sitemapUrls.length === 0 && input.homepageUrl) {
+    const { discoverSitemapUrl } = await import('./discovery');
+    const discovered = await discoverSitemapUrl(input.homepageUrl).catch(() => null);
+    if (discovered) {
+      sitemapUrls = await fetchSitemapUrls(discovered).catch(() => [] as string[]);
+      sitemapSource = 'auto-discovered';
+      console.info(`[discovery] Sitemap auto-discovered: ${discovered} (${sitemapUrls.length} URLs)`);
+    }
+  }
+
+  // Try provided about page, fallback to auto-discovery  
+  let aboutUrl = input.aboutUrl;
+  let aboutSource = 'provided';
+  if (aboutUrl) {
+    const aboutTest = await fetchPageSnapshot(aboutUrl).catch(() => null);
+    if (!aboutTest) {
+      aboutUrl = '';
+      aboutSource = 'provided-failed';
+    }
+  }
+  if (!aboutUrl && input.homepageUrl) {
+    const { discoverAboutPage } = await import('./discovery');
+    const discovered = await discoverAboutPage(input.homepageUrl).catch(() => null);
+    if (discovered) {
+      aboutUrl = discovered;
+      aboutSource = 'auto-discovered';
+      console.info(`[discovery] About page auto-discovered: ${discovered}`);
+    }
+  }
+
+  const baseEvidenceUrls = dedupeStrings(
+    [input.homepageUrl, aboutUrl, ...sitemapUrls].filter(Boolean),
+  ).slice(0, crawlLimits.maxPageFetches);
 
   const pageSnapshots = (
-    await Promise.all(baseEvidenceUrls.map((url) => concurrency(() => fetchPageSnapshot(url))))
+    await Promise.all(baseEvidenceUrls.map((url) => concurrency(() => fetchPageSnapshot(url).catch(() => null))))
   ).filter(keepPageSnapshot);
+
+  if (pageSnapshots.length === 0) {
+    console.warn('[discovery] WARNING: Zero page snapshots collected. AI analysis will be severely degraded.');
+  }
+
   const existingContentMap = buildExistingContentMap(sitemapUrls, pageSnapshots);
 
   return {
     sitemapUrls,
     pageSnapshots,
     existingContentMap,
+    discoveryMeta: { sitemapSource, aboutSource, aboutUrl, pageCount: pageSnapshots.length },
   };
 }
 
@@ -799,16 +842,98 @@ export async function analyzeCompetitiveLandscape(params: {
         : siteUnderstanding.competitorQueries.length > 0
           ? siteUnderstanding.competitorQueries
           : siteUnderstanding.offerings.map((offering) => `${offering} ${params.input.market}`),
-  }).catch(() => []);
+  })
+    .then((result) => result.candidates)
+    .catch((error) => {
+      console.warn('[competitors] DuckDuckGo discovery failed:', error instanceof Error ? error.message : error);
+      return [] as CompetitorCandidate[];
+    });
+
+  if (discoveredCompetitors.length === 0 && manualCompetitorUrls.length === 0) {
+    console.warn('[competitors] No competitors found from any source. Results will be limited.');
+  }
 
   const competitorUrls = dedupeStrings([
     ...manualCompetitorUrls,
     ...discoveredCompetitors.map((entry) => entry.url),
-  ]).slice(0, 5);
+  ]).slice(0, 10);
+
+  // --- Swarm Agent: Site Profile Discovery ---
+  let siteProfile: SiteProfile | null = null;
+  try {
+    siteProfile = await runSiteProfileAgent({
+      homepage: params.input.homepageUrl,
+      pageEvidence: params.pageSnapshots.map((s) => ({
+        url: s.url,
+        title: s.title ?? '',
+        headings: s.headings ?? [],
+        snippet: s.body?.slice(0, 500) ?? '',
+      })),
+    });
+    console.info('[swarm] Site profile extracted:', siteProfile.businessName, '/', siteProfile.niche);
+  } catch (error) {
+    console.warn('[swarm] Site profile agent failed, continuing without:', error instanceof Error ? error.message : error);
+  }
+
+  // --- Swarm Agent: Competitor Validation ---
+  let validationResult: Awaited<ReturnType<typeof runCompetitorValidationAgent>> | null = null;
+  if (siteProfile && discoveredCompetitors.length > 0) {
+    try {
+      validationResult = await runCompetitorValidationAgent({
+        siteProfile: {
+          businessName: siteProfile.businessName,
+          businessType: siteProfile.businessType,
+          primaryServices: siteProfile.primaryServices,
+          serviceArea: siteProfile.serviceArea,
+          niche: siteProfile.niche,
+        },
+        candidates: discoveredCompetitors.map((c) => ({
+          url: c.url,
+          domain: c.domain,
+          name: c.name,
+          snippet: c.snippet,
+        })),
+      });
+      console.info('[swarm] Competitor validation:', validationResult.overallQuality, `(${validationResult.validatedCompetitors.filter((v) => v.isRelevant).length} relevant)`);
+
+      // --- Swarm Agent: Judge / Quality Control ---
+      try {
+        const judgment = await runJudgeAgent({
+          siteProfile: {
+            businessName: siteProfile.businessName,
+            businessType: siteProfile.businessType,
+            niche: siteProfile.niche,
+            serviceArea: siteProfile.serviceArea,
+          },
+          competitors: validationResult.validatedCompetitors.map((v) => ({
+            url: v.url,
+            confidence: v.confidence,
+            isRelevant: v.isRelevant,
+          })),
+          totalCandidatesBeforeFiltering: discoveredCompetitors.length,
+        });
+        console.info('[swarm] Judge verdict:', judgment.competitorQuality, `score=${judgment.overallScore}/10, passesGate=${judgment.passesQualityGate}`);
+      } catch (error) {
+        console.warn('[swarm] Judge agent failed (non-fatal):', error instanceof Error ? error.message : error);
+      }
+    } catch (error) {
+      console.warn('[swarm] Competitor validation agent failed, continuing with unvalidated results:', error instanceof Error ? error.message : error);
+    }
+  }
+
+  // Filter competitor URLs: prefer validated relevant ones, fall back to unvalidated
+  const filteredCompetitorUrls = validationResult
+    ? dedupeStrings([
+        ...manualCompetitorUrls,
+        ...validationResult.validatedCompetitors
+          .filter((v) => v.isRelevant && v.confidence >= 0.3)
+          .map((v) => v.url),
+      ]).slice(0, 10)
+    : competitorUrls;
 
   const concurrency = pLimit(4);
   const competitorPageEvidence = (
-    await Promise.all(competitorUrls.map((url) => concurrency(() => fetchPageSnapshot(url))))
+    await Promise.all(filteredCompetitorUrls.map((url) => concurrency(() => fetchPageSnapshot(url))))
   ).filter(keepPageSnapshot);
 
   const competitorIntelligence = normalizeCompetitorIntelligence(
@@ -840,9 +965,11 @@ export async function analyzeCompetitiveLandscape(params: {
       autoCompetitorCandidates: discoveredCompetitors,
       competitorIntelligence,
     }),
-    competitorUrls,
+    competitorUrls: filteredCompetitorUrls,
     competitorPageEvidence,
     competitorIntelligence,
+    siteProfile,
+    validationResult,
   };
 }
 

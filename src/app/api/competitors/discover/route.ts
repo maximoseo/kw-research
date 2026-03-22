@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       existingResearchSummary: null,
     };
     const aiState: AiAvailabilityState = { enabled: true };
-    const { sitemapUrls, pageSnapshots, existingContentMap } = await buildSiteEvidence(input);
+    const { sitemapUrls, pageSnapshots, existingContentMap, discoveryMeta } = await buildSiteEvidence(input);
     const discovery = await analyzeCompetitiveLandscape({
       input,
       pageSnapshots,
@@ -75,10 +75,22 @@ export async function POST(request: Request) {
         sitemapUrlCount: sitemapUrls.length,
         pageEvidenceCount: pageSnapshots.length,
       },
+      discoveryMeta: discoveryMeta ?? null,
       aiUsed: aiState.enabled,
     });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Unable to discover competitors automatically.' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[competitors/discover] Pipeline error:', message, error);
+    
+    const isTimeout = message.includes('abort') || message.includes('timeout');
+    const isAiError = message.includes('AI provider') || message.includes('API key') || message.includes('Anthropic') || message.includes('OpenAI');
+    
+    const userMessage = isAiError
+      ? 'AI service is temporarily unavailable. Please check your API configuration and try again.'
+      : isTimeout
+        ? 'Discovery timed out. The target site may be slow or unreachable. Please try again.'
+        : `Competitor discovery failed: ${message.slice(0, 200)}`;
+    
+    return NextResponse.json({ error: userMessage }, { status: 500 });
   }
 }
