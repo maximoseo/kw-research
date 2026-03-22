@@ -15,6 +15,7 @@ export type QaOptions = {
   context?: RelevanceContext;
   blockerContext?: BlockerContext;
   strictMode?: boolean;
+  targetRows?: number;
 };
 
 export function validateAndNormalizeRows(
@@ -25,6 +26,7 @@ export function validateAndNormalizeRows(
   const issues: string[] = [];
   const seen = new Set<string>();
   const normalized: ResearchRow[] = [];
+  const minRowFloor = options?.targetRows ? Math.max(2, Math.floor(options.targetRows * 0.3)) : 0;
 
   for (const row of rows) {
     const keywords = ensureBrandFirst(brandName, row.keywords);
@@ -133,11 +135,67 @@ export function validateAndNormalizeRows(
     afterCrossDedup.push(row);
   }
 
+  // --- Apply similarity + relevance filtering with progressive relaxation ---
+  const finalRows = applySimilarityAndRelevance(afterCrossDedup, options, issues, minRowFloor);
+
+  issues.push(`QA output: ${finalRows.length} rows (target: ${options?.targetRows ?? 'unknown'}, floor: ${minRowFloor}).`);
+
+  return {
+    rows: finalRows,
+    issues,
+  };
+}
+
+/**
+ * Groups rows by pillar, applies pillar-cluster similarity, sibling overlap,
+ * and relevance scoring. Uses progressive relaxation when row count drops
+ * below the minimum floor.
+ */
+function applySimilarityAndRelevance(
+  rows: ResearchRow[],
+  options: QaOptions | undefined,
+  issues: string[],
+  minRowFloor: number,
+): ResearchRow[] {
+  // Define relaxation levels: each level loosens thresholds further
+  const relaxationLevels = [
+    { pillarClusterSim: 0.7, siblingOverlap: 0.65, relevance: 25, label: 'strict' },
+    { pillarClusterSim: 0.7, siblingOverlap: 0.65, relevance: 15, label: 'relaxed-relevance-15' },
+    { pillarClusterSim: 0.7, siblingOverlap: 0.65, relevance: 0, label: 'relaxed-relevance-0' },
+    { pillarClusterSim: 0.85, siblingOverlap: 0.8, relevance: 0, label: 'relaxed-similarity' },
+    { pillarClusterSim: 1.0, siblingOverlap: 1.0, relevance: 0, label: 'minimal-filtering' },
+  ];
+
+  for (const level of relaxationLevels) {
+    const levelIssues: string[] = [];
+    const result = applyFiltersAtLevel(rows, options, levelIssues, level);
+
+    if (result.length >= minRowFloor || level.label === 'minimal-filtering') {
+      issues.push(...levelIssues);
+      if (level.label !== 'strict') {
+        issues.push(`QA relaxed to "${level.label}" — row count ${result.length} (floor: ${minRowFloor}).`);
+      }
+      return result;
+    }
+
+    issues.push(`QA level "${level.label}" produced only ${result.length} rows (floor: ${minRowFloor}). Relaxing.`);
+  }
+
+  // Should not reach here, but return what we have
+  return rows;
+}
+
+function applyFiltersAtLevel(
+  rows: ResearchRow[],
+  options: QaOptions | undefined,
+  issues: string[],
+  level: { pillarClusterSim: number; siblingOverlap: number; relevance: number },
+): ResearchRow[] {
   // --- Group by pillar ---
   const grouped = new Map<string, ResearchRow[]>();
-  for (const row of afterCrossDedup) {
+  for (const row of rows) {
     const bucket = grouped.get(row.pillar) || [];
-    bucket.push(row);
+    bucket.push({ ...row });
     grouped.set(row.pillar, bucket);
   }
 
@@ -163,14 +221,14 @@ export function validateAndNormalizeRows(
       }
     }
 
-    // --- Pillar-cluster distinctiveness (lowered from 0.85 to 0.7) ---
+    // --- Pillar-cluster distinctiveness ---
     const pillarRow = group.find((r) => r.rowType === 'pillar');
     if (pillarRow && options?.context) {
       const toRemove = new Set<number>();
       for (let i = 1; i < group.length; i++) {
         const cluster = group[i];
         const sim = jaccardSimilarity(cluster.primaryKeyword, pillarRow.primaryKeyword);
-        if (sim >= 0.7) {
+        if (sim >= level.pillarClusterSim) {
           issues.push(
             `Removed near-duplicate cluster "${cluster.cluster}" (Jaccard ${sim.toFixed(2)} with pillar).`,
           );
@@ -184,7 +242,7 @@ export function validateAndNormalizeRows(
       }
     }
 
-    // --- Sibling cluster overlap (threshold 0.65, remove duplicate) ---
+    // --- Sibling cluster overlap ---
     if (options?.context) {
       const siblingRemove = new Set<number>();
       for (let li = 1; li < group.length; li++) {
@@ -194,7 +252,7 @@ export function validateAndNormalizeRows(
           const left = group[li];
           const right = group[ri];
           const sim = jaccardSimilarity(left.primaryKeyword, right.primaryKeyword);
-          if (sim >= 0.65) {
+          if (sim >= level.siblingOverlap) {
             issues.push(
               `Removed sibling duplicate "${right.cluster}" (Jaccard ${sim.toFixed(2)} with "${left.cluster}").`,
             );
@@ -255,7 +313,7 @@ export function validateAndNormalizeRows(
         siblings.filter((s) => s.primaryKeyword !== row.primaryKeyword),
       );
 
-      if (score.total < 25) {
+      if (score.total < level.relevance) {
         issues.push(`Low relevance (${score.total}) for "${row.cluster}": ${score.flags.join(', ')}`);
         continue;
       }
@@ -282,10 +340,7 @@ export function validateAndNormalizeRows(
     finalRows = [...finalGrouped.values()].flat();
   }
 
-  return {
-    rows: finalRows,
-    issues,
-  };
+  return finalRows;
 }
 
 export async function verifyWorkbookBuffer(buffer: Uint8Array) {

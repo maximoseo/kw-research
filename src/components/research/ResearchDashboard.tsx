@@ -170,7 +170,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
       payload.set('projectId', project.id);
       payload.set('competitorUrls', (input.competitorUrls ?? []).join('\n'));
       payload.set('notes', input.notes || '');
-      payload.set('mode', input.mode || 'fresh');
+      payload.set('mode', 'fresh');
       payload.set('targetRows', String(input.targetRows ?? 220));
 
       const response = await fetch('/api/runs', { method: 'POST', body: payload });

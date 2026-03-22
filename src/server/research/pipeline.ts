@@ -411,7 +411,9 @@ function buildPillarCandidatesFallback(params: {
     .filter((a) => !isMetadataCategory(a).blocked)
     .slice(0, 3);
 
-  const painPoints = params.siteUnderstanding.painPoints.slice(0, 3);
+  const painPoints = params.siteUnderstanding.painPoints
+    .filter((p) => !isMetadataCategory(p).blocked)
+    .slice(0, 3);
   const candidates: PillarCandidate[] = [];
 
   const pushCandidate = (candidate: PillarCandidate) => {
@@ -495,9 +497,10 @@ function buildClusterCandidatesFallback(params: {
 }) {
   const base = extractBaseKeyword(params.pillar.primaryKeyword, params.input.language) || params.pillar.primaryKeyword;
   const candidates: ClusterCandidate[] = [];
-  const audiences = params.siteUnderstanding?.audiences?.slice(0, 2) ?? [];
-  const painPoints = params.siteUnderstanding?.painPoints?.slice(0, 2) ?? [];
-  const differentiators = params.siteUnderstanding?.differentiators?.slice(0, 2) ?? [];
+  const audiences = params.siteUnderstanding?.audiences?.slice(0, 3) ?? [];
+  const painPoints = params.siteUnderstanding?.painPoints?.slice(0, 3) ?? [];
+  const differentiators = params.siteUnderstanding?.differentiators?.slice(0, 3) ?? [];
+  const offerings = params.siteUnderstanding?.offerings?.filter((o) => o.toLowerCase() !== base.toLowerCase()).slice(0, 3) ?? [];
 
   const pushCandidate = (candidate: ClusterCandidate) => {
     if (candidates.some((entry) => entry.title.toLowerCase() === candidate.title.toLowerCase())) {
@@ -506,7 +509,7 @@ function buildClusterCandidatesFallback(params: {
     candidates.push(candidate);
   };
 
-  // Context-driven cluster definitions instead of fixed 12-template approach
+  // Context-driven cluster definitions — expanded template set
   const definitions: Array<[string, string, string[]]> = [];
 
   if (params.input.language === 'Hebrew') {
@@ -514,30 +517,50 @@ function buildClusterCandidatesFallback(params: {
       [`${base} מוסבר`, 'Informational', ['הסבר', base]],
       [`אפשרויות ${base}`, 'Commercial', ['סוגים', base]],
       [`בחירת ${base}`, 'Commercial', ['בחירה', base]],
+      [`יתרונות ${base}`, 'Informational', ['יתרונות', base]],
+      [`טעויות נפוצות ב${base}`, 'Informational', ['טעויות', base]],
+      [`מתי צריך ${base}`, 'Informational', ['מתי', base]],
+      [`${base} למתחילים`, 'Informational', ['מתחילים', base]],
+      [`עלות ${base}`, 'Commercial', ['עלות', 'מחיר', base]],
+      [`${base} מול חלופות`, 'Commercial', ['השוואה', base]],
+      [`תהליך ${base}`, 'Informational', ['שלבים', 'תהליך', base]],
     );
     for (const audience of audiences.filter((a) => !isMetadataCategory(a).blocked)) {
       definitions.push([`${base} ל${audience}`, 'Commercial', [audience, base]]);
     }
-    for (const pain of painPoints) {
+    for (const pain of painPoints.filter((p) => !isMetadataCategory(p).blocked)) {
       definitions.push([`${pain} ב${base}`, 'Informational', [pain, base]]);
     }
     for (const diff of differentiators) {
       definitions.push([`${diff} ${base}`, 'Informational', [diff, base]]);
+    }
+    for (const offering of offerings) {
+      definitions.push([`${base} עם ${offering}`, 'Commercial', [offering, base]]);
     }
   } else {
     definitions.push(
       [`${base} explained`, 'Informational', ['overview', base]],
       [`${base} options`, 'Commercial', ['types', base]],
       [`choosing ${base}`, 'Commercial', ['selection', base]],
+      [`${base} advantages`, 'Informational', ['benefits', 'pros', base]],
+      [`common ${base} mistakes`, 'Informational', ['mistakes', 'errors', base]],
+      [`when to get ${base}`, 'Informational', ['timing', 'when', base]],
+      [`${base} for beginners`, 'Informational', ['beginners', 'getting started', base]],
+      [`${base} process`, 'Informational', ['steps', 'process', base]],
+      [`${base} vs alternatives`, 'Commercial', ['comparison', 'alternatives', base]],
+      [`${base} results`, 'Informational', ['outcomes', 'results', base]],
     );
     for (const audience of audiences.filter((a) => !isMetadataCategory(a).blocked)) {
       definitions.push([`${base} for ${audience.toLowerCase()}`, 'Commercial', [audience, base]]);
     }
-    for (const pain of painPoints) {
+    for (const pain of painPoints.filter((p) => !isMetadataCategory(p).blocked)) {
       definitions.push([`${base} ${pain.toLowerCase()}`, 'Informational', [pain, base]]);
     }
     for (const diff of differentiators) {
       definitions.push([`${base} ${diff.toLowerCase()}`, 'Informational', [diff, base]]);
+    }
+    for (const offering of offerings) {
+      definitions.push([`${base} and ${offering.toLowerCase()}`, 'Commercial', [offering, base]]);
     }
   }
 
@@ -1511,6 +1534,12 @@ export async function runResearchPipeline(params: {
     pillarBundles.push(bundle);
   }
 
+  await log(runId, 'clusters', `Swarm cluster generation complete`, {
+    totalBundles: pillarBundles.length,
+    expectedPillars: pillars.length,
+    bundleSummary: pillarBundles.map((b) => ({ pillar: b.title, clusters: b.clusters.length })),
+  });
+
   if (!pillarBundles.length) {
     throw new Error('All cluster generation tasks failed.');
   }
@@ -1518,6 +1547,13 @@ export async function runResearchPipeline(params: {
   const rawRows = buildRows({
     input,
     pillars: pillarBundles,
+  });
+
+  await log(runId, 'generation', 'Raw rows built from pillar bundles', {
+    rawRowCount: rawRows.length,
+    pillarBundleCount: pillarBundles.length,
+    clusterCounts: pillarBundles.map((b) => ({ pillar: b.title, clusters: b.clusters.length })),
+    targetRows: input.targetRows,
   });
 
   await log(runId, 'metrics', 'Enriching keyword metrics from real data sources');
@@ -1537,11 +1573,12 @@ export async function runResearchPipeline(params: {
     }
   }
 
-  await log(runId, 'qa', 'Validating and normalizing generated rows');
+  await log(runId, 'qa', 'Validating and normalizing generated rows', { rawRowCount: rawRows.length });
   const normalized = validateAndNormalizeRows(rawRows, input.brandName, {
     context: relevanceContext,
     blockerContext,
     strictMode: true,
+    targetRows: input.targetRows,
   });
   if (normalized.issues.length) {
     await addResearchLog({
@@ -1549,7 +1586,7 @@ export async function runResearchPipeline(params: {
       stage: 'qa',
       level: 'warning',
       message: 'Validation adjusted or flagged generated rows.',
-      metadata: { issues: normalized.issues.slice(0, 20) },
+      metadata: { issues: normalized.issues.slice(0, 20), finalRowCount: normalized.rows.length, rawRowCount: rawRows.length, targetRows: input.targetRows },
     });
   }
 
