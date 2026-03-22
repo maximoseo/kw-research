@@ -94,8 +94,11 @@ export function AppShell({
                 </h1>
               </div>
               <div className="action-row">
-                <Link href="/dashboard" className="hidden sm:block">
-                  <Button variant="ghost" size="sm">Switch site</Button>
+                <Link href="/dashboard">
+                  <Button variant="secondary" size="sm" className="gap-1.5">
+                    <LayoutDashboard className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                  </Button>
                 </Link>
                 <div className="flex items-center gap-2 xl:hidden">
                   <ThemeToggle />
