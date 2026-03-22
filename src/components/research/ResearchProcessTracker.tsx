@@ -88,7 +88,7 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-2 2xl:grid-cols-4">
         {process.steps.map((step) => {
           const Icon = stepIcons[step.id];
           const currentState = step.state as StepState;

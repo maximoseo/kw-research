@@ -29,7 +29,7 @@ export default function Card({ children, className = '', padding = 'md', variant
   return (
     <div
       className={cn(
-        'relative transition-all duration-200',
+        'relative min-w-0 overflow-hidden transition-all duration-200',
         variantMap[variant],
         paddingMap[padding],
         className,

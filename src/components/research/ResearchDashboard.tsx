@@ -249,7 +249,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   return (
     <div className="min-w-0 page-stack">
       {/* ── Hero section ── */}
-      <section className="animate-enter grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.05fr_0.95fr]">
+      <section className="animate-enter grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.05fr_0.95fr] [&>*]:min-w-0">
         <Card variant="hero" className="space-y-5">
           <div>
             <p className="eyebrow">Selected workspace</p>
@@ -282,7 +282,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
       </section>
 
       {/* ── New run + Live run ── */}
-      <section id="new-research" className="animate-enter-delayed grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.03fr_0.97fr]">
+      <section id="new-research" className="animate-enter-delayed grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.03fr_0.97fr] [&>*]:min-w-0">
         <Card className="space-y-5">
           <div className="section-header">
             <div>
@@ -396,8 +396,8 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
               <h2 className="section-subtitle mt-2">Status, logs, preview, and export</h2>
             </div>
             {selectedRun ? (
-              <Badge variant={statusBadgeMap[selectedRun.status].variant}>
-                {statusBadgeMap[selectedRun.status].label}
+              <Badge variant={(statusBadgeMap[selectedRun.status as ResearchRunSummary['status']] ?? { variant: 'info' as const }).variant}>
+                {(statusBadgeMap[selectedRun.status as ResearchRunSummary['status']] ?? { label: selectedRun.status }).label}
               </Badge>
             ) : (
               <Badge variant="neutral">
@@ -814,7 +814,7 @@ function RunLogs({
 }
 
 function StatusBadge({ status }: { status: ResearchRunSummary['status'] | ResearchRunDetail['status'] }) {
-  const meta = statusBadgeMap[status];
+  const meta = statusBadgeMap[status as ResearchRunSummary['status']] ?? { variant: 'info' as const, label: status };
 
   return (
     <Badge variant={meta.variant}>
