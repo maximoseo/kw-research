@@ -26,7 +26,13 @@ export async function runSiteProfileAgent(params: {
     .join('\n---\n');
 
   return callAiJson({
-    system: `You are a Site Profile Discovery Agent. Your job is to extract a structured business profile from website evidence. Be precise and factual — only report what you can confidently determine from the evidence. If something is unclear, say "unknown" rather than guessing.`,
+    system: `You are a Site Profile Discovery Agent. Your job is to extract a structured business profile from website evidence. Be precise and factual — only report what you can confidently determine from the evidence. If something is unclear, say "unknown" rather than guessing.
+
+LANGUAGE AWARENESS:
+- Detect the site's primary language from page titles, headings, and content
+- Hebrew sites (RTL, .co.il domains) should have Hebrew-language business descriptions
+- Report the language field accurately — it determines downstream pipeline behavior
+- Extract services and audience terms in the site's own language when appropriate`,
     prompt: `Analyze this website and extract its business profile.
 
 Homepage: ${params.homepage}
@@ -34,9 +40,9 @@ Homepage: ${params.homepage}
 Page Evidence:
 ${evidenceText || '(no page evidence available — infer from the homepage URL only)'}
 
-Extract the business profile with all available details.`,
+Extract the business profile with all available details. Pay special attention to the site's primary language and geographic market.`,
     schema: siteProfileSchema,
     modelTier: 'sonnet',
-    maxTokens: 2000,
+    maxTokens: 2500,
   });
 }

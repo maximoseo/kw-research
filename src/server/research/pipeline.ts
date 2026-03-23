@@ -666,25 +666,37 @@ export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'home
   const concurrency = pLimit(4);
 
   // Try provided sitemap, fallback to auto-discovery
-  let sitemapUrls = input.sitemapUrl ? await fetchSitemapUrls(input.sitemapUrl).catch(() => [] as string[]) : [];
+  let sitemapUrls = input.sitemapUrl ? await fetchSitemapUrls(input.sitemapUrl).catch((err) => {
+    console.warn(`[discovery] Provided sitemap fetch failed: ${err instanceof Error ? err.message : err}`);
+    return [] as string[];
+  }) : [];
   let sitemapSource = input.sitemapUrl ? 'provided' : 'none';
   let resolvedSitemapUrl = input.sitemapUrl || '';
   if (sitemapUrls.length === 0 && input.homepageUrl) {
     const { discoverSitemapUrl } = await import('./discovery');
-    const discovered = await discoverSitemapUrl(input.homepageUrl).catch(() => null);
+    const discovered = await discoverSitemapUrl(input.homepageUrl).catch((err) => {
+      console.warn(`[discovery] Sitemap auto-discovery failed: ${err instanceof Error ? err.message : err}`);
+      return null;
+    });
     if (discovered) {
-      sitemapUrls = await fetchSitemapUrls(discovered).catch(() => [] as string[]);
+      sitemapUrls = await fetchSitemapUrls(discovered).catch((err) => {
+        console.warn(`[discovery] Auto-discovered sitemap fetch failed: ${err instanceof Error ? err.message : err}`);
+        return [] as string[];
+      });
       resolvedSitemapUrl = discovered;
       sitemapSource = 'auto-discovered';
       console.info(`[discovery] Sitemap auto-discovered: ${discovered} (${sitemapUrls.length} URLs)`);
     }
   }
 
-  // Try provided about page, fallback to auto-discovery  
+  // Try provided about page, fallback to auto-discovery
   let aboutUrl = input.aboutUrl;
   let aboutSource = 'provided';
   if (aboutUrl) {
-    const aboutTest = await fetchPageSnapshot(aboutUrl).catch(() => null);
+    const aboutTest = await fetchPageSnapshot(aboutUrl).catch((err) => {
+      console.warn(`[discovery] Provided about page fetch failed: ${err instanceof Error ? err.message : err}`);
+      return null;
+    });
     if (!aboutTest) {
       aboutUrl = '';
       aboutSource = 'provided-failed';
@@ -692,7 +704,10 @@ export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'home
   }
   if (!aboutUrl && input.homepageUrl) {
     const { discoverAboutPage } = await import('./discovery');
-    const discovered = await discoverAboutPage(input.homepageUrl).catch(() => null);
+    const discovered = await discoverAboutPage(input.homepageUrl).catch((err) => {
+      console.warn(`[discovery] About page auto-discovery failed: ${err instanceof Error ? err.message : err}`);
+      return null;
+    });
     if (discovered) {
       aboutUrl = discovered;
       aboutSource = 'auto-discovered';
@@ -704,9 +719,14 @@ export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'home
     [input.homepageUrl, aboutUrl, ...sitemapUrls].filter(Boolean),
   ).slice(0, crawlLimits.maxPageFetches);
 
+  console.info(`[discovery] Fetching page snapshots for ${baseEvidenceUrls.length} URLs`);
   const pageSnapshots = (
-    await Promise.all(baseEvidenceUrls.map((url) => concurrency(() => fetchPageSnapshot(url).catch(() => null))))
+    await Promise.all(baseEvidenceUrls.map((url) => concurrency(() => fetchPageSnapshot(url).catch((err) => {
+      console.warn(`[discovery] Page snapshot failed for ${url}: ${err instanceof Error ? err.message : err}`);
+      return null;
+    }))))
   ).filter(keepPageSnapshot);
+  console.info(`[discovery] Collected ${pageSnapshots.length} page snapshots from ${baseEvidenceUrls.length} URLs`);
 
   if (pageSnapshots.length === 0) {
     console.warn('[discovery] WARNING: Zero page snapshots collected. AI analysis will be severely degraded.');
@@ -730,9 +750,11 @@ async function buildSiteUnderstanding(
   const response = await callAiJson({
     schema: siteUnderstandingSchema,
     system:
-      'You are a senior SEO strategist. Only describe services, products, audiences, and market signals that are explicitly supported by the supplied site evidence. Never invent offerings.',
+      `You are a senior SEO strategist. Only describe services, products, audiences, and market signals that are explicitly supported by the supplied site evidence. Never invent offerings.
+
+CRITICAL: The site language is ${input.language}. All offerings, audiences, pain points, and other text fields MUST be written in ${input.language}. ${input.language === 'Hebrew' ? 'Write all output in Hebrew. Use Hebrew terms for services, audiences, and business descriptions.' : 'Write all output in English.'}`,
     prompt: JSON.stringify({
-      task: 'Summarize the business, audience, coverage, exclusions, and market-relevant competitor search queries.',
+      task: `Summarize the business, audience, coverage, exclusions, and market-relevant competitor search queries. ALL text output must be in ${input.language}.`,
       language: input.language,
       market: input.market,
       brandName: input.brandName,
@@ -780,9 +802,9 @@ async function buildCompetitorIntelligence(params: {
   const response = await callAiJson({
     schema: competitorIntelligenceSchema,
     system:
-      'You are a keyword-research strategist. Select only competitors that are genuinely relevant to the same market and offering set. Reject tangential sites and directories.',
+      `You are a keyword-research strategist. Select only competitors that are genuinely relevant to the same market and offering set. Reject tangential sites and directories. The target site language is ${params.input.language} — opportunity themes should be written in ${params.input.language}.`,
     prompt: JSON.stringify({
-      task: 'Evaluate competitor evidence and extract useful inspiration themes without copying site structures blindly.',
+      task: `Evaluate competitor evidence and extract useful inspiration themes without copying site structures blindly. Write opportunity themes in ${params.input.language}.`,
       input: {
         language: params.input.language,
         market: params.input.market,
@@ -1171,9 +1193,11 @@ async function generatePillars(params: {
   const response = await callAiJson({
     schema: pillarSchema,
     system:
-      'You design pillar-and-cluster SEO architectures. Output only genuinely relevant new pillar opportunities tied to the real business. Avoid covered topics, duplicates, and cannibalization.',
+      `You design pillar-and-cluster SEO architectures. Output only genuinely relevant new pillar opportunities tied to the real business. Avoid covered topics, duplicates, and cannibalization.
+
+CRITICAL: All pillar titles, primary keywords, supporting keywords, and rationale MUST be written in ${params.input.language}. ${params.input.language === 'Hebrew' ? 'Write everything in Hebrew. Do not transliterate or mix English words unless they are industry-standard terms used in Hebrew (e.g. SEO, CRM).' : 'Write everything in English.'}`,
     prompt: JSON.stringify({
-      task: `Generate ${params.desiredCount} new pillar opportunities.`,
+      task: `Generate ${params.desiredCount} new pillar opportunities. ALL output must be in ${params.input.language}.`,
       language: params.input.language,
       market: params.input.market,
       brandName: params.input.brandName,
@@ -1213,7 +1237,7 @@ async function generatePillars(params: {
         ],
       },
     }),
-    maxTokens: 5000,
+    maxTokens: params.input.language === 'Hebrew' ? 8000 : 6000,
     modelTier: params.modelTier ?? 'sonnet',
   });
   return pillarSchema.parse(response);
@@ -1238,9 +1262,10 @@ async function runSwarmClusterGeneration(params: {
         agentId: taskId,
         agentRole: 'Cluster Generation Agent',
         phaseLabel: 'Cluster Generation',
-        taskLabel: `Generate ${params.desiredClustersPerPillar} clusters for pillar: ${pillar.title}`,
+        taskLabel: `Generate ${params.desiredClustersPerPillar} clusters for pillar: ${pillar.title}. ALL output MUST be in ${params.input.language}.`,
         input: {
           language: params.input.language,
+          languageInstruction: `CRITICAL: All cluster titles, primary keywords, supporting keywords, and rationale MUST be written in ${params.input.language}. ${params.input.language === 'Hebrew' ? 'Write everything in Hebrew. Do not use English unless the term is industry-standard in Hebrew usage.' : 'Write everything in English.'}`,
           market: params.input.market,
           brandName: params.input.brandName,
           mode: params.input.mode,
@@ -1255,22 +1280,31 @@ async function runSwarmClusterGeneration(params: {
             primaryKeyword: p.primaryKeyword,
           })),
           desiredCount: params.desiredClustersPerPillar + 2,
+          rules: [
+            `ALL output must be in ${params.input.language}`,
+            'Each cluster must be a genuinely distinct subtopic of the pillar — not a generic template',
+            'Cluster titles should make sense as real article topics that people actually search for',
+            'Do NOT use template patterns like "X explained", "X options", "choosing X", "X for beginners"',
+            'Supporting keywords must be real search queries, not generic modifiers',
+            'Include a mix of informational and commercial intent clusters',
+            'Each cluster must add unique value — no two clusters should cover the same ground',
+          ],
         },
         outputContract: {
           clusters: [
             {
-              title: 'Cluster title',
+              title: `Cluster title (in ${params.input.language})`,
               intent: 'Informational | Commercial | Transactional | Navigational',
-              primaryKeyword: 'cluster primary keyword',
-              supportingKeywords: ['3-8 supporting keywords'],
-              rationale: 'why this cluster is distinct',
+              primaryKeyword: `cluster primary keyword (in ${params.input.language})`,
+              supportingKeywords: [`3-8 supporting keywords (in ${params.input.language})`],
+              rationale: 'why this cluster is distinct and valuable',
               searchVolume: 'estimated monthly search volume (integer) or null if unavailable',
               cpc: 'estimated cost-per-click in USD or null if unavailable',
             },
           ],
         },
         modelTier,
-        maxTokens: 4500,
+        maxTokens: params.input.language === 'Hebrew' ? 6500 : 5500,
       });
 
       if (agentResult.status === 'error' || !agentResult.output) {

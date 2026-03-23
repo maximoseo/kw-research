@@ -53,7 +53,12 @@ RULES:
 - Never suggest directory sites, social media, marketplaces, news sites, or government sites
 - Never suggest the target business itself
 - Confidence of 0.7+ means you are highly confident this is a real competing domain
-- Confidence below 0.4 means speculative — only include if no better options exist`,
+- Confidence below 0.4 means speculative — only include if no better options exist
+
+LANGUAGE & MARKET AWARENESS:
+- For Hebrew-language businesses (.co.il, Hebrew content): prioritize Israeli competitors with Hebrew websites
+- For local businesses in non-English markets: focus on competitors that serve the same language market
+- Do not suggest English-language competitors for a Hebrew-language local business unless they genuinely operate in that market`,
     prompt: `Generate 10-15 competitor candidates for this business:
 
 Business: ${params.siteProfile.businessName}

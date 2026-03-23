@@ -62,6 +62,7 @@ REQUIRE to accept (isRelevant=true):
 - There must be evidence of SAME-SERVICE overlap (not just same broad industry)
 - For local businesses: candidate must plausibly serve the same geographic area
 - Candidate must target the same customer segment
+- For non-English markets (e.g. Hebrew/Israeli): candidates should primarily serve the same language market
 
 SCORING — compute four sub-scores and average them for relevanceScore:
 - businessTypeScore (0-1): How closely the business type/model matches

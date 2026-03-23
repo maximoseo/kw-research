@@ -185,9 +185,9 @@ export async function synthesizeReport(params: {
     const aiAnalysis = await callAiJson({
       schema: reportSynthesisSchema,
       system:
-        'You are the Report Synthesis Agent for a keyword research pipeline. Your role is to transform raw research data into a premium, professional-grade SEO deliverable.',
+        `You are the Report Synthesis Agent for a keyword research pipeline. Your role is to transform raw research data into a premium, professional-grade SEO deliverable. The research is for a ${input.language}-language site in the ${input.market} market. Write insights and recommendations in English (report language), but reference keywords and topics in their original ${input.language} form.`,
       prompt: JSON.stringify({
-        task: 'Generate a premium SEO research synthesis report',
+        task: `Generate a premium SEO research synthesis report for a ${input.language} site`,
         researchInput: {
           brandName: input.brandName,
           language: input.language,
@@ -235,10 +235,11 @@ export async function synthesizeReport(params: {
         })),
       }),
       modelTier: 'opus',
-      maxTokens: 4000,
+      maxTokens: 5000,
     });
     return reportSynthesisSchema.parse(aiAnalysis);
-  } catch {
+  } catch (err) {
+    console.warn('[synthesis] AI report synthesis failed, using fallback:', err instanceof Error ? err.message : err);
     return buildFallbackSynthesis(input, rows, pc, cc, metrics);
   }
 }

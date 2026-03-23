@@ -70,6 +70,7 @@ You are executing as part of a coordinated multi-agent research pipeline. Your r
 - Return structured JSON output with your findings
 - Flag uncertainty clearly rather than guessing
 - Document your reasoning for synthesis by other agents
+- If the input specifies a language (e.g. Hebrew), ALL text output must be in that language
 
 CRITICAL: Return valid JSON only, with no prose before or after the JSON block.`;
 }
@@ -81,6 +82,12 @@ function buildSwarmPrompt(
   outputContract: Record<string, unknown>,
   modelTier: ModelTier,
 ) {
+  // Extract language from input to add language constraint
+  const language = typeof input.language === 'string' ? input.language : null;
+  const languageConstraint = language
+    ? `All text values in the output MUST be written in ${language}`
+    : null;
+
   return JSON.stringify({
     context: {
       agentRole: phaseLabel,
@@ -94,6 +101,7 @@ function buildSwarmPrompt(
       'Do not include explanatory text outside the JSON',
       'If data is unavailable, return null values rather than guessing',
       'Flag low-confidence data with a warning in the reasoning field',
+      ...(languageConstraint ? [languageConstraint] : []),
     ],
   });
 }

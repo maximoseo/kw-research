@@ -43,7 +43,12 @@ Think about:
 - Are they competing for the same local keywords?
 
 Score intent overlap from 0 (no overlap) to 1 (identical keyword targets).
-"high" competitive intensity means they directly fight for the same search terms.`,
+"high" competitive intensity means they directly fight for the same search terms.
+
+LANGUAGE AWARENESS:
+- Consider the site's language when assessing keyword overlap
+- Hebrew businesses compete for Hebrew search queries, not English ones
+- Local language search intent differs from English — account for market-specific search patterns`,
     prompt: `Target Business:
 Name: ${params.targetBusiness.businessName}
 Type: ${params.targetBusiness.businessType}

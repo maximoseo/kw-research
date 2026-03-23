@@ -5,17 +5,18 @@ import type { BlockerContext } from './blockers';
 import { validateAndNormalizeRows } from './qa';
 
 function makeRow(overrides: Partial<ResearchRow> & { pillar: string; cluster: string; primaryKeyword: string }): ResearchRow {
+  const { pillar, cluster, primaryKeyword, ...rest } = overrides;
   return {
-    existingParentPage: overrides.rowType === 'pillar' ? '-' : `/${overrides.pillar.toLowerCase().replace(/\s+/g, '-')}/`,
-    existingParentPageUrl: overrides.rowType === 'pillar' ? null : `https://example.com/${overrides.pillar.toLowerCase().replace(/\s+/g, '-')}/`,
-    pillar: overrides.pillar,
-    cluster: overrides.cluster,
-    intent: overrides.intent ?? 'Informational',
-    primaryKeyword: overrides.primaryKeyword,
-    keywords: overrides.keywords ?? ['TestBrand', overrides.primaryKeyword],
-    rowType: overrides.rowType ?? 'cluster',
-    slugPath: `/${overrides.pillar.toLowerCase().replace(/\s+/g, '-')}/`,
-    ...overrides,
+    existingParentPage: rest.rowType === 'pillar' ? '-' : `/${pillar.toLowerCase().replace(/\s+/g, '-')}/`,
+    existingParentPageUrl: rest.rowType === 'pillar' ? null : `https://example.com/${pillar.toLowerCase().replace(/\s+/g, '-')}/`,
+    pillar,
+    cluster,
+    intent: rest.intent ?? 'Informational',
+    primaryKeyword,
+    keywords: rest.keywords ?? ['TestBrand', primaryKeyword],
+    rowType: rest.rowType ?? 'cluster',
+    slugPath: `/${pillar.toLowerCase().replace(/\s+/g, '-')}/`,
+    ...rest,
   };
 }
 
