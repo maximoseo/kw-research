@@ -131,7 +131,13 @@ export async function waitForRunCompletion(cookie: string, runId: string, timeou
       headers: { cookie: `kwr_session=${cookie}` },
     });
 
+    // Transient errors (502/503/504) during deploy — retry instead of failing
     if (!res.ok) {
+      if (res.status >= 500 && res.status < 600) {
+        console.warn(`[poll] Transient ${res.status} — retrying in 15s`);
+        await new Promise((r) => setTimeout(r, 15_000));
+        continue;
+      }
       throw new Error(`Failed to poll run: ${res.status}`);
     }
 
