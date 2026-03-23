@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getAuthCookie, createProjectViaApi, startRunViaApi, waitForRunCompletion } from './helpers/auth';
+import { getAuthCookie, createProjectAndRunViaApi, waitForRunCompletion } from './helpers/auth';
 import { assertOutputQuality } from './helpers/research-output-validators';
 
 const BASE = process.env.BASE_URL || 'http://localhost:3001';
@@ -16,19 +16,18 @@ test.describe('Research Flow — English Site (chimneysweepproshouston.com)', ()
     sessionCookie = await getAuthCookie();
   });
 
-  test('create English project via API', async () => {
-    projectId = await createProjectViaApi(sessionCookie, {
+  test('create English project and start research run', async () => {
+    const result = await createProjectAndRunViaApi(sessionCookie, {
       homepageUrl: 'https://chimneysweepproshouston.com/',
       brandName: 'Chimney Sweep Pros Houston',
       language: 'English',
       market: 'Houston, TX',
+      targetRows: TARGET_ROWS,
       notes: 'E2E test — English site research flow',
     });
+    projectId = result.projectId;
+    runId = result.runId;
     expect(projectId).toBeTruthy();
-  });
-
-  test('start fresh research run', async () => {
-    runId = await startRunViaApi(sessionCookie, projectId, TARGET_ROWS);
     expect(runId).toBeTruthy();
   });
 
