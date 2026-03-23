@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, LockKeyhole, Mail, UserRound } from 'lucide-react';
+import { LockKeyhole, Mail, UserRound } from 'lucide-react';
 import { Alert, Badge, Button, Card, Field } from '@/components/ui';
 
 type AuthMode = 'login' | 'register';
@@ -199,10 +199,10 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
           )}
           </div>
 
-          <div className="rounded-lg border border-border/50 bg-surface-raised/[0.4] px-4 py-3">
-            <div className="flex items-center justify-between gap-3 text-sm text-text-muted">
-              <span>Private workspace, route-protected access</span>
-              <ArrowRight className="h-3.5 w-3.5 text-accent/60" />
+          <div className="rounded-lg border border-border/40 bg-surface-inset/30 px-4 py-3">
+            <div className="flex items-center justify-center gap-2 text-caption text-text-muted">
+              <LockKeyhole className="h-3 w-3 shrink-0" />
+              <span>Secure workspace with route-protected access</span>
             </div>
           </div>
         </div>

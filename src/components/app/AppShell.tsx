@@ -106,26 +106,31 @@ export function AppShell({
                 </div>
               </div>
             </div>
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5 xl:hidden" style={{ scrollbarWidth: 'none' }}>
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'whitespace-nowrap rounded-md border px-3.5 py-2 text-body-sm font-semibold transition-all',
-                    item.active
-                      ? 'border-accent/25 bg-accent/[0.08] text-accent'
-                      : 'border-border/40 bg-surface-raised/80 text-text-muted hover:border-accent/15 hover:text-text-primary',
-                  )}
-                >
-                  {item.label}
-                </Link>
-              ))}
+            <div className="flex gap-1 overflow-x-auto pb-0.5 xl:hidden" style={{ scrollbarWidth: 'none' }}>
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-body-sm font-semibold transition-all min-h-[36px]',
+                      item.active
+                        ? 'border-accent/25 bg-accent/[0.08] text-accent shadow-sm'
+                        : 'border-transparent bg-transparent text-text-muted hover:border-border/40 hover:bg-surface-raised/80 hover:text-text-primary',
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    {item.label}
+                  </Link>
+                );
+              })}
               <Link
                 href="/dashboard"
-                className="whitespace-nowrap rounded-md border border-border/40 bg-surface-raised/80 px-3.5 py-2 text-body-sm font-semibold text-text-muted hover:border-accent/15 hover:text-text-primary transition-all sm:hidden"
+                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 py-2 text-body-sm font-semibold text-text-muted hover:border-border/40 hover:bg-surface-raised/80 hover:text-text-primary transition-all min-h-[36px] sm:hidden"
               >
-                Switch site
+                <ArrowLeftRight className="h-3.5 w-3.5 shrink-0" />
+                Switch
               </Link>
             </div>
           </div>

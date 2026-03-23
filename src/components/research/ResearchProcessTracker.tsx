@@ -50,25 +50,26 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
 
   return (
     <Card className="pt-4 sm:pt-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="eyebrow">Research progress</p>
-          <h3 className="mt-1.5 text-heading-2 text-text-primary">{process.headline}</h3>
-          <p className="mt-1.5 max-w-2xl text-body-sm leading-relaxed text-text-secondary">{process.helperText}</p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Badge variant="neutral">
-            {process.completedCount} / {process.totalSteps} steps
-          </Badge>
-          <Badge variant={status.variant}>
-            {status.title}
-          </Badge>
-          {run.status === 'processing' ? (
-            <Badge variant="info">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Active
-            </Badge>
-          ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="eyebrow">Research progress</p>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge variant="neutral">
+                {process.completedCount}/{process.totalSteps}
+              </Badge>
+              <Badge variant={status.variant}>
+                {status.title}
+              </Badge>
+              {run.status === 'processing' ? (
+                <Badge variant="info" pulse>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Active
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+          <p className="mt-1 text-body-sm leading-relaxed text-text-secondary">{process.helperText}</p>
         </div>
       </div>
 
@@ -98,7 +99,7 @@ export default function ResearchProcessTracker({ run }: { run: ResearchRunDetail
             <div
               key={step.id}
               className={cn(
-                'rounded-lg border px-3.5 py-3 overflow-hidden min-w-0 min-h-[160px] flex flex-col transition-all',
+                'rounded-lg border px-3.5 py-3 overflow-hidden min-w-0 min-h-[120px] flex flex-col transition-all',
                 stepStateStyles[state],
                 state === 'current' ? 'ring-1 ring-info/15' : null,
               )}

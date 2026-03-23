@@ -448,24 +448,28 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
             />
           ) : (
             <div className="space-y-4">
-              {/* Success banner */}
+              {/* Success banner — primary action hub when research is complete */}
               {selectedRun.status === 'completed' && selectedRun.workbookName ? (
-                <div className="action-row rounded-lg border border-success/20 bg-success/[0.04] p-4 sm:justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-success/15 bg-success/[0.08]">
-                      <CheckCircle2 className="h-4.5 w-4.5 text-success" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-body font-semibold text-text-primary">Research complete</p>
-                      <p className="mt-0.5 text-body-sm text-text-secondary truncate">{selectedRun.rows.length} rows &middot; {selectedRun.workbookName}</p>
+                <div className="rounded-xl border border-success/20 bg-success/[0.04] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-success/15 bg-success/[0.08]">
+                        <CheckCircle2 className="h-5 w-5 text-success" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-body font-semibold text-text-primary">Research complete</p>
+                        <p className="mt-0.5 text-body-sm text-text-secondary truncate">{selectedRun.rows.length} rows &middot; {selectedRun.workbookName}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} loading={isDownloading} onClick={handleDownload} className="w-full shrink-0 sm:w-auto">
+                        Download XLSX
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={isRerunning} onClick={handleRerun} className="shrink-0">
+                        Rerun
+                      </Button>
                     </div>
                   </div>
-                  <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} loading={isDownloading} onClick={handleDownload} className="w-full shrink-0 sm:w-auto">
-                    Download XLSX
-                  </Button>
-                  <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={isRerunning} onClick={handleRerun} className="w-full shrink-0 sm:w-auto">
-                    Rerun
-                  </Button>
                 </div>
               ) : null}
 
@@ -487,15 +491,20 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
               </div>
               <ResearchProcessTracker run={selectedRun} />
               <div className="action-row">
-                <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} disabled={!selectedRun.workbookName} loading={isDownloading} onClick={handleDownload} className="w-full sm:w-auto">
-                   Download XLSX
-                </Button>
-                {(selectedRun.status === 'completed' || selectedRun.status === 'failed') ? (
-                  <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={isRerunning} onClick={handleRerun} className="w-full sm:w-auto">
-                    Rerun
-                  </Button>
-                ) : null}
-                <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={runQuery.isRefetching} onClick={() => runQuery.refetch()} className="w-full sm:w-auto">
+                {/* Only show Download/Rerun here when success banner is NOT visible (i.e. not completed+workbook) */}
+                {!(selectedRun.status === 'completed' && selectedRun.workbookName) && (
+                  <>
+                    <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} disabled={!selectedRun.workbookName} loading={isDownloading} onClick={handleDownload} className="w-full sm:w-auto">
+                      Download XLSX
+                    </Button>
+                    {(selectedRun.status === 'completed' || selectedRun.status === 'failed') ? (
+                      <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={isRerunning} onClick={handleRerun} className="w-full sm:w-auto">
+                        Rerun
+                      </Button>
+                    ) : null}
+                  </>
+                )}
+                <Button type="button" variant="ghost" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={runQuery.isRefetching} onClick={() => runQuery.refetch()} className="w-full sm:w-auto">
                   Refresh
                 </Button>
                 {selectedRun.status === 'failed' ? (
@@ -622,40 +631,46 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                   <Metric label="Queued" value={formatDateTimeLabel(run.queuedAt)} helper={formatRelativeLabel(run.queuedAt)} compact />
                   <Metric label="Workbook" value={run.workbookName || 'Pending'} helper={run.errorMessage || run.step || 'No errors'} compact />
                 </div>
-                <div className="mt-3 action-row">
-                  <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); setSelectedRunId(run.id); }}>
-                    {selectedRunId === run.id ? 'Selected' : 'Open in workspace'}
-                  </Button>
-                  <Button
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+                    <Button type="button" variant={selectedRunId === run.id ? 'primary' : 'secondary'} size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); setSelectedRunId(run.id); }}>
+                      {selectedRunId === run.id ? 'Selected' : 'Open in workspace'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      icon={<RefreshCcw className="h-3.5 w-3.5" />}
+                      className="w-full sm:w-auto"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const payload = new FormData();
+                        payload.set('projectId', project.id);
+                        payload.set('competitorUrls', project.competitorUrls.join('\n'));
+                        payload.set('notes', project.notes || '');
+                        payload.set('mode', 'fresh');
+                        payload.set('targetRows', String(run.targetRows));
+                        const response = await fetch('/api/runs', { method: 'POST', body: payload });
+                        const result = await response.json().catch(() => null);
+                        if (!response.ok) {
+                          addToast(result?.error || 'Unable to start rerun.', 'error');
+                          return;
+                        }
+                        addToast('Rerun queued successfully.', 'success');
+                        setSelectedRunId(result.runId);
+                        await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
+                      }}
+                    >
+                      Rerun
+                    </Button>
+                  </div>
+                  <button
                     type="button"
-                    variant="secondary"
-                    size="sm"
-                    icon={<RefreshCcw className="h-3.5 w-3.5" />}
-                    className="w-full sm:w-auto"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      const payload = new FormData();
-                      payload.set('projectId', project.id);
-                      payload.set('competitorUrls', project.competitorUrls.join('\n'));
-                      payload.set('notes', project.notes || '');
-                      payload.set('mode', 'fresh');
-                      payload.set('targetRows', String(run.targetRows));
-                      const response = await fetch('/api/runs', { method: 'POST', body: payload });
-                      const result = await response.json().catch(() => null);
-                      if (!response.ok) {
-                        addToast(result?.error || 'Unable to start rerun.', 'error');
-                        return;
-                      }
-                      addToast('Rerun queued successfully.', 'success');
-                      setSelectedRunId(result.runId);
-                      await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
-                    }}
+                    className="text-caption font-medium text-text-muted transition-colors hover:text-accent cursor-pointer"
+                    onClick={(e) => { e.stopPropagation(); router.push(buildProjectRunPath(project.id, run.id)); }}
                   >
-                    Rerun
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); router.push(buildProjectRunPath(project.id, run.id)); }}>
-                    Full page
-                  </Button>
+                    Full page view
+                  </button>
                 </div>
               </article>
             ))}
@@ -773,27 +788,27 @@ function PreviewTable({
         )}
       </div>
       {previewRows.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 px-3 py-2.5 sm:px-4 sm:py-3">
           <div className="flex items-center gap-2">
-            <span className="text-caption text-text-muted">Rows per page:</span>
+            <span className="text-caption text-text-muted hidden sm:inline">Rows per page:</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="rounded-md border border-border/50 bg-surface-raised px-2 py-1 text-caption text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+              className="rounded-md border border-border/50 bg-surface-raised px-2 py-1 text-caption text-text-primary focus:outline-none focus:ring-1 focus:ring-accent cursor-pointer"
             >
               {[25, 50, 100].map((size) => (
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <span className="text-caption text-text-muted">
-              Page {currentPage + 1} of {totalPages} ({rowCount} rows)
+              {currentPage + 1}/{totalPages}
             </span>
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 0}
-              className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+              className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer min-h-tap min-w-[32px] flex items-center justify-center"
               aria-label="Previous page"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -801,7 +816,7 @@ function PreviewTable({
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage >= totalPages - 1}
-              className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+              className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer min-h-tap min-w-[32px] flex items-center justify-center"
               aria-label="Next page"
             >
               <ChevronRight className="h-4 w-4" />

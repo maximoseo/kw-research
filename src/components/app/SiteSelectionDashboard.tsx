@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Layers3, Plus, SearchCheck, Globe, Trash2 } from 'lucide-react';
+import { ArrowRight, Layers3, Plus, Globe, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Badge, Button, Card, EmptyState, Field, Metric } from '@/components/ui';
@@ -158,17 +158,17 @@ export function SiteSelectionDashboard({
         <Card variant="muted">
           <div className="space-y-4">
             <div>
-              <p className="eyebrow">How the flow works</p>
-              <h2 className="section-subtitle mt-2">Workspace model</h2>
+              <p className="eyebrow">Quick start</p>
+              <h2 className="section-subtitle mt-2">How it works</h2>
               <p className="section-copy mt-1.5">
-                A predictable workspace gate keeps analytics from leaking between sites.
+                Each workspace isolates research, exports, and history for one website.
               </p>
             </div>
             <div className="space-y-2">
               {[
-                ['Site-scoped routes', 'Every dashboard route opens only after a workspace is selected.'],
-                ['Context recovery', 'Returning sessions restore the last workspace when available.'],
-                ['Focused outputs', 'All uploads, logs, and exports stay attached to one website.'],
+                ['1. Select a workspace', 'Pick an existing site or create a new one below.'],
+                ['2. Run research', 'Launch AI-powered keyword research scoped to that site.'],
+                ['3. Download results', 'Export polished Excel workbooks with metrics and clusters.'],
               ].map(([title, text]) => (
                 <div key={title} className="subtle-surface px-4 py-3">
                   <p className="text-body font-semibold text-text-primary">{title}</p>
@@ -176,8 +176,8 @@ export function SiteSelectionDashboard({
                 </div>
               ))}
             </div>
-            <Button type="button" variant="ghost" size="sm" icon={<SearchCheck className="h-3.5 w-3.5 shrink-0" />} onClick={focusCreateSection}>
-              Jump to create form
+            <Button type="button" variant="ghost" size="sm" icon={<Plus className="h-3.5 w-3.5 shrink-0" />} onClick={focusCreateSection}>
+              Create new workspace
             </Button>
           </div>
         </Card>
