@@ -32,6 +32,10 @@ export type ResearchRow = {
   cpc?: number | null;
   difficulty?: number | null;
   trafficPotential?: number | null;
+  personalDifficulty?: number | null;
+  personalDifficultyExplanation?: string | null;
+  personalDifficultyConfidence?: number | null;
+  personalDifficultyGapToTop3?: number | null;
 };
 
 export type UploadedResearchSummary = {

@@ -39,7 +39,10 @@ import { exportKeywordsToCsv } from '@/lib/export-csv';
 import { Button, Card } from '@/components/ui';
 import IntentBadge from './IntentBadge';
 import { TrafficPotentialCell, type TrafficPotentialData } from './TrafficPotential';
+import PersonalDifficultyBadge, { type PersonalDifficultyData } from './PersonalDifficultyBadge';
 import BulkActionsToolbar, { type BulkAction } from './BulkActionsToolbar';
+import { SerpFeatureIcons, SerpFeatureTooltip } from './SERPFeaturesPanel';
+import type { SerpFeature } from '@/lib/serp-features';
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -62,6 +65,8 @@ const DEFAULT_COLUMNS: ColumnState[] = [
   { id: 'cpc', visible: true, order: 4, width: 100 },
   { id: 'intent', visible: true, order: 5, width: 130 },
   { id: 'trafficPotential', visible: false, order: 5.5, width: 100 },
+  { id: 'serpFeatures', visible: true, order: 5.6, width: 130 },
+  { id: 'personalDifficulty', visible: false, order: 5.7, width: 130 },
   { id: 'pillar', visible: true, order: 6, width: 150 },
   { id: 'cluster', visible: true, order: 7, width: 150 },
   { id: 'keywords', visible: true, order: 8, width: 200 },
@@ -288,6 +293,7 @@ function colHeaderLabel(id: string): string {
     cpc: 'CPC',
     intent: 'Intent',
     trafficPotential: 'Traffic Pot.',
+    serpFeatures: 'SERP Features',
     pillar: 'Pillar',
     cluster: 'Cluster',
     keywords: 'Keywords',
@@ -353,6 +359,16 @@ interface KeywordTableProps {
   trafficPotentialData?: Map<string, TrafficPotentialData>;
   /** Whether TP is being calculated */
   calculatingTP?: boolean;
+  /** SERP features data map (keyword → features) */
+  serpFeaturesData?: Map<string, SerpFeature[]>;
+  /** Whether SERP features are being analyzed */
+  analyzingSerpFeatures?: boolean;
+  /** Personal difficulty data map (keyword → PersonalDifficultyData) */
+  personalDifficultyMap?: Map<string, PersonalDifficultyData>;
+  /** Whether personal difficulty is loading (shows skeleton in Pers. Diff column) */
+  loadingPersonalDifficulty?: boolean;
+  /** Whether a user domain is set (shows "—" if not) */
+  hasDomain?: boolean;
 }
 
 export default function KeywordTable({
@@ -373,6 +389,11 @@ export default function KeywordTable({
   classifyingIntents = false,
   trafficPotentialData,
   calculatingTP = false,
+  serpFeaturesData,
+  analyzingSerpFeatures = false,
+  personalDifficultyMap,
+  loadingPersonalDifficulty = false,
+  hasDomain = false,
 }: KeywordTableProps) {
   /* ── Column visibility & localStorage persistence ── */
   const [columnState, setColumnState] = useState<ColumnState[]>(loadColumnState);
@@ -609,6 +630,66 @@ export default function KeywordTable({
         enableColumnFilter: false,
       },
       {
+        id: 'serpFeatures',
+        accessorKey: 'serpFeatures',
+        header: () => (
+          <div className="inline-flex items-center gap-1">
+            <span>SERP Features</span>
+          </div>
+        ),
+        cell: ({ row }) => {
+          const kw = row.original.primaryKeyword;
+          const features = serpFeaturesData?.get(kw);
+          if (analyzingSerpFeatures && features === undefined) {
+            return (
+              <span className="inline-flex items-center gap-1 text-text-muted">
+                <span className="h-3 w-3 rounded-full border-2 border-text-muted/30 border-t-accent animate-spin" />
+                <span className="text-[10px]">analyzing…</span>
+              </span>
+            );
+          }
+          if (!features || features.length === 0) {
+            return <span className="text-text-muted/50 text-caption">—</span>;
+          }
+          return <SerpFeatureTooltip features={features} />;
+        },
+        enableSorting: false,
+        enableColumnFilter: false,
+      },
+      {
+        id: 'personalDifficulty',
+        accessorKey: 'personalDifficulty',
+        header: ({ column }) => (
+          <button
+            type="button"
+            className="inline-flex items-center gap-0.5 cursor-pointer hover:text-accent transition-colors"
+            onClick={() => column.toggleSorting()}
+          >
+            <span>Pers. Diff</span>
+            <SortIcon sorted={column.getIsSorted()} />
+          </button>
+        ),
+        cell: ({ row }) => {
+          const kw = row.original.primaryKeyword;
+          const pd = personalDifficultyMap?.get(kw);
+          return (
+            <PersonalDifficultyBadge
+              genericDifficulty={row.original.difficulty ?? null}
+              personalData={pd ?? null}
+              loading={loadingPersonalDifficulty && !pd}
+              unavailable={!hasDomain}
+              compact
+            />
+          );
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = personalDifficultyMap?.get(rowA.original.primaryKeyword)?.personalDifficulty ?? -1;
+          const b = personalDifficultyMap?.get(rowB.original.primaryKeyword)?.personalDifficulty ?? -1;
+          return a - b;
+        },
+        enableColumnFilter: false,
+      },
+      {
         id: 'pillar',
         accessorKey: 'pillar',
         header: ({ column }) => (
@@ -753,7 +834,7 @@ export default function KeywordTable({
         size: 100,
       },
     ],
-    [filterOpen, onAddToList, onAnalyzeSerp, onExport, trafficPotentialData, calculatingTP]
+    [filterOpen, onAddToList, onAnalyzeSerp, onExport, trafficPotentialData, calculatingTP, serpFeaturesData, analyzingSerpFeatures, personalDifficultyMap, loadingPersonalDifficulty, hasDomain]
   );
 
   /* ── Column visibility map from columnState ── */

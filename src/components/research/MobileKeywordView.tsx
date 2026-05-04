@@ -49,6 +49,8 @@ type MobileKeywordViewProps = {
   onSelectKeyword: (kw: KeywordRow) => void;
   /** Optional: initial view mode override */
   initialViewMode?: ViewMode;
+  /** Optional: trend data from API (keyword -> trend data) */
+  trendData?: Record<string, { direction: 'up' | 'down' | 'stable'; changePercent: number; monthlyData: number[] }>;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -131,25 +133,39 @@ function IntentBadge({ intent }: { intent: ResearchIntent }) {
 }
 
 /** Trend arrow indicator with Sparkline */
-function TrendIndicator({ volume }: { volume?: number | null }) {
-  // Simulated trend data — in a real app this would come from the API
-  // Using a simple static pattern based on volume
+function TrendIndicator({
+  volume,
+  trend,
+}: {
+  volume?: number | null;
+  trend?: { direction: 'up' | 'down' | 'stable'; changePercent: number; monthlyData: number[] } | null;
+}) {
   const trendData = useMemo(() => {
+    // Use real trend data if available
+    if (trend?.monthlyData && trend.monthlyData.length >= 2) {
+      return trend.monthlyData;
+    }
+    // Fallback: generate a simple sine-wave pattern from volume
     if (!volume) return [];
     const base = volume / 12;
-    // Generate a simple sine-wave-ish pattern for visual variety
     return Array.from({ length: 12 }, (_, i) => {
       const t = i / 11;
       const wave = Math.sin(t * Math.PI * 1.5) * (base * 0.3);
       return Math.max(0, Math.round(base + wave + Math.random() * base * 0.2));
     });
-  }, [volume]);
+  }, [volume, trend]);
 
   if (!trendData.length) return null;
 
   return (
     <div className="flex items-center gap-1.5">
-      <Sparkline data={trendData} width={48} height={18} />
+      <Sparkline
+        data={trendData}
+        width={48}
+        height={18}
+        showDirection={!!trend}
+        showPercent={!!trend}
+      />
     </div>
   );
 }
@@ -161,11 +177,13 @@ function KeywordCard({
   isExpanded,
   onToggle,
   onSelect,
+  trend,
 }: {
   keyword: KeywordRow;
   isExpanded: boolean;
   onToggle: () => void;
   onSelect: (kw: KeywordRow) => void;
+  trend?: { direction: 'up' | 'down' | 'stable'; changePercent: number; monthlyData: number[] } | null;
 }) {
   return (
     <div onClick={() => onSelect(keyword)}>
@@ -238,7 +256,7 @@ function KeywordCard({
             {/* Trend */}
             <div className="flex items-center justify-between">
               <span className="text-caption text-text-muted">12-month trend</span>
-              <TrendIndicator volume={keyword.searchVolume} />
+              <TrendIndicator volume={keyword.searchVolume} trend={trend} />
             </div>
             {/* Additional keywords */}
             {keyword.keywords.length > 0 && (
@@ -628,6 +646,7 @@ export default function MobileKeywordView({
   keywords,
   onSelectKeyword,
   initialViewMode,
+  trendData,
 }: MobileKeywordViewProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (initialViewMode) return initialViewMode;
@@ -824,6 +843,7 @@ export default function MobileKeywordView({
               isExpanded={expandedCards.has(i)}
               onToggle={() => toggleCard(i)}
               onSelect={onSelectKeyword}
+              trend={trendData?.[kw.primaryKeyword]}
             />
           ))}
         </div>

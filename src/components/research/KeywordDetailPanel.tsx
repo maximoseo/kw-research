@@ -7,6 +7,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
 import type { ResearchRow } from '@/lib/research';
 import type { KeywordDetail, SerpResult, ContentTypeDistribution } from '@/app/api/keywords/[id]/details/route';
+import { KeywordSERPFeatureDetail } from './SERPFeaturesPanel';
 
 interface KeywordDetailPanelProps {
   keyword: ResearchRow | null;
@@ -487,6 +488,17 @@ export default function KeywordDetailPanel({ keyword, runId, onClose }: KeywordD
                   </div>
                 </div>
               )}
+            </section>
+
+            {/* ── SERP Features (Real Data) ── */}
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <Search className="h-3.5 w-3.5 text-text-muted" />
+                <h3 className="text-caption font-semibold uppercase tracking-wider text-text-muted">
+                  SERP Features
+                </h3>
+              </div>
+              <KeywordSERPFeatureDetail keyword={keyword} />
             </section>
 
             {/* ── Related Keywords ── */}

@@ -29,6 +29,22 @@ const TREND_COLORS: Record<TrendDirection, string> = {
   stable: '#6b7280',
 };
 
+const TREND_ICONS: Record<TrendDirection, string> = {
+  up: '🔼',
+  down: '🔽',
+  stable: '➡️',
+};
+
+function computeChangePercent(data: number[]): number | null {
+  if (data.length < 6) return null;
+
+  const firstAvg = data.slice(0, 3).reduce((s, v) => s + v, 0) / 3;
+  const lastAvg = data.slice(-3).reduce((s, v) => s + v, 0) / 3;
+
+  if (firstAvg === 0) return null;
+  return Math.round(((lastAvg - firstAvg) / firstAvg) * 100);
+}
+
 function buildPath(data: number[], width: number, height: number, padding: number): string {
   if (data.length === 0) return '';
 
@@ -50,6 +66,26 @@ function buildPath(data: number[], width: number, height: number, padding: numbe
   return `M${pointsStr}`;
 }
 
+function buildAreaPath(data: number[], width: number, height: number, padding: number): string {
+  if (data.length === 0) return '';
+
+  const innerWidth = width - padding * 2;
+  const innerHeight = height - padding * 2;
+
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+
+  const range = max - min || 1;
+
+  const points = data.map((value, index) => {
+    const x = padding + (index / Math.max(data.length - 1, 1)) * innerWidth;
+    const y = padding + innerHeight - ((value - min) / range) * innerHeight;
+    return `${x},${y}`;
+  });
+
+  return `M${points.join(' ')} L${width - padding},${height - padding} L${padding},${height - padding} Z`;
+}
+
 function buildTooltip(data: number[]): string {
   if (data.length === 0) return 'No data';
 
@@ -68,22 +104,44 @@ export interface SparklineProps {
   width?: number;
   /** Height in pixels (default 20) */
   height?: number;
+  /** Show direction indicator icon (default false) */
+  showDirection?: boolean;
+  /** Show percent change next to the sparkline (default false) */
+  showPercent?: boolean;
+  /** Show area fill under the line (default true) */
+  showFill?: boolean;
+  /** Line stroke width (default 1.2) */
+  strokeWidth?: number;
+  /** Additional CSS class */
+  className?: string;
 }
 
 /**
  * Sparkline — renders a tiny inline SVG trend chart for keyword volume data.
  *
  * Props:
- * - `data`: number[] (12 monthly values)
+ * - `data`: number[] (monthly values)
  * - `width`: number (default 60)
  * - `height`: number (default 20)
+ * - `showDirection`: boolean — show 🔼/🔽/➡️ icon
+ * - `showPercent`: boolean — show +/-X% change
  *
  * Trend detection: comparing first 3 months average vs last 3 months average.
  * Colors: green (up), red (down), gray (stable).
  * Graceful fallback: renders an em dash "—" when data is empty or all zeros.
  */
-export default function Sparkline({ data, width = 60, height = 20 }: SparklineProps) {
+export default function Sparkline({
+  data,
+  width = 60,
+  height = 20,
+  showDirection = false,
+  showPercent = false,
+  showFill = true,
+  strokeWidth = 1.2,
+  className,
+}: SparklineProps) {
   const trend = useMemo(() => detectTrend(data), [data]);
+  const changePercent = useMemo(() => (showPercent ? computeChangePercent(data) : null), [data, showPercent]);
   const color = TREND_COLORS[trend];
   const tooltip = useMemo(() => buildTooltip(data), [data]);
 
@@ -105,31 +163,64 @@ export default function Sparkline({ data, width = 60, height = 20 }: SparklinePr
     return <span className="text-text-muted" aria-label="No trend data">—</span>;
   }
 
-  return (
+  const changeStr =
+    changePercent !== null
+      ? `${changePercent > 0 ? '+' : ''}${changePercent}%`
+      : null;
+
+  const icon = showDirection ? TREND_ICONS[trend] : null;
+
+  const svg = (
     <svg
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
       className="inline-block align-middle"
-      aria-label={`Trend: ${trend}`}
+      aria-label={`Trend: ${trend}${changeStr ? ` (${changeStr})` : ''}`}
       role="img"
     >
       <title>{tooltip}</title>
       {/* Subtle fill under the line */}
-      <path
-        d={`${path} L${width - padding},${height - padding} L${padding},${height - padding} Z`}
-        fill={color}
-        fillOpacity={0.08}
-      />
+      {showFill && (
+        <path
+          d={buildAreaPath(data, width, height, padding)}
+          fill={color}
+          fillOpacity={0.08}
+        />
+      )}
       {/* The line itself */}
       <path
         d={path}
         fill="none"
         stroke={color}
-        strokeWidth={1.2}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
+  );
+
+  // If no extra indicators, just return the SVG
+  if (!showDirection && !showPercent) {
+    return svg;
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1 ${className ?? ''}`}>
+      {svg}
+      {icon && (
+        <span className="text-[11px] leading-none" aria-hidden="true">
+          {icon}
+        </span>
+      )}
+      {changeStr && (
+        <span
+          className="font-mono text-[10px] font-semibold leading-none"
+          style={{ color }}
+        >
+          {changeStr}
+        </span>
+      )}
+    </span>
   );
 }

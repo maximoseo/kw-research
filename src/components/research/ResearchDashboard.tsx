@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Bookmark, CheckCircle2, ChevronLeft, ChevronRight, Download, FileSpreadsheet, History, Loader2, Radar, RefreshCcw, Search, Star, TableProperties, Trash2, TrendingUp, UploadCloud, X } from 'lucide-react';
+import { ArrowLeftRight, Bookmark, CheckCircle2, ChevronLeft, ChevronRight, Download, FileSpreadsheet, History, Loader2, Radar, RefreshCcw, Search, Star, TableProperties, Trash2, TrendingUp, UploadCloud, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +14,9 @@ import type { ResearchProjectDetail, ResearchRow, ResearchRunDetail, ResearchRun
 import { cn, formatDateTime, formatRelative } from '@/lib/utils';
 import { createProjectRunFormSchema, type CreateProjectRunFormInput } from '@/lib/validation';
 import DifficultyBadge, { DifficultyVariantToggle } from './DifficultyBadge';
+import PersonalDifficultyBadge from './PersonalDifficultyBadge';
+import { usePersonalDifficulty } from '@/hooks/usePersonalDifficulty';
+import type { PersonalDifficultyData } from './PersonalDifficultyBadge';
 import MobileKeywordView from './MobileKeywordView';
 import ResearchProcessTracker from './ResearchProcessTracker';
 import KeywordDetailPanel from './KeywordDetailPanel';
@@ -23,9 +26,14 @@ import ContentMap from './ContentMap';
 import KeywordClusters from './KeywordClusters';
 import BulkKeywordImport from './BulkKeywordImport';
 import BulkActionsToolbar, { type BulkAction } from './BulkActionsToolbar';
+import SERPCompare from './SERPCompare';
+import { SerpFeatureIcons } from './SERPFeaturesPanel';
+import type { SerpFeature } from '@/lib/serp-features';
+import ListCompare from './ListCompare';
 import { exportKeywordsToCsv } from '@/lib/export-csv';
 import FilterPresets, { type CurrentFilters } from './FilterPresets';
 import SavedSearches, { useSavedSearches, type SavedSearch, type SearchHistoryItem } from './SavedSearches';
+import VolumeTrendChart, { type VolumeTrendData } from './VolumeTrendChart';
 
 type CompetitorDiscoveryState = {
   status: 'idle' | 'success' | 'empty' | 'error';
@@ -108,7 +116,7 @@ function triggerDownload(runId: string, addToast: (msg: string, type: 'error' | 
     .finally(() => setDownloading(false));
 }
 
-export default function ResearchDashboard({ project, initialRunId }: { project: ResearchProjectDetail; initialRunId?: string | null }) {
+export default function ResearchDashboard({ project, initialRunId, userDomain = '' }: { project: ResearchProjectDetail; initialRunId?: string | null; userDomain?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { addToast } = useToast();
@@ -130,6 +138,12 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   const [detailKeyword, setDetailKeyword] = useState<ResearchRow | null>(null);
   const [isClassifyingIntents, setIsClassifyingIntents] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [showListCompare, setShowListCompare] = useState(false);
+  const [showSerpCompare, setShowSerpCompare] = useState(false);
+  // Volume trends
+  const [showTrends, setShowTrends] = useState(false);
+  const [trendData, setTrendData] = useState<VolumeTrendData[] | null>(null);
+  const [trendLoading, setTrendLoading] = useState(false);
   const form = useForm<CreateProjectRunFormInput>({
     resolver: zodResolver(createProjectRunFormSchema),
     defaultValues: buildDefaultValues(project),
@@ -244,6 +258,59 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   const previewRows = keywordsQuery.data?.data ?? [];
   const pagination = keywordsQuery.data?.pagination ?? { page: 1, limit: previewPageSize, total: 0, totalPages: 1 };
   const isLoadingKeywords = keywordsQuery.isFetching && !keywordsQuery.isPending;
+
+  // ── Personal Difficulty analysis ──
+  const previewKeywordList = useMemo(
+    () => previewRows.map((r) => r.primaryKeyword).filter(Boolean),
+    [previewRows],
+  );
+  const {
+    dataMap: personalDifficultyMap,
+    loading: loadingPersonalDifficulty,
+    pendingCount: pendingPersonalDiff,
+  } = usePersonalDifficulty({
+    domain: userDomain,
+    keywords: userDomain ? previewKeywordList : [],
+    batchSize: 5,
+    batchDelayMs: 500,
+  });
+  const hasDomain = Boolean(userDomain);
+
+  // ── SERP Features analysis state ──
+  const [serpFeaturesData, setSerpFeaturesData] = useState<Map<string, SerpFeature[]> | undefined>(undefined);
+  const [analyzingSerpFeatures, setAnalyzingSerpFeatures] = useState(false);
+
+  const handleAnalyzeSerpFeatures = useCallback(async () => {
+    const allKeywords = keywordsQuery.data?.data.map((r: ResearchRow) => r.primaryKeyword).filter(Boolean) ?? [];
+    if (allKeywords.length === 0) {
+      addToast('No keywords to analyze.', 'error');
+      return;
+    }
+    setAnalyzingSerpFeatures(true);
+    try {
+      const response = await fetch('/api/keywords/serp-features', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ keywords: allKeywords.slice(0, 50) }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Analysis failed');
+
+      const map = new Map<string, SerpFeature[]>();
+      for (const r of body.results ?? []) {
+        map.set(r.keyword, r.features);
+      }
+      setSerpFeaturesData(map);
+      addToast(
+        `Detected features across ${body.summary.totalFeatureTypesFound} types in ${body.summary.keywordsWithFeatures} keywords.`,
+        'success',
+      );
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'SERP feature analysis failed', 'error');
+    } finally {
+      setAnalyzingSerpFeatures(false);
+    }
+  }, [keywordsQuery.data, addToast]);
 
   // Client-side filtering of preview rows
   const filteredPreviewRows = useMemo(() => {
@@ -618,6 +685,43 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
       setIsClassifyingIntents(false);
     }
   }, [selectedRunId, keywordsQuery.data, previewPage, previewPageSize, previewSort, previewSortOrder, addToast, queryClient]);
+
+  const handleToggleTrends = useCallback(async () => {
+    if (showTrends) {
+      setShowTrends(false);
+      setTrendData(null);
+      return;
+    }
+
+    const keywords = filteredPreviewRows
+      .slice(0, 5)
+      .map((r) => r.primaryKeyword)
+      .filter(Boolean);
+
+    if (keywords.length === 0) {
+      addToast('No keywords available for trends.', 'error');
+      return;
+    }
+
+    setShowTrends(true);
+    setTrendLoading(true);
+
+    try {
+      const res = await fetch('/api/keywords/volume-trends', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ keywords }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load trends');
+      setTrendData(json.trends);
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Trend load failed.', 'error');
+      setShowTrends(false);
+    } finally {
+      setTrendLoading(false);
+    }
+  }, [showTrends, filteredPreviewRows, addToast]);
 
   const handleSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
@@ -1172,6 +1276,26 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
 
                   {/* Desktop: full table */}
                   <div className="hidden md:block">
+                    {/* Volume Trends Panel */}
+                    {showTrends && (
+                      <div className="mb-3 rounded-lg border border-accent/20 bg-surface-raised/50 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-accent" />
+                            <span className="text-body font-semibold text-text-primary">Search Volume Trends</span>
+                            <span className="text-caption text-text-muted">Last 12 months · AI-estimated</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="rounded p-1 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                            onClick={() => { setShowTrends(false); setTrendData(null); }}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <VolumeTrendChart data={trendData ?? []} loading={trendLoading} width={640} height={200} />
+                      </div>
+                    )}
                     <PreviewTable
                       previewRows={filteredPreviewRows}
                       rowCount={pagination.total}
@@ -1198,6 +1322,15 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                       classifyingIntents={isClassifyingIntents}
                       selectedKeywords={selectedKeywordSet}
                       onSelectionChange={handleKeywordSelection}
+                      onCompareSerp={() => setShowSerpCompare(true)}
+                      serpFeaturesData={serpFeaturesData}
+                      analyzingSerpFeatures={analyzingSerpFeatures}
+                      onAnalyzeSerpFeatures={handleAnalyzeSerpFeatures}
+                      personalDifficultyMap={personalDifficultyMap}
+                      loadingPersonalDifficulty={loadingPersonalDifficulty}
+                      hasDomain={hasDomain}
+                      onShowTrends={handleToggleTrends}
+                      showTrends={showTrends}
                     />
                   </div>
                   {/* Mobile: card/table view */}
@@ -1300,6 +1433,21 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
               processingAction={processingBulkAction}
             />
           )}
+
+          {/* ── SERP Compare ── */}
+          {showSerpCompare && selectedRun && (
+            <div className="mt-4">
+              <SERPCompare
+                selectedKeywords={filteredPreviewRows.filter((r) =>
+                  selectedKeywordSet.has(r.primaryKeyword),
+                )}
+                onClose={() => {
+                  setShowSerpCompare(false);
+                  handleClearSelection();
+                }}
+              />
+            </div>
+          )}
         </Card>
       </section>
 
@@ -1315,6 +1463,16 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
             <History className="h-3.5 w-3.5" />
             {runsQuery.data?.length || 0} tracked
           </div>
+          <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            icon={<ArrowLeftRight className="h-3.5 w-3.5" />}
+            onClick={() => setShowListCompare(true)}
+          >
+            Compare Lists
+          </Button>
           <Button
             type="button"
             variant="secondary"
@@ -1324,6 +1482,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
           >
             Import Keywords
           </Button>
+          </div>
         </div>
         {!runsQuery.data?.length ? (
           <EmptyState
@@ -1427,6 +1586,31 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
         runId={selectedRunId}
         onClose={() => setDetailKeyword(null)}
       />
+
+      {/* ── List Compare Section ── */}
+      {showListCompare && (
+        <section className="animate-enter space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-heading-2 text-text-primary">Compare &amp; Merge Lists</h2>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              icon={<X className="h-4 w-4" />}
+              onClick={() => {
+                setShowListCompare(false);
+                queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
+                if (selectedRunId) {
+                  queryClient.invalidateQueries({ queryKey: ['run', project.id, selectedRunId] });
+                }
+              }}
+            >
+              Close
+            </Button>
+          </div>
+          <ListCompare projectId={project.id} />
+        </section>
+      )}
 
       {/* ── Bulk Keyword Import Dialog ── */}
       <BulkKeywordImport
@@ -1542,6 +1726,15 @@ function PreviewTable({
   classifyingIntents = false,
   selectedKeywords,
   onSelectionChange,
+  onCompareSerp,
+  serpFeaturesData,
+  analyzingSerpFeatures = false,
+  onAnalyzeSerpFeatures,
+  onShowTrends,
+  showTrends = false,
+  personalDifficultyMap,
+  loadingPersonalDifficulty = false,
+  hasDomain = false,
 }: {
   previewRows: ResearchRow[];
   rowCount: number;
@@ -1562,6 +1755,15 @@ function PreviewTable({
   onSelectionChange: (keyword: string, selected: boolean) => void;
   onSelectAll?: () => void;
   onClearSelection?: () => void;
+  onCompareSerp?: () => void;
+  serpFeaturesData?: Map<string, SerpFeature[]>;
+  analyzingSerpFeatures?: boolean;
+  onAnalyzeSerpFeatures?: () => void;
+  onShowTrends?: () => void;
+  showTrends?: boolean;
+  personalDifficultyMap?: Map<string, PersonalDifficultyData>;
+  loadingPersonalDifficulty?: boolean;
+  hasDomain?: boolean;
 }) {
   // All page numbers are 1-based from the API
   const startRow = (currentPage - 1) * pageSize + 1;
@@ -1592,6 +1794,63 @@ function PreviewTable({
               ) : (
                 'Classify Intents'
               )}
+            </button>
+          )}
+          {onAnalyzeSerpFeatures && (
+            <button
+              type="button"
+              className="rounded-md px-3 py-1.5 text-caption font-medium text-accent hover:bg-accent/[0.06] transition-colors flex items-center gap-1.5 border border-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={onAnalyzeSerpFeatures}
+              disabled={analyzingSerpFeatures}
+              title="Detect SERP features (featured snippets, PAA, video, local pack, etc.)"
+            >
+              {analyzingSerpFeatures ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Analyzing SERP…
+                </>
+              ) : (
+                <>
+                  <Search className="h-3.5 w-3.5" />
+                  SERP Features
+                </>
+              )}
+            </button>
+          )}
+          {onShowTrends && (
+            <button
+              type="button"
+              className={cn(
+                'rounded-md px-3 py-1.5 text-caption font-medium transition-colors flex items-center gap-1.5 border disabled:opacity-50 disabled:cursor-not-allowed',
+                showTrends
+                  ? 'bg-accent/[0.08] text-accent border-accent/30'
+                  : 'text-accent hover:bg-accent/[0.06] border-accent/20',
+              )}
+              onClick={onShowTrends}
+              title="View search volume trends over the last 12 months"
+            >
+              {showTrends ? (
+                <>
+                  <X className="h-3.5 w-3.5" />
+                  Hide Trends
+                </>
+              ) : (
+                <>
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  Trends
+                </>
+              )}
+            </button>
+          )}
+          {onCompareSerp && selectedKeywords.size >= 2 && selectedKeywords.size <= 3 && (
+            <button
+              type="button"
+              className="rounded-md px-3 py-1.5 text-caption font-medium text-info hover:bg-info/[0.06] transition-colors flex items-center gap-1.5 border border-info/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={onCompareSerp}
+              title="Compare SERP results side-by-side for selected keywords"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              Compare SERPs ({selectedKeywords.size})
             </button>
           )}
           <DifficultyVariantToggle />
@@ -1683,9 +1942,19 @@ function PreviewTable({
                   >
                     Difficulty<SortIndicator field="difficulty" currentSort={sort} order={sortOrder} />
                   </th>
+                  {hasDomain && (
+                    <th className="px-2.5 py-2.5 text-center text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5">
+                      Pers. Diff
+                    </th>
+                  )}
                   <th className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5">
                     Keywords
                   </th>
+                  {serpFeaturesData !== undefined && (
+                    <th className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5 w-[130px]">
+                      SERP Features
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
@@ -1741,9 +2010,36 @@ function PreviewTable({
                         <span className="text-body-sm text-text-muted">—</span>
                       )}
                     </td>
+                    {hasDomain && (
+                      <td className="px-2.5 py-2.5 text-center sm:px-3.5">
+                        <PersonalDifficultyBadge
+                          genericDifficulty={row.difficulty ?? null}
+                          personalData={personalDifficultyMap?.get(row.primaryKeyword) ?? null}
+                          loading={loadingPersonalDifficulty && !personalDifficultyMap?.has(row.primaryKeyword)}
+                          unavailable={!hasDomain}
+                          compact
+                        />
+                      </td>
+                    )}
                     <td className="max-w-[140px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[200px]" title={row.keywords.join(', ')}>
                       {row.keywords.join(', ')}
                     </td>
+                    {serpFeaturesData !== undefined && (
+                      <td className="px-2.5 py-2.5 sm:px-3.5">
+                        {analyzingSerpFeatures && !serpFeaturesData.has(row.primaryKeyword) ? (
+                          <span className="inline-flex items-center gap-1 text-text-muted">
+                            <span className="h-3 w-3 rounded-full border-2 border-text-muted/30 border-t-accent animate-spin" />
+                          </span>
+                        ) : (() => {
+                          const features = serpFeaturesData.get(row.primaryKeyword);
+                          return features && features.length > 0 ? (
+                            <SerpFeatureIcons features={features} size="sm" />
+                          ) : (
+                            <span className="text-text-muted/40 text-caption">—</span>
+                          );
+                        })()}
+                      </td>
+                    )}
                   </tr>
                 );})}
               </tbody>
