@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuthenticatedUserOrNull } from '@/server/auth/guards';
-import { addResearchLog, getRunForUser, updateRunState } from '@/server/research/repository';
+import { addResearchLog, getRunForUser, updateRunState, listRunsForProject } from '@/server/research/repository';
 import type { ResearchRow } from '@/lib/research';
 
 const importKeywordSchema = z.object({
@@ -23,7 +23,6 @@ type ImportKeyword = z.infer<typeof importKeywordSchema>;
  */
 async function getExistingKeywordsForProject(userId: string, projectId: string): Promise<Set<string>> {
   // Get the user's runs for the project
-  const { listRunsForProject } = await import('@/server/research/repository');
   const runs = await listRunsForProject(userId, projectId, 100);
 
   const existingLower = new Set<string>();
@@ -157,9 +156,7 @@ export async function POST(request: Request) {
     }
 
     // Store imported keywords in the database
-    // We need to attach these to an existing run or create a virtual run
     // Find the latest completed run for this project and append to its resultRows
-    const { listRunsForProject } = await import('@/server/research/repository');
     const runs = await listRunsForProject(user.id, projectId, 50);
     const completedRun = runs.find((r) => r.status === 'completed');
 
