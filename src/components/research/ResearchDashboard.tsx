@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle2, ChevronLeft, ChevronRight, Download, FileSpreadsheet, History, Loader2, Radar, RefreshCcw, Search, TableProperties, Trash2, TrendingUp, UploadCloud } from 'lucide-react';
+import { Bookmark, CheckCircle2, ChevronLeft, ChevronRight, Download, FileSpreadsheet, History, Loader2, Radar, RefreshCcw, Search, Star, TableProperties, Trash2, TrendingUp, UploadCloud, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +22,10 @@ import QuestionsTab from './QuestionsTab';
 import ContentMap from './ContentMap';
 import KeywordClusters from './KeywordClusters';
 import BulkKeywordImport from './BulkKeywordImport';
+import BulkActionsToolbar, { type BulkAction } from './BulkActionsToolbar';
+import { exportKeywordsToCsv } from '@/lib/export-csv';
+import FilterPresets, { type CurrentFilters } from './FilterPresets';
+import SavedSearches, { useSavedSearches, type SavedSearch, type SearchHistoryItem } from './SavedSearches';
 
 type CompetitorDiscoveryState = {
   status: 'idle' | 'success' | 'empty' | 'error';
@@ -180,6 +184,39 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   const [previewSort, setPreviewSort] = useState<string>('volume');
   const [previewSortOrder, setPreviewSortOrder] = useState<string>('desc');
 
+  // Filter state
+  const [filterMinDifficulty, setFilterMinDifficulty] = useState(0);
+  const [filterMaxDifficulty, setFilterMaxDifficulty] = useState(100);
+  const [filterMinVolume, setFilterMinVolume] = useState(0);
+  const [filterMaxVolume, setFilterMaxVolume] = useState(1_000_000);
+  const [filterIntents, setFilterIntents] = useState<string[]>([]);
+  const [filterSearchQuery, setFilterSearchQuery] = useState('');
+
+  // Saved searches & search history
+  const savedSearches = useSavedSearches();
+  const [showSavedSearches, setShowSavedSearches] = useState(false);
+  const [triggerSaveDialog, setTriggerSaveDialog] = useState(false);
+
+  const currentFilterState: CurrentFilters = useMemo(() => ({
+    minDifficulty: filterMinDifficulty,
+    maxDifficulty: filterMaxDifficulty,
+    minVolume: filterMinVolume,
+    maxVolume: filterMaxVolume,
+    intents: filterIntents,
+    sortBy: previewSort,
+    sortOrder: previewSortOrder as 'asc' | 'desc',
+    searchQuery: filterSearchQuery,
+  }), [
+    filterMinDifficulty,
+    filterMaxDifficulty,
+    filterMinVolume,
+    filterMaxVolume,
+    filterIntents,
+    previewSort,
+    previewSortOrder,
+    filterSearchQuery,
+  ]);
+
   // Read page from URL; fall back to 1 if not present
   const previewPage = (() => {
     const raw = searchParams.get('page');
@@ -208,6 +245,116 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   const pagination = keywordsQuery.data?.pagination ?? { page: 1, limit: previewPageSize, total: 0, totalPages: 1 };
   const isLoadingKeywords = keywordsQuery.isFetching && !keywordsQuery.isPending;
 
+  // Client-side filtering of preview rows
+  const filteredPreviewRows = useMemo(() => {
+    let rows = previewRows;
+
+    // Search query filter
+    if (filterSearchQuery.trim()) {
+      const q = filterSearchQuery.toLowerCase().trim();
+      rows = rows.filter(
+        (row) =>
+          row.primaryKeyword?.toLowerCase().includes(q) ||
+          row.pillar?.toLowerCase().includes(q) ||
+          row.cluster?.toLowerCase().includes(q) ||
+          row.keywords?.some((k) => k.toLowerCase().includes(q)),
+      );
+    }
+
+    // Intent filter
+    if (filterIntents.length > 0) {
+      rows = rows.filter((row) => filterIntents.includes(row.intent || ''));
+    }
+
+    // Difficulty filter
+    rows = rows.filter((row) => {
+      const d = row.difficulty;
+      if (d == null) return true; // no difficulty data — include
+      return d >= filterMinDifficulty && d <= filterMaxDifficulty;
+    });
+
+    // Volume filter
+    rows = rows.filter((row) => {
+      const v = row.searchVolume;
+      if (v == null) return true; // no volume data — include
+      return v >= filterMinVolume && v <= filterMaxVolume;
+    });
+
+    return rows;
+  }, [previewRows, filterSearchQuery, filterIntents, filterMinDifficulty, filterMaxDifficulty, filterMinVolume, filterMaxVolume]);
+
+  // ── Keywords selection state ──
+  const [selectedKeywordSet, setSelectedKeywordSet] = useState<Set<string>>(new Set());
+  const [processingBulkAction, setProcessingBulkAction] = useState<BulkAction | null>(null);
+
+  // Clear selection when run changes
+  useEffect(() => {
+    setSelectedKeywordSet(new Set());
+  }, [selectedRunId]);
+
+  const handleKeywordSelection = useCallback((keyword: string, selected: boolean) => {
+    setSelectedKeywordSet((prev) => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(keyword);
+      } else {
+        next.delete(keyword);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAllVisible = useCallback(() => {
+    setSelectedKeywordSet((prev) => {
+      const next = new Set(prev);
+      filteredPreviewRows.forEach((r) => next.add(r.primaryKeyword));
+      return next;
+    });
+  }, [filteredPreviewRows]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedKeywordSet(new Set());
+  }, []);
+
+  const handleBulkAction = useCallback((action: BulkAction) => {
+    const selectedRows = filteredPreviewRows.filter((r) => selectedKeywordSet.has(r.primaryKeyword));
+    switch (action) {
+      case 'add-to-list':
+        // Add to keyword list — parent handles via callbacks
+        handleClearSelection();
+        break;
+      case 'export-csv':
+        setProcessingBulkAction('export-csv');
+        setTimeout(() => {
+          exportKeywordsToCsv(selectedRows);
+          setProcessingBulkAction(null);
+        }, 150);
+        break;
+      case 'generate-brief':
+        setProcessingBulkAction('generate-brief');
+        // TODO: integrate content brief generator
+        setTimeout(() => {
+          addToast(`Content brief requested for ${selectedRows.length} keywords.`, 'success');
+          setProcessingBulkAction(null);
+        }, 150);
+        break;
+      case 'cluster-selected':
+        setProcessingBulkAction('cluster-selected');
+        // TODO: integrate clustering
+        setTimeout(() => {
+          addToast(`Clustering requested for ${selectedRows.length} keywords.`, 'success');
+          setProcessingBulkAction(null);
+        }, 150);
+        break;
+      case 'select-all':
+        handleSelectAllVisible();
+        break;
+      case 'clear-selection':
+        handleClearSelection();
+        break;
+    }
+  }, [filteredPreviewRows, selectedKeywordSet, handleClearSelection, handleSelectAllVisible, addToast]);
+
   // Reset sort/page when run changes
   useEffect(() => { setPreviewSort('volume'); setPreviewSortOrder('desc'); }, [selectedRunId]);
 
@@ -230,6 +377,108 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
     (page: number) => updatePageUrl(page),
     [updatePageUrl],
   );
+
+  const handleLoadPreset = useCallback(
+    (preset: CurrentFilters) => {
+      setFilterMinDifficulty(preset.minDifficulty);
+      setFilterMaxDifficulty(preset.maxDifficulty);
+      setFilterMinVolume(preset.minVolume);
+      setFilterMaxVolume(preset.maxVolume);
+      setFilterIntents(preset.intents);
+      setPreviewSort(preset.sortBy);
+      setPreviewSortOrder(preset.sortOrder);
+      setFilterSearchQuery(preset.searchQuery);
+      handlePageChange(1);
+    },
+    [handlePageChange],
+  );
+
+  // ── Saved Searches handlers ──────────────────────────────────────────────
+
+  const handleAddToHistory = useCallback(() => {
+    if (!filterSearchQuery.trim()) return;
+    savedSearches.addToHistory({
+      query: filterSearchQuery.trim(),
+      resultCount: filteredPreviewRows.length,
+    });
+  }, [filterSearchQuery, filteredPreviewRows.length, savedSearches]);
+
+  // Auto-save to history when search query changes (debounced via the fact we track it on enter/blur)
+  const [lastHistoryQuery, setLastHistoryQuery] = useState('');
+  useEffect(() => {
+    const q = filterSearchQuery.trim();
+    if (q && q !== lastHistoryQuery && previewRows.length > 0) {
+      // Only add to history if the user has typed something meaningful
+      // We use a simple heuristic: add when the query has been stable for 1.5 seconds
+      const timer = setTimeout(() => {
+        savedSearches.addToHistory({
+          query: q,
+          resultCount: filteredPreviewRows.length,
+        });
+        setLastHistoryQuery(q);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [filterSearchQuery, lastHistoryQuery, previewRows.length, filteredPreviewRows.length, savedSearches]);
+
+  const handleHistoryClick = useCallback(
+    (item: SearchHistoryItem) => {
+      setFilterSearchQuery(item.query);
+      handlePageChange(1);
+      setShowSavedSearches(false);
+    },
+    [handlePageChange],
+  );
+
+  const handleSavedClick = useCallback(
+    (item: SavedSearch) => {
+      setFilterSearchQuery(item.query);
+      setFilterMinDifficulty(item.filters.minDifficulty);
+      setFilterMaxDifficulty(item.filters.maxDifficulty);
+      setFilterMinVolume(item.filters.minVolume);
+      setFilterMaxVolume(item.filters.maxVolume);
+      setFilterIntents(item.filters.intents);
+      handlePageChange(1);
+      setShowSavedSearches(false);
+    },
+    [handlePageChange],
+  );
+
+  const handleSaveCurrent = useCallback(
+    (name: string) => {
+      savedSearches.saveSearch(
+        name,
+        filterSearchQuery,
+        {
+          minDifficulty: filterMinDifficulty,
+          maxDifficulty: filterMaxDifficulty,
+          minVolume: filterMinVolume,
+          maxVolume: filterMaxVolume,
+          intents: filterIntents,
+        },
+      );
+      addToast('Search saved.', 'success');
+    },
+    [filterSearchQuery, filterMinDifficulty, filterMaxDifficulty, filterMinVolume, filterMaxVolume, filterIntents, savedSearches, addToast],
+  );
+
+  // Keyboard shortcut: Ctrl+Shift+S to save search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        if (showSavedSearches) {
+          setTriggerSaveDialog(true);
+        } else {
+          setShowSavedSearches(true);
+          // Will trigger save dialog after panel opens
+          setTimeout(() => setTriggerSaveDialog(true), 200);
+        }
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [showSavedSearches]);
 
   const handlePageSizeChange = useCallback(
     (size: number) => {
@@ -723,7 +972,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                   }
                 }}
                 tabs={[
-                  { id: 'preview', label: 'Preview', hasContent: previewRows.length > 0 },
+                  { id: 'preview', label: 'Preview', hasContent: filteredPreviewRows.length > 0 },
                   { id: 'logs', label: 'Logs', hasContent: Boolean(selectedRun.logs.length) },
                   { id: 'summary', label: 'Summary', hasContent: Boolean(selectedRun.resultSummary) },
                   { id: 'questions', label: 'Questions', hasContent: questionSeedKeyword.length > 0 },
@@ -733,10 +982,198 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
               />
               {activeTab === 'preview' ? (
                 <>
+                  {/* ── Filter Toolbar ── */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Search */}
+                    <div className="relative flex-1 min-w-[180px] max-w-[320px]">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+                      <input
+                        type="text"
+                        value={filterSearchQuery}
+                        onChange={(e) => {
+                          setFilterSearchQuery(e.target.value);
+                          handlePageChange(1);
+                        }}
+                        onFocus={() => {}}
+                        placeholder="Search keywords…"
+                        className="field-input pl-8 pr-14 text-sm h-8"
+                      />
+                      <div className="absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          className="rounded p-1 text-text-muted hover:text-amber-400 hover:bg-amber-400/10 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setShowSavedSearches(true);
+                            setTriggerSaveDialog(true);
+                          }}
+                          title="Save this search (Ctrl+Shift+S)"
+                        >
+                          <Star className="h-3.5 w-3.5" />
+                        </button>
+                        {filterSearchQuery && (
+                          <button
+                            type="button"
+                            className="rounded p-1 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                            onClick={() => setFilterSearchQuery('')}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Intent filter chips */}
+                    <div className="flex items-center gap-1">
+                      {(['Informational', 'Commercial', 'Transactional', 'Navigational'] as const).map((intent) => {
+                        const active = filterIntents.includes(intent);
+                        return (
+                          <button
+                            key={intent}
+                            type="button"
+                            onClick={() => {
+                              setFilterIntents((prev) =>
+                                active
+                                  ? prev.filter((i) => i !== intent)
+                                  : [...prev, intent],
+                              );
+                              handlePageChange(1);
+                            }}
+                            className={cn(
+                              'rounded-md border px-2 py-0.5 text-caption font-medium transition-colors',
+                              active
+                                ? 'border-accent/30 bg-accent/[0.08] text-accent'
+                                : 'border-transparent bg-surface-inset text-text-muted hover:text-text-primary',
+                            )}
+                          >
+                            {intent}
+                          </button>
+                        );
+                      })}
+                      {filterIntents.length > 0 && (
+                        <button
+                          type="button"
+                          className="rounded px-1.5 py-0.5 text-caption text-text-muted hover:text-red-500"
+                          onClick={() => setFilterIntents([])}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Difficulty range */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-caption text-text-muted hidden lg:inline">KD</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={filterMinDifficulty}
+                        onChange={(e) => {
+                          setFilterMinDifficulty(Number(e.target.value));
+                          handlePageChange(1);
+                        }}
+                        className="field-input w-14 text-sm h-8 px-1.5 text-center"
+                        title="Min difficulty"
+                      />
+                      <span className="text-caption text-text-muted">–</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={filterMaxDifficulty}
+                        onChange={(e) => {
+                          setFilterMaxDifficulty(Number(e.target.value));
+                          handlePageChange(1);
+                        }}
+                        className="field-input w-14 text-sm h-8 px-1.5 text-center"
+                        title="Max difficulty"
+                      />
+                    </div>
+
+                    {/* Volume range */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-caption text-text-muted hidden lg:inline">Vol</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={1_000_000}
+                        step={10}
+                        value={filterMinVolume}
+                        onChange={(e) => {
+                          setFilterMinVolume(Number(e.target.value));
+                          handlePageChange(1);
+                        }}
+                        className="field-input w-16 text-sm h-8 px-1.5 text-center"
+                        title="Min volume"
+                      />
+                      <span className="text-caption text-text-muted">–</span>
+                      <input
+                        type="number"
+                        max={1_000_000}
+                        step={10}
+                        value={filterMaxVolume}
+                        onChange={(e) => {
+                          setFilterMaxVolume(Number(e.target.value));
+                          handlePageChange(1);
+                        }}
+                        className="field-input w-16 text-sm h-8 px-1.5 text-center"
+                        title="Max volume"
+                      />
+                    </div>
+
+                    {/* FilterPresets (save/load) */}
+                    <FilterPresets
+                      currentFilters={currentFilterState}
+                      onLoadPreset={handleLoadPreset}
+                    />
+
+                    {/* Saved Searches trigger */}
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-surface-raised px-2.5 py-1.5 text-caption font-medium text-text-muted hover:text-text-primary hover:border-accent/30 transition-colors cursor-pointer"
+                      onClick={() => setShowSavedSearches(true)}
+                      title="Search history & saved searches"
+                    >
+                      <Bookmark className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Saved</span>
+                    </button>
+
+                    {/* Active filter count badge */}
+                    {(filterIntents.length > 0 ||
+                      filterMinDifficulty > 0 ||
+                      filterMaxDifficulty < 100 ||
+                      filterMinVolume > 0 ||
+                      filterMaxVolume < 1_000_000 ||
+                      filterSearchQuery) && (
+                      <button
+                        type="button"
+                        className="rounded-md border border-border/50 px-2 py-0.5 text-caption text-text-muted hover:text-red-500 hover:border-red-500/30"
+                        onClick={() => {
+                          setFilterIntents([]);
+                          setFilterMinDifficulty(0);
+                          setFilterMaxDifficulty(100);
+                          setFilterMinVolume(0);
+                          setFilterMaxVolume(1_000_000);
+                          setFilterSearchQuery('');
+                          handlePageChange(1);
+                        }}
+                      >
+                        Reset filters
+                      </button>
+                    )}
+
+                    {/* Filter result count */}
+                    {filteredPreviewRows.length !== previewRows.length && (
+                      <span className="text-caption text-text-muted whitespace-nowrap">
+                        {filteredPreviewRows.length} of {previewRows.length}
+                      </span>
+                    )}
+                  </div>
+
                   {/* Desktop: full table */}
                   <div className="hidden md:block">
                     <PreviewTable
-                      previewRows={previewRows}
+                      previewRows={filteredPreviewRows}
                       rowCount={pagination.total}
                       status={selectedRun.status}
                       currentPage={previewPage}
@@ -759,12 +1196,14 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                       onKeywordClick={(row) => setDetailKeyword(row)}
                       onClassifyIntents={handleClassifyIntents}
                       classifyingIntents={isClassifyingIntents}
+                      selectedKeywords={selectedKeywordSet}
+                      onSelectionChange={handleKeywordSelection}
                     />
                   </div>
                   {/* Mobile: card/table view */}
                   <div className="md:hidden">
                     <MobileKeywordView
-                      keywords={previewRows}
+                      keywords={filteredPreviewRows}
                       onSelectKeyword={(row) => setDetailKeyword(row)}
                     />
                   </div>
@@ -844,6 +1283,22 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 />
               ) : null}
             </div>
+          )}
+
+          {/* ── Floating Bulk Actions Toolbar ── */}
+          {selectedRun && (
+            <BulkActionsToolbar
+              selectedCount={selectedKeywordSet.size}
+              totalCount={filteredPreviewRows.length}
+              allSelected={
+                selectedKeywordSet.size > 0 &&
+                filteredPreviewRows.every((r) => selectedKeywordSet.has(r.primaryKeyword))
+              }
+              onSelectAll={handleSelectAllVisible}
+              onAction={handleBulkAction}
+              onDismiss={handleClearSelection}
+              processingAction={processingBulkAction}
+            />
           )}
         </Card>
       </section>
@@ -996,6 +1451,34 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
           return [...kws];
         })()}
       />
+
+      {/* ── Saved Searches & History Panel ── */}
+      <SavedSearches
+        open={showSavedSearches}
+        onClose={() => {
+          setShowSavedSearches(false);
+          setTriggerSaveDialog(false);
+        }}
+        history={savedSearches.history}
+        saved={savedSearches.saved}
+        onHistoryClick={handleHistoryClick}
+        onSavedClick={handleSavedClick}
+        onClearHistory={savedSearches.clearHistory}
+        onDeleteSaved={savedSearches.deleteSavedSearch}
+        onRenameSaved={savedSearches.renameSavedSearch}
+        onSaveCurrent={handleSaveCurrent}
+        currentQuery={filterSearchQuery}
+        currentFilters={{
+          minDifficulty: filterMinDifficulty,
+          maxDifficulty: filterMaxDifficulty,
+          minVolume: filterMinVolume,
+          maxVolume: filterMaxVolume,
+          intents: filterIntents,
+        }}
+        mounted={savedSearches.mounted}
+        triggerSave={triggerSaveDialog}
+        onSaveDialogHandled={() => setTriggerSaveDialog(false)}
+      />
     </div>
   );
 }
@@ -1057,6 +1540,8 @@ function PreviewTable({
   onKeywordClick,
   onClassifyIntents,
   classifyingIntents = false,
+  selectedKeywords,
+  onSelectionChange,
 }: {
   previewRows: ResearchRow[];
   rowCount: number;
@@ -1073,6 +1558,10 @@ function PreviewTable({
   onKeywordClick?: (row: ResearchRow) => void;
   onClassifyIntents?: () => void;
   classifyingIntents?: boolean;
+  selectedKeywords: Set<string>;
+  onSelectionChange: (keyword: string, selected: boolean) => void;
+  onSelectAll?: () => void;
+  onClearSelection?: () => void;
 }) {
   // All page numbers are 1-based from the API
   const startRow = (currentPage - 1) * pageSize + 1;
@@ -1134,6 +1623,21 @@ function PreviewTable({
             <table className="min-w-[900px] w-full text-left">
               <thead className="sticky top-0 z-10 bg-surface-raised shadow-[0_1px_0_hsl(var(--border)/0.5)]">
                 <tr className="text-text-muted">
+                  <th className="px-2 py-2.5 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-border/60 accent-accent cursor-pointer"
+                      checked={previewRows.length > 0 && previewRows.every((r) => selectedKeywords.has(r.primaryKeyword))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          previewRows.forEach((r) => onSelectionChange(r.primaryKeyword, true));
+                        } else {
+                          previewRows.forEach((r) => onSelectionChange(r.primaryKeyword, false));
+                        }
+                      }}
+                      aria-label="Select all visible keywords"
+                    />
+                  </th>
                   <th className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5">
                     Parent Page
                   </th>
@@ -1185,15 +1689,30 @@ function PreviewTable({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
-                {previewRows.map((row, index) => (
+                {previewRows.map((row, index) => {
+                  const isSelected = selectedKeywords.has(row.primaryKeyword);
+                  return (
                   <tr
                     key={`${row.cluster}-${index}`}
                     className={cn(
                       'align-top transition-colors hover:bg-accent/[0.02] cursor-pointer',
                       index % 2 === 1 && 'bg-surface-inset/30',
+                      isSelected && 'bg-accent/[0.06]',
                     )}
                     onClick={() => onKeywordClick?.(row)}
                   >
+                    <td className="px-2 py-2.5 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-border/60 accent-accent cursor-pointer"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          onSelectionChange(row.primaryKeyword, e.target.checked);
+                        }}
+                        aria-label={`Select ${row.primaryKeyword}`}
+                      />
+                    </td>
                     <td className="max-w-[140px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[200px]" title={row.existingParentPage}>
                       {row.existingParentPage}
                     </td>
@@ -1226,7 +1745,7 @@ function PreviewTable({
                       {row.keywords.join(', ')}
                     </td>
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           </div>

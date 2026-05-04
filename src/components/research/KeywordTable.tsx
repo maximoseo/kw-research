@@ -14,13 +14,10 @@ import {
   ChevronUp,
   Columns3,
   Download,
-  ExternalLink,
-  FileDown,
   ListPlus,
   Loader2,
   Search,
   TableProperties,
-  Trash2,
 } from 'lucide-react';
 import type {
   ColumnDef,
@@ -38,8 +35,11 @@ import {
 } from '@tanstack/react-table';
 import type { ResearchRow } from '@/lib/research';
 import { cn } from '@/lib/utils';
+import { exportKeywordsToCsv } from '@/lib/export-csv';
 import { Button, Card } from '@/components/ui';
 import IntentBadge from './IntentBadge';
+import { TrafficPotentialCell, type TrafficPotentialData } from './TrafficPotential';
+import BulkActionsToolbar, { type BulkAction } from './BulkActionsToolbar';
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -61,6 +61,7 @@ const DEFAULT_COLUMNS: ColumnState[] = [
   { id: 'difficulty', visible: true, order: 3, width: 100 },
   { id: 'cpc', visible: true, order: 4, width: 100 },
   { id: 'intent', visible: true, order: 5, width: 130 },
+  { id: 'trafficPotential', visible: false, order: 5.5, width: 100 },
   { id: 'pillar', visible: true, order: 6, width: 150 },
   { id: 'cluster', visible: true, order: 7, width: 150 },
   { id: 'keywords', visible: true, order: 8, width: 200 },
@@ -286,6 +287,7 @@ function colHeaderLabel(id: string): string {
     difficulty: 'Difficulty',
     cpc: 'CPC',
     intent: 'Intent',
+    trafficPotential: 'Traffic Pot.',
     pillar: 'Pillar',
     cluster: 'Cluster',
     keywords: 'Keywords',
@@ -315,93 +317,7 @@ function SortIcon({ sorted }: { sorted: false | 'asc' | 'desc' }) {
   );
 }
 
-/* ─────────────────────────────────────────────
-   Bulk Actions Toolbar
-   ───────────────────────────────────────────── */
 
-function BulkActionsToolbar({
-  selectedCount,
-  totalCount,
-  onSelectAll,
-  allSelected,
-  onExportSelected,
-  onAddToList,
-  onDeleteSelected,
-  onClear,
-}: {
-  selectedCount: number;
-  totalCount: number;
-  onSelectAll: () => void;
-  allSelected: boolean;
-  onExportSelected: () => void;
-  onAddToList: () => void;
-  onDeleteSelected: () => void;
-  onClear: () => void;
-}) {
-  if (selectedCount === 0) return null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/20 bg-accent/[0.03] px-3 py-2 animate-fade-in">
-      <span className="text-body-sm font-semibold text-accent">
-        {selectedCount} selected
-      </span>
-      {!allSelected && selectedCount < totalCount && (
-        <button
-          type="button"
-          className="text-caption text-text-muted hover:text-accent transition-colors"
-          onClick={onSelectAll}
-        >
-          Select all {totalCount}
-        </button>
-      )}
-      {allSelected && (
-        <span className="text-caption text-text-muted">
-          All {totalCount} selected
-        </span>
-      )}
-      <div className="flex-1" />
-      <div className="flex items-center gap-1.5">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          icon={<FileDown className="h-3.5 w-3.5" />}
-          onClick={onExportSelected}
-        >
-          Export
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          icon={<ListPlus className="h-3.5 w-3.5" />}
-          onClick={onAddToList}
-        >
-          Add to List
-        </Button>
-        <Button
-          type="button"
-          variant="danger"
-          size="sm"
-          icon={<Trash2 className="h-3.5 w-3.5" />}
-          onClick={onDeleteSelected}
-        >
-          Delete
-        </Button>
-        <button
-          type="button"
-          className="ml-1 rounded p-1 text-text-muted hover:text-text-primary transition-colors"
-          onClick={onClear}
-          title="Clear selection"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
 
 /* ─────────────────────────────────────────────
    Main Component
@@ -433,6 +349,10 @@ interface KeywordTableProps {
   onClassifyIntents?: () => void;
   /** Whether intent classification is in progress */
   classifyingIntents?: boolean;
+  /** Traffic potential data map (keyword → TP data) */
+  trafficPotentialData?: Map<string, TrafficPotentialData>;
+  /** Whether TP is being calculated */
+  calculatingTP?: boolean;
 }
 
 export default function KeywordTable({
@@ -451,6 +371,8 @@ export default function KeywordTable({
   showRowActions = true,
   onClassifyIntents,
   classifyingIntents = false,
+  trafficPotentialData,
+  calculatingTP = false,
 }: KeywordTableProps) {
   /* ── Column visibility & localStorage persistence ── */
   const [columnState, setColumnState] = useState<ColumnState[]>(loadColumnState);
@@ -660,6 +582,33 @@ export default function KeywordTable({
         },
       },
       {
+        id: 'trafficPotential',
+        accessorKey: 'trafficPotential',
+        header: ({ column }) => (
+          <div className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              className="inline-flex items-center gap-0.5 cursor-pointer hover:text-accent transition-colors"
+              onClick={() => column.toggleSorting()}
+            >
+              <span>Traffic Pot.</span>
+              <SortIcon sorted={column.getIsSorted()} />
+            </button>
+          </div>
+        ),
+        cell: ({ row }) => {
+          const kw = row.original.primaryKeyword;
+          const tpData = trafficPotentialData?.get(kw) ?? null;
+          return <TrafficPotentialCell data={tpData} calculating={calculatingTP} />;
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = trafficPotentialData?.get(rowA.original.primaryKeyword)?.trafficPotential ?? -1;
+          const b = trafficPotentialData?.get(rowB.original.primaryKeyword)?.trafficPotential ?? -1;
+          return a - b;
+        },
+        enableColumnFilter: false,
+      },
+      {
         id: 'pillar',
         accessorKey: 'pillar',
         header: ({ column }) => (
@@ -804,7 +753,7 @@ export default function KeywordTable({
         size: 100,
       },
     ],
-    [filterOpen, onAddToList, onAnalyzeSerp, onExport]
+    [filterOpen, onAddToList, onAnalyzeSerp, onExport, trafficPotentialData, calculatingTP]
   );
 
   /* ── Column visibility map from columnState ── */
@@ -879,27 +828,53 @@ export default function KeywordTable({
     table.toggleAllRowsSelected(false);
   }, [table]);
 
-  const handleExportSelected = useCallback(() => {
+  const [processingBulkAction, setProcessingBulkAction] = useState<BulkAction | null>(null);
+
+  const handleBulkAction = useCallback((action: BulkAction) => {
     const toExport = selectionCount === filteredCount ? rows : selectedRows;
-    if (onExport) {
-      onExport(toExport);
-    } else {
-      // Default: download as CSV
-      exportAsCSV(toExport);
+    switch (action) {
+      case 'add-to-list':
+        if (onAddToList && selectedRows.length > 0) {
+          onAddToList(selectedRows);
+        }
+        handleClearSelection();
+        break;
+      case 'export-csv':
+        setProcessingBulkAction('export-csv');
+        if (onExport) {
+          onExport(toExport);
+          setProcessingBulkAction(null);
+        } else {
+          // Use enhanced CSV export with all columns + UTF-8 BOM
+          // Small delay to let the loading spinner show
+          const exportRows = selectionCount === filteredCount ? rows : selectedRows;
+          setTimeout(() => {
+            exportKeywordsToCsv(exportRows);
+            setProcessingBulkAction(null);
+          }, 150);
+        }
+        break;
+      case 'generate-brief':
+        // Content brief generation — parent can handle this via callback or default
+        if (onAddToList && selectedRows.length > 0) {
+          // For now, pass through to parent; in the future a dedicated brief generator can be integrated
+          console.log('Brief requested for', selectedRows.length, 'keywords');
+        }
+        break;
+      case 'cluster-selected':
+        // Send to clustering — parent handles this
+        console.log('Cluster requested for', selectedRows.length, 'keywords');
+        break;
+      case 'select-all':
+        table.toggleAllRowsSelected(true);
+        break;
+      case 'clear-selection':
+        handleClearSelection();
+        break;
     }
-  }, [selectionCount, filteredCount, rows, selectedRows, onExport]);
+  }, [selectionCount, filteredCount, rows, selectedRows, onAddToList, onExport, handleClearSelection, table]);
 
-  const handleAddToList = useCallback(() => {
-    if (onAddToList && selectedRows.length > 0) {
-      onAddToList(selectedRows);
-    }
-  }, [onAddToList, selectedRows]);
 
-  const handleDeleteSelected = useCallback(() => {
-    // In a connected component, this would dispatch a mutation.
-    // For now, we just clear selection and let parent handle via callback.
-    handleClearSelection();
-  }, [handleClearSelection]);
 
   /* ── Pagination display ── */
   const startRow = (currentPage - 1) * pageSize + 1;
@@ -961,12 +936,11 @@ export default function KeywordTable({
       <BulkActionsToolbar
         selectedCount={selectionCount}
         totalCount={filteredCount}
-        allSelected={selectionCount === filteredCount}
+        allSelected={selectionCount === filteredCount && filteredCount > 0}
         onSelectAll={handleSelectAll}
-        onExportSelected={handleExportSelected}
-        onAddToList={handleAddToList}
-        onDeleteSelected={handleDeleteSelected}
-        onClear={handleClearSelection}
+        onAction={handleBulkAction}
+        onDismiss={handleClearSelection}
+        processingAction={processingBulkAction}
       />
 
       {/* ── Table ── */}
@@ -1328,45 +1302,3 @@ function IntentFilterHeader({
   );
 }
 
-/* ─────────────────────────────────────────────
-   Default CSV export
-   ───────────────────────────────────────────── */
-
-function exportAsCSV(rows: ResearchRow[]) {
-  const headers = [
-    'Keyword',
-    'Volume',
-    'Difficulty',
-    'CPC',
-    'Intent',
-    'Pillar',
-    'Cluster',
-    'Parent Page',
-  ];
-
-  const csvRows = rows.map((r) =>
-    [
-      r.primaryKeyword || '',
-      r.searchVolume ?? '',
-      (r as ResearchRow & { difficulty?: number }).difficulty ?? '',
-      r.cpc ?? '',
-      r.intent || '',
-      r.pillar || '',
-      r.cluster || '',
-      r.existingParentPage || '',
-    ]
-      .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-      .join(',')
-  );
-
-  const csv = [headers.join(','), ...csvRows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `keyword-export-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}

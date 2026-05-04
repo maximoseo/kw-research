@@ -31,6 +31,7 @@ export type ResearchRow = {
   searchVolume?: number | null;
   cpc?: number | null;
   difficulty?: number | null;
+  trafficPotential?: number | null;
 };
 
 export type UploadedResearchSummary = {
