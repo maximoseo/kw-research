@@ -54,6 +54,7 @@ export const researchRuns = sqliteTable('research_runs', {
   mode: text('mode').notNull(),
   status: text('status').notNull(),
   step: text('step'),
+  progress: integer('progress').default(0),
   targetRows: integer('target_rows').notNull(),
   inputSnapshot: text('input_snapshot').notNull(),
   siteSnapshot: text('site_snapshot'),
@@ -84,11 +85,31 @@ export const researchLogs = sqliteTable('research_logs', {
   createdAt: integer('created_at').notNull(),
 });
 
+export const searchCache = sqliteTable('search_cache', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  queryHash: text('query_hash').notNull(),
+  results: text('results').notNull(),
+  createdAt: integer('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+});
+
+export const contentMap = sqliteTable('content_map', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  keywordId: text('keyword_id').notNull(),
+  pageUrl: text('page_url').notNull(),
+  pageTitle: text('page_title'),
+  mappedAt: integer('mapped_at').notNull(),
+});
+
 export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   projects: many(projects),
   runs: many(researchRuns),
   uploadedFiles: many(uploadedFiles),
+  contentMaps: many(contentMap),
+  contentBriefs: many(contentBriefs),
 }));
 
 export const sessionRelations = relations(sessions, ({ one }) => ({
@@ -133,5 +154,49 @@ export const researchLogRelations = relations(researchLogs, ({ one }) => ({
   run: one(researchRuns, {
     fields: [researchLogs.runId],
     references: [researchRuns.id],
+  }),
+}));
+
+export const searchCacheRelations = relations(searchCache, ({ one }) => ({
+  user: one(users, {
+    fields: [searchCache.userId],
+    references: [users.id],
+  }),
+}));
+
+export const contentMapRelations = relations(contentMap, ({ one }) => ({
+  user: one(users, {
+    fields: [contentMap.userId],
+    references: [users.id],
+  }),
+}));
+
+export const contentBriefs = sqliteTable('content_briefs', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  keywords: text('keywords').notNull(),
+  brief: text('brief').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
+export const serpResults = sqliteTable('serp_results', {
+  id: text('id').primaryKey(),
+  keywordId: text('keyword_id').notNull(),
+  keywordText: text('keyword_text').notNull(),
+  runId: text('run_id').references(() => researchRuns.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull(),
+  url: text('url').notNull(),
+  title: text('title').notNull(),
+  snippet: text('snippet').notNull(),
+  content_type: text('content_type').notNull(),
+  domain: text('domain').notNull(),
+  fetchedAt: integer('fetched_at').notNull(),
+});
+
+export const contentBriefRelations = relations(contentBriefs, ({ one }) => ({
+  user: one(users, {
+    fields: [contentBriefs.userId],
+    references: [users.id],
   }),
 }));

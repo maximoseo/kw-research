@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, ChevronLeft, ChevronRight, Download, FileSpreadsheet, History, Loader2, Radar, RefreshCcw, Search, TableProperties, Trash2, TrendingUp, UploadCloud } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,10 +10,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Badge, Button, Card, EmptyState, Field, Metric, Tabs } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import { buildProjectRunPath } from '@/lib/project-context';
-import type { ResearchProjectDetail, ResearchRunDetail, ResearchRunSummary } from '@/lib/research';
+import type { ResearchProjectDetail, ResearchRow, ResearchRunDetail, ResearchRunSummary } from '@/lib/research';
 import { cn, formatDateTime, formatRelative } from '@/lib/utils';
 import { createProjectRunFormSchema, type CreateProjectRunFormInput } from '@/lib/validation';
+import DifficultyBadge, { DifficultyVariantToggle } from './DifficultyBadge';
+import MobileKeywordView from './MobileKeywordView';
 import ResearchProcessTracker from './ResearchProcessTracker';
+import KeywordDetailPanel from './KeywordDetailPanel';
+import IntentBadge from './IntentBadge';
+import QuestionsTab from './QuestionsTab';
+import ContentMap from './ContentMap';
+import KeywordClusters from './KeywordClusters';
+import BulkKeywordImport from './BulkKeywordImport';
 
 type CompetitorDiscoveryState = {
   status: 'idle' | 'success' | 'empty' | 'error';
@@ -29,6 +37,27 @@ function buildRunUrl(projectId: string, runId: string) {
   return `/api/runs/${runId}?projectId=${encodeURIComponent(projectId)}`;
 }
 
+function buildKeywordsUrl(runId: string, page: number, limit: number, sort: string, order: string) {
+  const params = new URLSearchParams({
+    runId,
+    page: String(page),
+    limit: String(limit),
+    sort,
+    order,
+  });
+  return `/api/keywords?${params.toString()}`;
+}
+
+type KeywordsApiResponse = {
+  data: ResearchRow[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 function buildDefaultValues(project: ResearchProjectDetail): CreateProjectRunFormInput {
   return {
     competitorUrls: project.competitorUrls.join('\n'),
@@ -43,6 +72,7 @@ const statusBadgeMap: Record<ResearchRunSummary['status'], { variant: 'warning' 
   processing: { variant: 'info', label: 'Processing' },
   completed: { variant: 'success', label: 'Completed' },
   failed: { variant: 'error', label: 'Failed' },
+  cancelled: { variant: 'warning', label: 'Cancelled' },
 };
 
 /** Trigger a file download without opening a new tab (avoids popup blockers). */
@@ -80,16 +110,22 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
   const { addToast } = useToast();
   const [selectedRunId, setSelectedRunId] = useState(initialRunId || null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [activeTab, setActiveTab] = useState<'preview' | 'logs' | 'summary'>('preview');
+  const [activeTab, setActiveTab] = useState<'preview' | 'logs' | 'summary' | 'questions' | 'content-map' | 'clusters'>('preview');
+  const [questionSeedKeyword, setQuestionSeedKeyword] = useState<string>('');
   const [isPending, startTransition] = useTransition();
   const [isDiscoveringCompetitors, startCompetitorDiscovery] = useTransition();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isRerunning, setIsRerunning] = useState(false);
+  const [isRefreshingResearch, setIsRefreshingResearch] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const [competitorDiscovery, setCompetitorDiscovery] = useState<CompetitorDiscoveryState>({
     status: 'idle',
   });
+  const [detailKeyword, setDetailKeyword] = useState<ResearchRow | null>(null);
+  const [isClassifyingIntents, setIsClassifyingIntents] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const form = useForm<CreateProjectRunFormInput>({
     resolver: zodResolver(createProjectRunFormSchema),
     defaultValues: buildDefaultValues(project),
@@ -140,17 +176,69 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
 
   const selectedRun = runQuery.data;
 
-  const [previewPage, setPreviewPage] = useState(0);
+  const searchParams = useSearchParams();
+  const [previewSort, setPreviewSort] = useState<string>('volume');
+  const [previewSortOrder, setPreviewSortOrder] = useState<string>('desc');
+
+  // Read page from URL; fall back to 1 if not present
+  const previewPage = (() => {
+    const raw = searchParams.get('page');
+    const parsed = raw ? parseInt(raw, 10) : 1;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  })();
   const [previewPageSize, setPreviewPageSize] = useState<number>(50);
 
-  const allRows = useMemo(() => selectedRun?.rows ?? [], [selectedRun?.rows]);
-  const totalPages = Math.max(1, Math.ceil(allRows.length / previewPageSize));
-  const previewRows = useMemo(
-    () => allRows.slice(previewPage * previewPageSize, (previewPage + 1) * previewPageSize),
-    [allRows, previewPage, previewPageSize],
+  const keywordsQuery = useQuery({
+    queryKey: ['keywords', selectedRunId, previewPage, previewPageSize, previewSort, previewSortOrder],
+    queryFn: async (): Promise<KeywordsApiResponse> => {
+      const response = await fetch(
+        buildKeywordsUrl(selectedRunId!, previewPage, previewPageSize, previewSort, previewSortOrder),
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to load keywords.');
+      }
+      return payload;
+    },
+    enabled: Boolean(selectedRunId),
+    placeholderData: (prev) => prev, // keep previous data while loading next page
+  });
+
+  const previewRows = keywordsQuery.data?.data ?? [];
+  const pagination = keywordsQuery.data?.pagination ?? { page: 1, limit: previewPageSize, total: 0, totalPages: 1 };
+  const isLoadingKeywords = keywordsQuery.isFetching && !keywordsQuery.isPending;
+
+  // Reset sort/page when run changes
+  useEffect(() => { setPreviewSort('volume'); setPreviewSortOrder('desc'); }, [selectedRunId]);
+
+  // Update URL when page changes
+  const updatePageUrl = useCallback(
+    (newPage: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newPage <= 1) {
+        params.delete('page');
+      } else {
+        params.set('page', String(newPage));
+      }
+      const qs = params.toString();
+      router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false });
+    },
+    [router, searchParams],
   );
 
-  useEffect(() => { setPreviewPage(0); }, [selectedRunId]);
+  const handlePageChange = useCallback(
+    (page: number) => updatePageUrl(page),
+    [updatePageUrl],
+  );
+
+  const handlePageSizeChange = useCallback(
+    (size: number) => {
+      setPreviewPageSize(size);
+      // Reset to page 1 when changing page size
+      updatePageUrl(1);
+    },
+    [updatePageUrl],
+  );
   const formatDateTimeLabel = (value: string | number | Date | null | undefined, fallback = 'Syncing time...') =>
     hasMounted ? formatDateTime(value, fallback) : fallback;
   const formatRelativeLabel = (value: string | number | Date | null | undefined, fallback = 'Syncing...') =>
@@ -160,6 +248,24 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
     if (!selectedRun?.workbookName) return;
     triggerDownload(selectedRun.id, addToast, setIsDownloading);
   }, [selectedRun?.id, selectedRun?.workbookName, addToast]);
+
+  const handleCancel = useCallback(async () => {
+    if (!selectedRun) return;
+    setIsCancelling(true);
+    try {
+      const response = await fetch(`/api/runs/${selectedRun.id}/cancel`, { method: 'POST' });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        addToast(result?.error || 'Unable to cancel run.', 'error');
+        return;
+      }
+      addToast('Run cancelled.', 'success');
+      await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
+      await queryClient.invalidateQueries({ queryKey: ['run', project.id, selectedRun.id] });
+    } finally {
+      setIsCancelling(false);
+    }
+  }, [selectedRun, selectedRun?.id, project.id, addToast, queryClient]);
 
   const handleRerun = useCallback(async () => {
     if (!selectedRun?.input) return;
@@ -187,6 +293,82 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
       setIsRerunning(false);
     }
   }, [selectedRun?.input, project.id, addToast, queryClient]);
+
+  const handleRefreshResearch = useCallback(async () => {
+    if (!selectedRun?.input) return;
+    setIsRefreshingResearch(true);
+    try {
+      const input = selectedRun.input;
+      const payload = new FormData();
+      payload.set('projectId', project.id);
+      payload.set('competitorUrls', (input.competitorUrls ?? []).join('\n'));
+      payload.set('notes', input.notes || '');
+      payload.set('mode', 'fresh');
+      payload.set('targetRows', String(input.targetRows ?? 220));
+      payload.set('refresh', 'true');
+
+      const response = await fetch('/api/runs', { method: 'POST', body: payload });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        addToast(result?.error || 'Unable to start research refresh.', 'error');
+        return;
+      }
+      addToast('Refresh queued — bypassing cache for fresh results.', 'success');
+      setSelectedRunId(result.runId);
+      await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
+      await queryClient.invalidateQueries({ queryKey: ['run', project.id, result.runId] });
+    } finally {
+      setIsRefreshingResearch(false);
+    }
+  }, [selectedRun?.input, project.id, addToast, queryClient]);
+
+  const handleClassifyIntents = useCallback(async () => {
+    if (!selectedRunId || !keywordsQuery.data) return;
+    setIsClassifyingIntents(true);
+    try {
+      const keywords = keywordsQuery.data.data.map((row: ResearchRow) => row.primaryKeyword).filter(Boolean);
+      if (keywords.length === 0) {
+        addToast('No keywords to classify.', 'error');
+        return;
+      }
+
+      const response = await fetch('/api/keywords/classify-intent', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ keywords }),
+      });
+
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        addToast(result?.error || 'Intent classification failed.', 'error');
+        return;
+      }
+
+      // Build a map of keyword → intent
+      const intentMap = new Map<string, string>();
+      for (const item of result.results) {
+        intentMap.set(item.keyword, item.intent);
+      }
+
+      // Update the local rows with the classified intents
+      const classified = keywordsQuery.data.data.map((row: ResearchRow) => ({
+        ...row,
+        intent: (intentMap.get(row.primaryKeyword) as ResearchRow['intent']) || row.intent,
+      }));
+
+      // Update the query cache
+      queryClient.setQueryData(
+        ['keywords', selectedRunId, previewPage, previewPageSize, previewSort, previewSortOrder],
+        { data: classified, pagination: keywordsQuery.data.pagination },
+      );
+
+      addToast(`Classified ${result.results.length} keywords.`, 'success');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Classification failed.', 'error');
+    } finally {
+      setIsClassifyingIntents(false);
+    }
+  }, [selectedRunId, keywordsQuery.data, previewPage, previewPageSize, previewSort, previewSortOrder, addToast, queryClient]);
 
   const handleSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
@@ -461,9 +643,12 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                         <p className="mt-0.5 text-body-sm text-text-secondary truncate">{selectedRun.rows.length} rows &middot; {selectedRun.workbookName}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Button type="button" variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} loading={isDownloading} onClick={handleDownload} className="w-full shrink-0 sm:w-auto">
                         Download XLSX
+                      </Button>
+                      <Button type="button" variant="secondary" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={isRefreshingResearch} onClick={handleRefreshResearch} className="shrink-0">
+                        Refresh Research
                       </Button>
                       <Button type="button" variant="ghost" size="sm" icon={<RefreshCcw className="h-3.5 w-3.5" />} loading={isRerunning} onClick={handleRerun} className="shrink-0">
                         Rerun
@@ -489,7 +674,7 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                 <Metric label="Brand" value={selectedRun.brandName} helper={`${selectedRun.language} · ${selectedRun.market}`} />
                 <Metric label="Queued" value={formatDateTimeLabel(selectedRun.queuedAt)} helper={selectedRun.step || 'Awaiting updates'} />
               </div>
-              <ResearchProcessTracker run={selectedRun} />
+              <ResearchProcessTracker run={selectedRun} onCancel={handleCancel} isCancelling={isCancelling} />
               <div className="action-row">
                 {/* Only show Download/Rerun here when success banner is NOT visible (i.e. not completed+workbook) */}
                 {!(selectedRun.status === 'completed' && selectedRun.workbookName) && (
@@ -530,24 +715,60 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
               </div>
               <Tabs
                 activeTab={activeTab}
-                onChange={(value) => setActiveTab(value as typeof activeTab)}
+                onChange={(value) => {
+                  setActiveTab(value as typeof activeTab);
+                  // Set seed keyword for questions tab from the selected run's brand
+                  if (value === 'questions' && selectedRun && !questionSeedKeyword) {
+                    setQuestionSeedKeyword(selectedRun.brandName || '');
+                  }
+                }}
                 tabs={[
                   { id: 'preview', label: 'Preview', hasContent: previewRows.length > 0 },
                   { id: 'logs', label: 'Logs', hasContent: Boolean(selectedRun.logs.length) },
                   { id: 'summary', label: 'Summary', hasContent: Boolean(selectedRun.resultSummary) },
+                  { id: 'questions', label: 'Questions', hasContent: questionSeedKeyword.length > 0 },
+                  { id: 'content-map', label: 'Content Map', hasContent: Boolean(selectedRun?.rows?.length) },
+                  { id: 'clusters', label: 'Clusters', hasContent: Boolean(selectedRun?.rows?.length) },
                 ]}
               />
               {activeTab === 'preview' ? (
-                <PreviewTable
-                  previewRows={previewRows}
-                  rowCount={allRows.length}
-                  status={selectedRun.status}
-                  currentPage={previewPage}
-                  totalPages={totalPages}
-                  pageSize={previewPageSize}
-                  onPageChange={setPreviewPage}
-                  onPageSizeChange={(size) => { setPreviewPageSize(size); setPreviewPage(0); }}
-                />
+                <>
+                  {/* Desktop: full table */}
+                  <div className="hidden md:block">
+                    <PreviewTable
+                      previewRows={previewRows}
+                      rowCount={pagination.total}
+                      status={selectedRun.status}
+                      currentPage={previewPage}
+                      totalPages={pagination.totalPages}
+                      pageSize={previewPageSize}
+                      isLoading={isLoadingKeywords}
+                      onPageChange={handlePageChange}
+                      onPageSizeChange={handlePageSizeChange}
+                      sort={previewSort}
+                      sortOrder={previewSortOrder}
+                      onSortChange={(field) => {
+                        if (field === previewSort) {
+                          setPreviewSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+                        } else {
+                          setPreviewSort(field);
+                          setPreviewSortOrder('desc');
+                        }
+                        handlePageChange(1);
+                      }}
+                      onKeywordClick={(row) => setDetailKeyword(row)}
+                      onClassifyIntents={handleClassifyIntents}
+                      classifyingIntents={isClassifyingIntents}
+                    />
+                  </div>
+                  {/* Mobile: card/table view */}
+                  <div className="md:hidden">
+                    <MobileKeywordView
+                      keywords={previewRows}
+                      onSelectKeyword={(row) => setDetailKeyword(row)}
+                    />
+                  </div>
+                </>
               ) : null}
               {activeTab === 'logs' ? (
                 <RunLogs entries={selectedRun.logs} status={selectedRun.status} formatRelativeLabel={formatRelativeLabel} />
@@ -563,6 +784,64 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
                     <Metric label="Mode" value={selectedRun.mode === 'expand' ? 'Expand existing' : 'Fresh research'} helper={`Target ${selectedRun.targetRows} rows`} />
                   </div>
                 )
+              ) : null}
+              {activeTab === 'questions' ? (
+                <div className="space-y-4">
+                  {!questionSeedKeyword && selectedRun ? (
+                    <div className="rounded-xl border border-border/40 bg-surface-raised/50 p-4">
+                      <p className="text-body text-text-secondary mb-3">
+                        Enter a keyword to discover related search questions (People Also Ask).
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          className="field-input flex-1"
+                          placeholder={`e.g., "${selectedRun.brandName} marketing"`}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              setQuestionSeedKeyword((e.target as HTMLInputElement).value.trim());
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="md"
+                          icon={<Search className="h-4 w-4" />}
+                          onClick={() => {
+                            const input = document.querySelector<HTMLInputElement>('.field-input.flex-1');
+                            if (input) setQuestionSeedKeyword(input.value.trim());
+                          }}
+                        >
+                          Search
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <QuestionsTab
+                    seedKeyword={questionSeedKeyword}
+                    onAddKeyword={(keyword) => {
+                      addToast(`"${keyword}" ready — add it in a new research run.`, 'success');
+                    }}
+                  />
+                </div>
+              ) : null}
+              {activeTab === 'content-map' ? (
+                <ContentMap
+                  keywords={selectedRun?.rows ?? []}
+                  projectId={project.id}
+                />
+              ) : null}
+              {activeTab === 'clusters' ? (
+                <KeywordClusters
+                  keywords={selectedRun?.rows ?? []}
+                  onGenerateContentBrief={(clusterName, clusterKeywords) => {
+                    addToast(
+                      `Content brief requested for "${clusterName}" with ${clusterKeywords.length} keywords.`,
+                      'success',
+                    );
+                  }}
+                />
               ) : null}
             </div>
           )}
@@ -581,6 +860,15 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
             <History className="h-3.5 w-3.5" />
             {runsQuery.data?.length || 0} tracked
           </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            icon={<UploadCloud className="h-3.5 w-3.5" />}
+            onClick={() => setShowBulkImport(true)}
+          >
+            Import Keywords
+          </Button>
         </div>
         {!runsQuery.data?.length ? (
           <EmptyState
@@ -677,6 +965,37 @@ export default function ResearchDashboard({ project, initialRunId }: { project: 
           </div>
         )}
       </section>
+
+      {/* ── Keyword Detail Slide-in Panel ── */}
+      <KeywordDetailPanel
+        keyword={detailKeyword}
+        runId={selectedRunId}
+        onClose={() => setDetailKeyword(null)}
+      />
+
+      {/* ── Bulk Keyword Import Dialog ── */}
+      <BulkKeywordImport
+        open={showBulkImport}
+        onClose={() => {
+          setShowBulkImport(false);
+          // Refresh data after import
+          queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
+          if (selectedRunId) {
+            queryClient.invalidateQueries({ queryKey: ['run', project.id, selectedRunId] });
+          }
+        }}
+        projectId={project.id}
+        existingKeywords={(() => {
+          const kws = new Set<string>();
+          if (selectedRun?.rows) {
+            for (const row of selectedRun.rows) {
+              if (row.primaryKeyword) kws.add(row.primaryKeyword);
+              if (row.keywords) row.keywords.forEach((k) => kws.add(k));
+            }
+          }
+          return [...kws];
+        })()}
+      />
     </div>
   );
 }
@@ -694,6 +1013,34 @@ function InfoRow({ label, value, multiline = false }: { label: string; value: st
   );
 }
 
+type SortableField = 'volume' | 'cpc' | 'primaryKeyword' | 'pillar' | 'cluster' | 'intent' | 'difficulty';
+
+function SortIndicator({ field, currentSort, order }: { field: SortableField; currentSort: string; order: string }) {
+  if (field !== currentSort) {
+    return <span className="ml-1 text-text-muted/40 inline-block">↕</span>;
+  }
+  return <span className="ml-1 text-accent inline-block">{order === 'asc' ? '↑' : '↓'}</span>;
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="animate-pulse">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="flex gap-2 px-3 py-3 border-b border-border/20">
+          <div className="h-4 bg-border/30 rounded w-1/6" />
+          <div className="h-4 bg-border/20 rounded w-1/6" />
+          <div className="h-4 bg-border/20 rounded w-1/6" />
+          <div className="h-4 bg-border/20 rounded w-[10%]" />
+          <div className="h-4 bg-border/30 rounded w-1/6" />
+          <div className="h-4 bg-border/20 rounded w-[8%]" />
+          <div className="h-4 bg-border/20 rounded w-[8%]" />
+          <div className="h-4 bg-border/20 rounded w-1/6" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PreviewTable({
   previewRows,
   rowCount,
@@ -701,31 +1048,73 @@ function PreviewTable({
   currentPage,
   totalPages,
   pageSize,
+  isLoading,
   onPageChange,
   onPageSizeChange,
+  sort,
+  sortOrder,
+  onSortChange,
+  onKeywordClick,
+  onClassifyIntents,
+  classifyingIntents = false,
 }: {
-  previewRows: ResearchRunDetail['rows'];
+  previewRows: ResearchRow[];
   rowCount: number;
   status: ResearchRunDetail['status'];
   currentPage: number;
   totalPages: number;
   pageSize: number;
+  isLoading: boolean;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
-}){
+  sort: string;
+  sortOrder: string;
+  onSortChange: (field: SortableField) => void;
+  onKeywordClick?: (row: ResearchRow) => void;
+  onClassifyIntents?: () => void;
+  classifyingIntents?: boolean;
+}) {
+  // All page numbers are 1-based from the API
+  const startRow = (currentPage - 1) * pageSize + 1;
+  const endRow = Math.min(currentPage * pageSize, rowCount);
+  const hasData = previewRows.length > 0;
+
   return (
     <div className="overflow-hidden rounded-lg border border-border/50 bg-surface-raised/60">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 px-4 py-2.5">
-        <div className="flex items-center gap-2 text-body font-semibold text-text-primary">
+        <div className="flex items-center gap-3 text-body font-semibold text-text-primary">
           <TableProperties className="h-4 w-4 text-accent" />
           Output preview
         </div>
-        <span className="text-caption text-text-muted">
-          Showing {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, rowCount)} of {rowCount} rows
-        </span>
+        <div className="flex items-center gap-3">
+          {onClassifyIntents && (
+            <button
+              type="button"
+              className="rounded-md px-3 py-1.5 text-caption font-medium text-accent hover:bg-accent/[0.06] transition-colors flex items-center gap-1.5 border border-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={onClassifyIntents}
+              disabled={classifyingIntents}
+              title="Use AI to classify search intent for all visible keywords"
+            >
+              {classifyingIntents ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Classifying…
+                </>
+              ) : (
+                'Classify Intents'
+              )}
+            </button>
+          )}
+          <DifficultyVariantToggle />
+          <span className="text-caption text-text-muted">
+            {rowCount > 0 ? `Showing ${startRow}–${endRow} of ${rowCount} rows` : '0 rows'}
+          </span>
+        </div>
       </div>
       <div className="max-h-[480px] overflow-x-auto overflow-y-auto">
-        {!previewRows.length ? (
+        {isLoading && !hasData ? (
+          <LoadingSkeleton />
+        ) : !hasData ? (
           <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
             <TableProperties className="h-7 w-7 text-text-muted/40 mb-2" />
             <p className="text-body font-medium text-text-primary">
@@ -736,58 +1125,114 @@ function PreviewTable({
             </p>
           </div>
         ) : (
-          <table className="min-w-[800px] w-full text-left">
-            <thead className="sticky top-0 z-10 bg-surface-raised shadow-[0_1px_0_hsl(var(--border)/0.5)]">
-              <tr className="text-text-muted">
-                {['Parent Page', 'Pillar', 'Cluster', 'Intent', 'Primary Keyword', 'Volume', 'CPC', 'Keywords'].map((label) => (
-                  <th key={label} className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5">
-                    {label}
+          <div className={cn('relative', isLoading && 'opacity-60 transition-opacity')}>
+            {isLoading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface-raised/30">
+                <Loader2 className="h-5 w-5 animate-spin text-accent" />
+              </div>
+            )}
+            <table className="min-w-[900px] w-full text-left">
+              <thead className="sticky top-0 z-10 bg-surface-raised shadow-[0_1px_0_hsl(var(--border)/0.5)]">
+                <tr className="text-text-muted">
+                  <th className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5">
+                    Parent Page
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {previewRows.map((row, index) => (
-                <tr key={`${row.cluster}-${index}`} className={cn('align-top transition-colors hover:bg-accent/[0.02]', index % 2 === 1 && 'bg-surface-inset/30')}>
-                  <td className="max-w-[140px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[200px]" title={row.existingParentPage}>
-                    {row.existingParentPage}
-                  </td>
-                  <td className="max-w-[120px] truncate px-2.5 py-2.5 font-medium text-body-sm sm:px-3.5 md:max-w-[160px]" title={row.pillar}>
-                    {row.pillar}
-                  </td>
-                  <td className="max-w-[120px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[160px]" title={row.cluster}>
-                    {row.cluster}
-                  </td>
-                  <td className="px-2.5 py-2.5 sm:px-3.5" title={row.intent}>
-                    <span className={cn(
-                      'inline-block rounded-md px-2 py-0.5 text-caption font-medium',
-                      row.intent === 'Informational' && 'bg-info/[0.08] text-info',
-                      row.intent === 'Commercial' && 'bg-warning/[0.08] text-warning',
-                      row.intent === 'Transactional' && 'bg-success/[0.08] text-success',
-                      row.intent === 'Navigational' && 'bg-accent/[0.08] text-accent',
-                    )}>
-                      {row.intent}
-                    </span>
-                  </td>
-                  <td className="max-w-[120px] truncate px-2.5 py-2.5 font-medium text-body-sm sm:px-3.5 md:max-w-[160px]" title={row.primaryKeyword}>
-                    {row.primaryKeyword}
-                  </td>
-                  <td className="px-2.5 py-2.5 text-center font-mono text-body-sm text-text-secondary sm:px-3.5" title={row.searchVolume != null ? String(row.searchVolume) : 'N/A'}>
-                    {row.searchVolume != null ? row.searchVolume.toLocaleString() : '—'}
-                  </td>
-                  <td className="px-2.5 py-2.5 text-center font-mono text-body-sm text-text-secondary sm:px-3.5" title={row.cpc != null ? String(row.cpc) : 'N/A'}>
-                    {row.cpc != null ? `$${row.cpc.toFixed(2)}` : '—'}
-                  </td>
-                  <td className="max-w-[140px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[200px]" title={row.keywords.join(', ')}>
-                    {row.keywords.join(', ')}
-                  </td>
+                  <th
+                    className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5 cursor-pointer hover:text-accent transition-colors select-none"
+                    onClick={() => onSortChange('pillar')}
+                  >
+                    Pillar<SortIndicator field="pillar" currentSort={sort} order={sortOrder} />
+                  </th>
+                  <th
+                    className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5 cursor-pointer hover:text-accent transition-colors select-none"
+                    onClick={() => onSortChange('cluster')}
+                  >
+                    Cluster<SortIndicator field="cluster" currentSort={sort} order={sortOrder} />
+                  </th>
+                  <th
+                    className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5 cursor-pointer hover:text-accent transition-colors select-none"
+                    onClick={() => onSortChange('intent')}
+                  >
+                    Intent<SortIndicator field="intent" currentSort={sort} order={sortOrder} />
+                  </th>
+                  <th
+                    className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5 cursor-pointer hover:text-accent transition-colors select-none"
+                    onClick={() => onSortChange('primaryKeyword')}
+                  >
+                    Primary Keyword<SortIndicator field="primaryKeyword" currentSort={sort} order={sortOrder} />
+                  </th>
+                  <th
+                    className="px-2.5 py-2.5 text-center text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5 cursor-pointer hover:text-accent transition-colors select-none"
+                    onClick={() => onSortChange('volume')}
+                  >
+                    Volume<SortIndicator field="volume" currentSort={sort} order={sortOrder} />
+                  </th>
+                  <th
+                    className="px-2.5 py-2.5 text-center text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5 cursor-pointer hover:text-accent transition-colors select-none"
+                    onClick={() => onSortChange('cpc')}
+                  >
+                    CPC<SortIndicator field="cpc" currentSort={sort} order={sortOrder} />
+                  </th>
+                  <th
+                    className="px-2.5 py-2.5 text-center text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5 cursor-pointer hover:text-accent transition-colors select-none"
+                    onClick={() => onSortChange('difficulty')}
+                  >
+                    Difficulty<SortIndicator field="difficulty" currentSort={sort} order={sortOrder} />
+                  </th>
+                  <th className="px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5">
+                    Keywords
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {previewRows.map((row, index) => (
+                  <tr
+                    key={`${row.cluster}-${index}`}
+                    className={cn(
+                      'align-top transition-colors hover:bg-accent/[0.02] cursor-pointer',
+                      index % 2 === 1 && 'bg-surface-inset/30',
+                    )}
+                    onClick={() => onKeywordClick?.(row)}
+                  >
+                    <td className="max-w-[140px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[200px]" title={row.existingParentPage}>
+                      {row.existingParentPage}
+                    </td>
+                    <td className="max-w-[120px] truncate px-2.5 py-2.5 font-medium text-body-sm sm:px-3.5 md:max-w-[160px]" title={row.pillar}>
+                      {row.pillar}
+                    </td>
+                    <td className="max-w-[120px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[160px]" title={row.cluster}>
+                      {row.cluster}
+                    </td>
+                    <td className="px-2.5 py-2.5 sm:px-3.5">
+                      <IntentBadge intent={row.intent || ''} />
+                    </td>
+                    <td className="max-w-[120px] truncate px-2.5 py-2.5 font-medium text-body-sm sm:px-3.5 md:max-w-[160px]" title={row.primaryKeyword}>
+                      {row.primaryKeyword}
+                    </td>
+                    <td className="px-2.5 py-2.5 text-center font-mono text-body-sm text-text-secondary sm:px-3.5" title={row.searchVolume != null ? String(row.searchVolume) : 'N/A'}>
+                      {row.searchVolume != null ? row.searchVolume.toLocaleString() : '—'}
+                    </td>
+                    <td className="px-2.5 py-2.5 text-center font-mono text-body-sm text-text-secondary sm:px-3.5" title={row.cpc != null ? String(row.cpc) : 'N/A'}>
+                      {row.cpc != null ? `$${row.cpc.toFixed(2)}` : '—'}
+                    </td>
+                    <td className="px-2.5 py-2.5 text-center sm:px-3.5">
+                      {row.difficulty != null ? (
+                        <DifficultyBadge difficulty={row.difficulty} showLabel={false} />
+                      ) : (
+                        <span className="text-body-sm text-text-muted">—</span>
+                      )}
+                    </td>
+                    <td className="max-w-[140px] truncate px-2.5 py-2.5 text-body-sm text-text-secondary sm:px-3.5 md:max-w-[200px]" title={row.keywords.join(', ')}>
+                      {row.keywords.join(', ')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
-      {previewRows.length > 0 && (
+      {(hasData || rowCount > 0) && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 px-3 py-2.5 sm:px-4 sm:py-3">
           <div className="flex items-center gap-2">
             <span className="text-caption text-text-muted hidden sm:inline">Rows per page:</span>
@@ -803,11 +1248,11 @@ function PreviewTable({
           </div>
           <div className="flex items-center gap-1">
             <span className="text-caption text-text-muted">
-              {currentPage + 1}/{totalPages}
+              {currentPage}/{totalPages}
             </span>
             <button
               onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 0}
+              disabled={currentPage <= 1}
               className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer min-h-tap min-w-[32px] flex items-center justify-center"
               aria-label="Previous page"
             >
@@ -815,7 +1260,7 @@ function PreviewTable({
             </button>
             <button
               onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages - 1}
+              disabled={currentPage >= totalPages}
               className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer min-h-tap min-w-[32px] flex items-center justify-center"
               aria-label="Next page"
             >

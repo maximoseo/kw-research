@@ -92,6 +92,16 @@ export function deriveResearchProcess(run: RunLike) {
       return { ...step, state: 'complete' as const };
     }
 
+    if (run.status === 'cancelled') {
+      if (index < currentIndex) {
+        return { ...step, state: 'complete' as const };
+      }
+      if (index === currentIndex) {
+        return { ...step, state: 'failed' as const };
+      }
+      return { ...step, state: 'upcoming' as const };
+    }
+
     if (index < currentIndex) {
       return { ...step, state: 'complete' as const };
     }
@@ -114,9 +124,11 @@ export function deriveResearchProcess(run: RunLike) {
       ? 'Research complete'
       : run.status === 'failed'
         ? 'Research failed'
-        : run.status === 'processing'
-          ? `${currentStep.label} in progress`
-          : 'Queued for processing';
+        : run.status === 'cancelled'
+          ? 'Research cancelled'
+          : run.status === 'processing'
+            ? `${currentStep.label} in progress`
+            : 'Queued for processing';
 
   return {
     headline,
@@ -133,10 +145,12 @@ export function deriveResearchProcess(run: RunLike) {
     helperText:
       run.status === 'failed'
         ? run.errorMessage || run.step || 'The research run stopped before the workbook was created.'
-        : run.status === 'completed'
-          ? run.workbookName
-            ? `Workbook ready: ${run.workbookName}`
-            : 'Workbook verified and ready to download.'
-          : run.step || currentStep.description,
+        : run.status === 'cancelled'
+          ? 'Research was cancelled by user.'
+          : run.status === 'completed'
+            ? run.workbookName
+              ? `Workbook ready: ${run.workbookName}`
+              : 'Workbook verified and ready to download.'
+            : run.step || currentStep.description,
   };
 }

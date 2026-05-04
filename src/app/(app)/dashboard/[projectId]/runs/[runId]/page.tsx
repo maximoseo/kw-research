@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import ResearchDashboard from '@/components/research/ResearchDashboard';
 import { requireProjectAccess } from '@/server/auth/guards';
@@ -14,5 +15,9 @@ export default async function ProjectRunDetailPage({
     redirect(`/dashboard/${project.id}`);
   }
 
-  return <ResearchDashboard project={project} initialRunId={params.runId} />;
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" /></div>}>
+      <ResearchDashboard project={project} initialRunId={params.runId} />
+    </Suspense>
+  );
 }

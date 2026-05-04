@@ -19,6 +19,7 @@ import {
   heartbeatRun,
   updateRunState,
 } from './repository';
+import { assertNotCancelled, updateRunProgress } from './worker';
 import { validateAndNormalizeRows, verifyWorkbookBuffer } from './qa';
 import {
   buildSlugPath,
@@ -1394,9 +1395,14 @@ function buildRows(params: {
 export async function runResearchPipeline(params: {
   runId: string;
   input: ResearchInputSnapshot;
+  /** Set to true to bypass cache and force fresh API calls */
+  refresh?: boolean;
 }) {
-  const { runId, input } = params;
+  const { runId, input, refresh } = params;
   const aiState: AiAvailabilityState = { enabled: true };
+
+  await assertNotCancelled(runId);
+  await updateRunProgress(runId, 5, 'Fetching sitemap and required pages');
 
   await log(runId, 'crawl', 'Fetching sitemap and required pages');
   const {
@@ -1405,10 +1411,16 @@ export async function runResearchPipeline(params: {
     existingContentMap,
   } = await buildSiteEvidence(input);
 
+  await assertNotCancelled(runId);
+  await updateRunProgress(runId, 15, 'Understanding the business and existing coverage');
+
   await log(runId, 'analysis', 'Understanding the business and existing coverage', {
     sitemapUrls: sitemapUrls.length,
     pageEvidence: pageSnapshots.length,
   });
+
+  await assertNotCancelled(runId);
+  await updateRunProgress(runId, 25, 'Discovering relevant competitors');
 
   await log(runId, 'competitors', 'Discovering relevant competitors');
   const {
@@ -1435,12 +1447,18 @@ export async function runResearchPipeline(params: {
     },
   });
 
+  await assertNotCancelled(runId);
+  await updateRunProgress(runId, 40, 'Competitive analysis complete');
+
   const desiredPillarCount = clamp(Math.round(input.targetRows / 14), 10, 15);
   const desiredClustersPerPillar = clamp(
     Math.ceil((input.targetRows - desiredPillarCount) / desiredPillarCount) + 1,
     10,
     15,
   );
+
+  await assertNotCancelled(runId);
+  await updateRunProgress(runId, 50, 'Generating pillar opportunities');
 
   await log(runId, 'pillars', 'Generating pillar opportunities', {
     desiredPillarCount,
@@ -1554,6 +1572,9 @@ export async function runResearchPipeline(params: {
 
   const pillarBundles: Array<PillarCandidate & { clusters: ClusterCandidate[] }> = [];
 
+  await assertNotCancelled(runId);
+  await updateRunProgress(runId, 60, `Generating clusters for ${pillars.length} pillars`);
+
   await log(runId, 'clusters', `Generating clusters for ${pillars.length} pillars using swarm orchestration`);
   const swarmBundles = await runSwarmClusterGeneration({
     input,
@@ -1590,6 +1611,9 @@ export async function runResearchPipeline(params: {
     targetRows: input.targetRows,
   });
 
+  await assertNotCancelled(runId);
+  await updateRunProgress(runId, 75, 'Enriching keyword metrics from real data sources', rawRows.length);
+
   await log(runId, 'metrics', 'Enriching keyword metrics from real data sources');
 
   const primaryKeywords = dedupeStrings(rawRows.map((row) => row.primaryKeyword));
@@ -1606,6 +1630,9 @@ export async function runResearchPipeline(params: {
       row.cpc = metrics.cpc;
     }
   }
+
+  await assertNotCancelled(runId);
+  await updateRunProgress(runId, 85, 'Validating and normalizing generated rows', rawRows.length);
 
   await log(runId, 'qa', 'Validating and normalizing generated rows', { rawRowCount: rawRows.length });
   const normalized = validateAndNormalizeRows(rawRows, input.brandName, {
@@ -1631,6 +1658,9 @@ export async function runResearchPipeline(params: {
     pillarCount: pillarBundles.length,
     clusterCount: normalized.rows.filter((r) => r.rowType === 'cluster').length,
   });
+
+  await assertNotCancelled(runId);
+  await updateRunProgress(runId, 92, 'Building the Excel workbook', normalized.rows.length);
 
   await log(runId, 'export', 'Building the Excel workbook');
   const workbookBuffer = await buildWorkbook({

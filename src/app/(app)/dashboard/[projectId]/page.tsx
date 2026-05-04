@@ -1,4 +1,5 @@
-import ResearchDashboard from '@/components/research/ResearchDashboard';
+import { Suspense } from 'react';
+import ProjectDashboardView from '@/components/research/ProjectDashboardView';
 import { requireProjectAccess } from '@/server/auth/guards';
 
 export const metadata = {
@@ -12,5 +13,9 @@ export default async function ProjectDashboardPage({
 }) {
   const { project } = await requireProjectAccess(params.projectId);
 
-  return <ResearchDashboard project={project} />;
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" /></div>}>
+      <ProjectDashboardView project={project} />
+    </Suspense>
+  );
 }

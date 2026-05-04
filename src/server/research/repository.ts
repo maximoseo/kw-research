@@ -38,6 +38,7 @@ export async function createProjectAndRun(params: {
   notes: string;
   targetRows: number;
   mode: 'fresh' | 'expand';
+  refresh?: boolean;
   uploadedFile?: {
     originalName: string;
     storedPath: string;
@@ -82,7 +83,7 @@ export async function createProjectAndRun(params: {
     });
   }
 
-  const inputSnapshot: ResearchInputSnapshot = {
+  const inputSnapshot: ResearchInputSnapshot & { refresh?: boolean } = {
     homepageUrl: params.homepageUrl,
     aboutUrl: params.aboutUrl,
     sitemapUrl: params.sitemapUrl,
@@ -94,6 +95,7 @@ export async function createProjectAndRun(params: {
     targetRows: params.targetRows,
     mode: params.mode,
     existingResearchSummary: params.uploadedFile?.summary || null,
+    refresh: params.refresh,
   };
 
   await db.insert(researchRuns).values({
@@ -341,6 +343,7 @@ export async function createRunForProject(params: {
   notes: string;
   targetRows: number;
   mode: 'fresh' | 'expand';
+  refresh?: boolean;
   uploadedFile?: {
     originalName: string;
     storedPath: string;
@@ -373,7 +376,7 @@ export async function createRunForProject(params: {
     });
   }
 
-  const inputSnapshot: ResearchInputSnapshot = {
+  const inputSnapshot: ResearchInputSnapshot & { refresh?: boolean } = {
     homepageUrl: project.homepageUrl,
     aboutUrl: project.aboutUrl,
     sitemapUrl: project.sitemapUrl,
@@ -385,6 +388,7 @@ export async function createRunForProject(params: {
     targetRows: params.targetRows,
     mode: params.mode,
     existingResearchSummary: params.uploadedFile?.summary || null,
+    refresh: params.refresh,
   };
 
   await db.insert(researchRuns).values({
@@ -516,6 +520,7 @@ export async function getRunForUser(userId: string, runId: string): Promise<Rese
       mode: researchRuns.mode,
       status: researchRuns.status,
       step: researchRuns.step,
+      progress: researchRuns.progress,
       targetRows: researchRuns.targetRows,
       queuedAt: researchRuns.queuedAt,
       completedAt: researchRuns.completedAt,

@@ -8,3 +8,4 @@ export { default as Tabs } from './Tabs';
 export { default as Metric } from './Metric';
 export { default as ScrollArea } from './ScrollArea';
 export { default as SectionLabel } from './SectionLabel';
+export { default as Skeleton } from './Skeleton';

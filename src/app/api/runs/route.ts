@@ -92,6 +92,7 @@ export async function POST(request: Request) {
         notes: parsedRun.data.notes,
         targetRows: parsedRun.data.targetRows,
         mode: parsedRun.data.mode,
+        refresh: formData.get('refresh') === 'true',
         uploadedFile: storedUpload,
       });
 
@@ -144,6 +145,7 @@ export async function POST(request: Request) {
       notes: parsed.data.notes,
       targetRows: parsed.data.targetRows,
       mode: parsed.data.mode,
+      refresh: formData.get('refresh') === 'true',
       uploadedFile: storedUpload,
     });
 

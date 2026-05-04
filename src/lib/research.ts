@@ -1,6 +1,6 @@
 export type SiteLanguage = 'English' | 'Hebrew';
 export type ResearchMode = 'fresh' | 'expand';
-export type ResearchStatus = 'queued' | 'processing' | 'completed' | 'failed';
+export type ResearchStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
 export type ResearchIntent = 'Informational' | 'Commercial' | 'Transactional' | 'Navigational';
 
 export type ResearchInputSnapshot = {
@@ -30,6 +30,7 @@ export type ResearchRow = {
   notes?: string[];
   searchVolume?: number | null;
   cpc?: number | null;
+  difficulty?: number | null;
 };
 
 export type UploadedResearchSummary = {

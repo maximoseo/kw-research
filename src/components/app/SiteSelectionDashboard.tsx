@@ -34,6 +34,7 @@ const runStatusVisual: Record<ResearchStatus | 'none', RunStatusVisual> = {
   processing: { label: 'Processing', variant: 'warning' },
   completed: { label: 'Completed', variant: 'success' },
   failed: { label: 'Failed', variant: 'error' },
+  cancelled: { label: 'Cancelled', variant: 'warning' },
   none: { label: 'No runs yet', variant: 'neutral' },
 };
 
