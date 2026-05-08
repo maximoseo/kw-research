@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { Sora, DM_Sans } from 'next/font/google';
 import { Providers } from '@/app/providers';
@@ -36,7 +36,6 @@ export const metadata: Metadata = {
   description:
     'Production keyword research workspace for pillar and cluster planning, cannibalization avoidance, and polished XLSX exports.',
   manifest: '/site.webmanifest',
-  themeColor: '#0d9488',
   icons: {
     icon: [
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
@@ -44,6 +43,10 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: '/apple-icon.png', sizes: '180x180' }],
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0d9488',
 };
 
 export default function RootLayout({

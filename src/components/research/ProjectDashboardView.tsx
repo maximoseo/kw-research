@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, FileText, GanttChart, GitMerge, Globe, Radar, ShieldAlert } from 'lucide-react';
+import { FileText, GanttChart, GitMerge, Globe, Radar, Settings2, ShieldAlert } from 'lucide-react';
 import type { ResearchProjectDetail } from '@/lib/research';
-import { Tabs } from '@/components/ui';
+import { Button, Card, Tabs } from '@/components/ui';
 import ResearchDashboard from './ResearchDashboard';
 import ContentGapAnalysis from './ContentGapAnalysis';
 import ContentBriefGenerator from './ContentBriefGenerator';
@@ -69,59 +69,54 @@ export default function ProjectDashboardView({ project }: { project: ResearchPro
 
   return (
     <div className="min-w-0 space-y-5">
-      {/* Domain input bar */}
-      <div className="flex flex-col gap-2.5 rounded-xl border border-border/50 bg-surface-raised/40 px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:py-2.5">
-        <div className="flex items-center gap-2 shrink-0">
-          <Globe className="h-4 w-4 text-text-muted shrink-0" />
-          <label className="text-body-sm font-medium text-text-secondary whitespace-nowrap">
-            Your domain:
-          </label>
-        </div>
-        <div className="flex flex-1 items-center gap-2">
-          <input
-            type="text"
-            className="field-input min-w-0 flex-1 text-body-sm"
-            placeholder="e.g. example.com"
-            value={domainInputValue}
-            onChange={(e) => setDomainInputValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleDomainSave();
-            }}
-          />
-          <button
-            type="button"
-            className="min-h-tap shrink-0 rounded-lg px-3 py-2 text-caption font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
-            onClick={handleDomainSave}
-          >
-            Set
-          </button>
-          {userDomain && (
-            <button
-              type="button"
-              className="min-h-tap shrink-0 rounded-lg px-2 py-2 text-caption text-text-muted hover:text-destructive transition-colors"
-              onClick={handleDomainClear}
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        {userDomain ? (
-          <span className="text-caption text-success font-medium whitespace-nowrap">
-            ✓ {userDomain}
-          </span>
-        ) : (
-          <span className="hidden text-caption text-text-muted whitespace-nowrap sm:block">
-            Set to see personal difficulty
-          </span>
-        )}
-      </div>
+      <Card className="space-y-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
+            <p className="eyebrow">Project workspace</p>
+            <div>
+              <h1 className="text-heading-1">{project.name}</h1>
+              <p className="mt-1 text-body text-text-secondary">
+                {project.brandName} · {project.market} · {project.language}
+              </p>
+            </div>
+          </div>
 
-      {/* Tab bar — icons on mobile, labels on sm+ */}
-      <Tabs
-        tabs={tabs.map(t => ({ id: t.id, label: t.label, icon: t.icon }))}
-        activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as DashboardTab)}
-      />
+          <div className="rounded-xl border border-border/50 bg-surface-raised/50 px-4 py-3 lg:min-w-[340px]">
+            <div className="mb-2 flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-text-muted" />
+              <p className="text-caption font-medium text-text-secondary">Personal difficulty domain</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                <input
+                  type="text"
+                  className="field-input min-w-0 w-full pl-9 text-body-sm"
+                  placeholder="e.g. example.com"
+                  value={domainInputValue}
+                  onChange={(e) => setDomainInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleDomainSave();
+                  }}
+                />
+              </div>
+              <Button type="button" size="sm" onClick={handleDomainSave}>Set</Button>
+              {userDomain && (
+                <Button type="button" size="sm" variant="ghost" onClick={handleDomainClear}>Clear</Button>
+              )}
+            </div>
+            <p className="mt-2 text-caption text-text-muted">
+              {userDomain ? `Active domain: ${userDomain}` : 'Set your domain to unlock personal difficulty insights.'}
+            </p>
+          </div>
+        </div>
+
+        <Tabs
+          tabs={tabs.map(t => ({ id: t.id, label: t.label, icon: t.icon }))}
+          activeTab={activeTab}
+          onChange={(id) => setActiveTab(id as DashboardTab)}
+        />
+      </Card>
 
       {/* Tab content */}
       {activeTab === 'research' && <ResearchDashboard project={project} userDomain={userDomain} />}
