@@ -15,6 +15,7 @@ import {
 import { Alert, Badge, Button, Card, EmptyState, Field } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import { cn } from '@/lib/utils';
+import { chartTheme } from '@/lib/chart-theme';
 import type { OverlapResponse, OverlapSets, OverlapStats } from '@/app/api/competitors/overlap/route';
 
 // ---------------------------------------------------------------------------
@@ -48,9 +49,9 @@ interface SegmentInfo {
 // ---------------------------------------------------------------------------
 
 const COLORS = {
-  domain1: { fill: 'rgba(59, 130, 246, 0.28)', stroke: '#3b82f6', label: 'Blue' },
-  domain2: { fill: 'rgba(239, 68, 68, 0.28)', stroke: '#ef4444', label: 'Red' },
-  domain3: { fill: 'rgba(34, 197, 94, 0.28)', stroke: '#22c55e', label: 'Green' },
+  domain1: { fill: chartTheme.series[1].replace(')', ' / 0.28)'), stroke: chartTheme.series[1], label: 'Blue' },
+  domain2: { fill: chartTheme.negative.replace(')', ' / 0.28)'), stroke: chartTheme.negative, label: 'Red' },
+  domain3: { fill: chartTheme.positive.replace(')', ' / 0.28)'), stroke: chartTheme.positive, label: 'Green' },
 };
 
 // ---------------------------------------------------------------------------
@@ -188,7 +189,7 @@ function TwoDomainVenn({
       id: 'shared',
       label: `${domains[0]} ∩ ${domains[1]}`,
       keywords: sets.shared,
-      color: '#a855f7', // purple for overlap
+      color: chartTheme.overlap, // purple for overlap
     },
     {
       id: 'domain2Only',
@@ -390,25 +391,25 @@ function ThreeDomainVenn({
       id: 'shared',
       label: `${domains[0]} ∩ ${domains[1]}`,
       keywords: sets.shared,
-      color: '#a855f7',
+      color: chartTheme.overlap,
     },
     {
       id: 'domain1SharedWith3',
       label: `${domains[0]} ∩ ${domains[2]}`,
       keywords: sets.domain1SharedWith3 || [],
-      color: '#06b6d4',
+      color: chartTheme.series[1],
     },
     {
       id: 'domain2SharedWith3',
       label: `${domains[1]} ∩ ${domains[2]}`,
       keywords: sets.domain2SharedWith3 || [],
-      color: '#f59e0b',
+      color: chartTheme.series[3],
     },
     {
       id: 'all3',
       label: `All 3 domains`,
       keywords: sets.all3 || [],
-      color: '#ec4899',
+      color: chartTheme.series[0],
     },
   ];
 
@@ -441,11 +442,11 @@ function ThreeDomainVenn({
       case 'domain1Only': return COLORS.domain1.stroke;
       case 'domain2Only': return COLORS.domain2.stroke;
       case 'domain3Only': return COLORS.domain3.stroke;
-      case 'shared': return '#a855f7';
-      case 'domain1SharedWith3': return '#06b6d4';
-      case 'domain2SharedWith3': return '#f59e0b';
-      case 'all3': return '#ec4899';
-      default: return '#888';
+      case 'shared': return chartTheme.overlap;
+      case 'domain1SharedWith3': return chartTheme.series[1];
+      case 'domain2SharedWith3': return chartTheme.series[3];
+      case 'all3': return chartTheme.series[0];
+      default: return chartTheme.neutral;
     }
   };
 
@@ -540,7 +541,7 @@ function OverlapStatsSummary({
   stats: OverlapStats;
   domains: string[];
 }) {
-  const items = [
+  const items: { label: string; value: number; color: string }[] = [
     {
       label: `Unique to ${domains[0]}`,
       value: stats.domain1OnlyCount,
@@ -551,7 +552,7 @@ function OverlapStatsSummary({
       value: stats.domain2OnlyCount,
       color: COLORS.domain2.stroke,
     },
-    { label: 'Shared', value: stats.sharedCount, color: '#a855f7' },
+    { label: 'Shared', value: stats.sharedCount, color: chartTheme.overlap },
   ];
 
   if (domains.length >= 3) {
@@ -563,14 +564,14 @@ function OverlapStatsSummary({
     items.push({
       label: 'Shared by all 3',
       value: stats.sharedAll3Count ?? 0,
-      color: '#ec4899',
+      color: chartTheme.series[0],
     });
   }
 
   items.push({
     label: 'Total unique keywords',
     value: stats.totalUnique,
-    color: '#6b7280',
+    color: chartTheme.neutral,
   });
 
   return (

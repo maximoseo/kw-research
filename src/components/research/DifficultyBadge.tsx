@@ -5,11 +5,11 @@ import { cn } from '@/lib/utils';
 
 // ── Color & label mapping ──
 const DIFFICULTY_LEVELS = [
-  { min: 0, max: 20, color: '#16a34a', bg: 'rgba(22,163,74,0.12)', label: 'Easy' },
-  { min: 21, max: 40, color: '#65a30d', bg: 'rgba(101,163,13,0.12)', label: 'Low' },
-  { min: 41, max: 60, color: '#ca8a04', bg: 'rgba(202,138,4,0.12)', label: 'Medium' },
-  { min: 61, max: 80, color: '#ea580c', bg: 'rgba(234,88,12,0.12)', label: 'Hard' },
-  { min: 81, max: 100, color: '#dc2626', bg: 'rgba(220,38,38,0.12)', label: 'Very Hard' },
+  { min: 0,  max: 20,  colorVar: 'hsl(var(--success))',     bgVar: 'hsl(var(--success) / 0.12)',     label: 'Easy'      },
+  { min: 21, max: 40,  colorVar: 'hsl(142 72% 40%)',        bgVar: 'hsl(142 72% 40% / 0.12)',        label: 'Low'       },
+  { min: 41, max: 60,  colorVar: 'hsl(var(--warning))',     bgVar: 'hsl(var(--warning) / 0.12)',     label: 'Medium'    },
+  { min: 61, max: 80,  colorVar: 'hsl(25 90% 52%)',         bgVar: 'hsl(25 90% 52% / 0.12)',         label: 'Hard'      },
+  { min: 81, max: 100, colorVar: 'hsl(var(--destructive))', bgVar: 'hsl(var(--destructive) / 0.12)', label: 'Very Hard' },
 ] as const;
 
 function getLevel(difficulty: number) {
@@ -104,12 +104,12 @@ function BadgeVariant({
         className,
       )}
       style={{
-        backgroundColor: level.bg,
-        color: level.color,
-        border: `1px solid ${level.color}33`,
+        backgroundColor: level.bgVar,
+        color: level.colorVar,
+        border: `1px solid ${level.colorVar.replace(')', ' / 0.2)')}`,
         ...(colorblind
           ? {
-              backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 3px, ${level.color}18 3px, ${level.color}18 6px)`,
+              backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 3px, ${level.colorVar.replace(')', ' / 0.1)')} 3px, ${level.colorVar.replace(')', ' / 0.1)')} 6px)`,
             }
           : {}),
       }}
@@ -148,8 +148,8 @@ function BarVariant({
           colorblind && 'cb-striped-bar',
         )}
         style={{
-          backgroundColor: `${level.color}26`,
-          border: `1px solid ${level.color}33`,
+          backgroundColor: `${level.colorVar.replace(')', ' / 0.15)')}`,
+          border: `1px solid ${level.colorVar.replace(')', ' / 0.2)')}`,
         }}
       >
         <span
@@ -159,7 +159,7 @@ function BarVariant({
           )}
           style={{
             width: `${clamped}%`,
-            backgroundColor: level.color,
+            backgroundColor: level.colorVar,
             ...(colorblind
               ? {
                   backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(0,0,0,0.15) 4px, rgba(0,0,0,0.15) 8px)`,
@@ -169,7 +169,7 @@ function BarVariant({
         />
       </span>
       {showLabel && (
-        <span className="text-[11px] font-semibold whitespace-nowrap" style={{ color: level.color }}>
+        <span className="text-[11px] font-semibold whitespace-nowrap" style={{ color: level.colorVar }}>
           {clamped} {level.label}
         </span>
       )}

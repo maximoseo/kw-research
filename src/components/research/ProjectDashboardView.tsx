@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BarChart3, FileText, GanttChart, GitMerge, Globe, Radar, ShieldAlert } from 'lucide-react';
 import type { ResearchProjectDetail } from '@/lib/research';
+import { Tabs } from '@/components/ui';
 import ResearchDashboard from './ResearchDashboard';
 import ContentGapAnalysis from './ContentGapAnalysis';
 import ContentBriefGenerator from './ContentBriefGenerator';
@@ -67,17 +68,19 @@ export default function ProjectDashboardView({ project }: { project: ResearchPro
   }, []);
 
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="min-w-0 space-y-5">
       {/* Domain input bar */}
-      <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-surface-raised/40 px-4 py-2.5">
-        <Globe className="h-4 w-4 text-text-muted shrink-0" />
-        <label className="text-body-sm font-medium text-text-secondary whitespace-nowrap">
-          Your domain:
-        </label>
-        <div className="flex items-center gap-2 flex-1">
+      <div className="flex flex-col gap-2.5 rounded-xl border border-border/50 bg-surface-raised/40 px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:py-2.5">
+        <div className="flex items-center gap-2 shrink-0">
+          <Globe className="h-4 w-4 text-text-muted shrink-0" />
+          <label className="text-body-sm font-medium text-text-secondary whitespace-nowrap">
+            Your domain:
+          </label>
+        </div>
+        <div className="flex flex-1 items-center gap-2">
           <input
             type="text"
-            className="field-input flex-1 max-w-sm text-body-sm"
+            className="field-input min-w-0 flex-1 text-body-sm"
             placeholder="e.g. example.com"
             value={domainInputValue}
             onChange={(e) => setDomainInputValue(e.target.value)}
@@ -87,7 +90,7 @@ export default function ProjectDashboardView({ project }: { project: ResearchPro
           />
           <button
             type="button"
-            className="rounded-md px-3 py-1 text-caption font-medium bg-accent text-white hover:bg-accent/90 transition-colors"
+            className="min-h-tap shrink-0 rounded-lg px-3 py-2 text-caption font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
             onClick={handleDomainSave}
           >
             Set
@@ -95,43 +98,30 @@ export default function ProjectDashboardView({ project }: { project: ResearchPro
           {userDomain && (
             <button
               type="button"
-              className="rounded-md px-2 py-1 text-caption text-text-muted hover:text-red-500 transition-colors"
+              className="min-h-tap shrink-0 rounded-lg px-2 py-2 text-caption text-text-muted hover:text-destructive transition-colors"
               onClick={handleDomainClear}
             >
               Clear
             </button>
           )}
         </div>
-        {userDomain && (
-          <span className="text-caption text-accent font-medium whitespace-nowrap">
+        {userDomain ? (
+          <span className="text-caption text-success font-medium whitespace-nowrap">
             ✓ {userDomain}
           </span>
-        )}
-        {!userDomain && (
-          <span className="text-caption text-text-muted whitespace-nowrap">
+        ) : (
+          <span className="hidden text-caption text-text-muted whitespace-nowrap sm:block">
             Set to see personal difficulty
           </span>
         )}
       </div>
 
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 rounded-xl border border-border/50 bg-surface-raised/40 p-1 w-fit">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-body-sm font-semibold transition-all duration-150 ${
-              activeTab === tab.id
-                ? 'bg-surface text-text-primary shadow-[0_1px_3px_rgba(0,0,0,0.08)] ring-1 ring-border/30'
-                : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Tab bar — icons on mobile, labels on sm+ */}
+      <Tabs
+        tabs={tabs.map(t => ({ id: t.id, label: t.label, icon: t.icon }))}
+        activeTab={activeTab}
+        onChange={(id) => setActiveTab(id as DashboardTab)}
+      />
 
       {/* Tab content */}
       {activeTab === 'research' && <ResearchDashboard project={project} userDomain={userDomain} />}

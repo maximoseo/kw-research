@@ -7,6 +7,7 @@ interface Tab {
   id: string;
   label: string;
   hasContent?: boolean;
+  icon?: React.ReactNode;
 }
 
 interface TabsProps {
@@ -55,15 +56,26 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={cn(
-               'relative min-h-tap cursor-pointer whitespace-nowrap rounded-md px-4 py-2 text-body-sm font-semibold transition-all',
-               activeTab === tab.id
-                 ? 'bg-surface text-accent shadow-elevation-1'
-                 : 'text-text-muted hover:bg-surface/50 hover:text-text-primary',
-             )}
+              'relative flex min-h-[40px] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-body-sm font-semibold transition-all sm:px-4',
+              activeTab === tab.id
+                ? 'bg-surface text-accent shadow-elevation-1'
+                : 'text-text-muted hover:bg-surface/50 hover:text-text-primary',
+            )}
           >
-            {tab.label}
+            {tab.icon && (
+              <span className={cn(
+                'shrink-0',
+                activeTab === tab.id ? 'text-accent' : 'text-text-muted',
+              )}>
+                {tab.icon}
+              </span>
+            )}
+            {/* Label: hidden on xs when icon present, always shown on sm+ */}
+            <span className={cn(tab.icon ? 'hidden sm:inline' : '')}>
+              {tab.label}
+            </span>
             {tab.hasContent && (
-              <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-accent inline-block" />
+              <span className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-accent" />
             )}
           </button>
         ))}
