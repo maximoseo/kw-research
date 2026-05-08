@@ -1066,355 +1066,62 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
                   </Button>
                 ) : null}
               </div>
-              <Tabs
+              <RunWorkspaceTabs
                 activeTab={activeTab}
-                onChange={(value) => {
-                  setActiveTab(value as typeof activeTab);
-                  // Set seed keyword for questions tab from the selected run's brand
-                  if (value === 'questions' && selectedRun && !questionSeedKeyword) {
-                    setQuestionSeedKeyword(selectedRun.brandName || '');
-                  }
-                }}
-                tabs={[
-                  { id: 'preview', label: 'Preview', hasContent: filteredPreviewRows.length > 0 },
-                  { id: 'logs', label: 'Logs', hasContent: Boolean(selectedRun.logs.length) },
-                  { id: 'summary', label: 'Summary', hasContent: Boolean(selectedRun.resultSummary) },
-                  { id: 'questions', label: 'Questions', hasContent: questionSeedKeyword.length > 0 },
-                  { id: 'content-map', label: 'Content Map', hasContent: Boolean(selectedRun?.rows?.length) },
-                  { id: 'clusters', label: 'Clusters', hasContent: Boolean(selectedRun?.rows?.length) },
-                ]}
+                setActiveTab={setActiveTab}
+                selectedRun={selectedRun}
+                questionSeedKeyword={questionSeedKeyword}
+                setQuestionSeedKeyword={setQuestionSeedKeyword}
+                filteredPreviewRows={filteredPreviewRows}
+                previewRows={previewRows}
+                filterSearchQuery={filterSearchQuery}
+                setFilterSearchQuery={setFilterSearchQuery}
+                filterIntents={filterIntents}
+                setFilterIntents={setFilterIntents}
+                filterMinDifficulty={filterMinDifficulty}
+                setFilterMinDifficulty={setFilterMinDifficulty}
+                filterMaxDifficulty={filterMaxDifficulty}
+                setFilterMaxDifficulty={setFilterMaxDifficulty}
+                filterMinVolume={filterMinVolume}
+                setFilterMinVolume={setFilterMinVolume}
+                filterMaxVolume={filterMaxVolume}
+                setFilterMaxVolume={setFilterMaxVolume}
+                currentFilterState={currentFilterState}
+                handleLoadPreset={handleLoadPreset}
+                handlePageChange={handlePageChange}
+                setShowSavedSearches={setShowSavedSearches}
+                setTriggerSaveDialog={setTriggerSaveDialog}
+                showTrends={showTrends}
+                setShowTrends={setShowTrends}
+                setTrendData={setTrendData}
+                trendData={trendData}
+                trendLoading={trendLoading}
+                pagination={pagination}
+                previewPage={previewPage}
+                previewPageSize={previewPageSize}
+                isLoadingKeywords={isLoadingKeywords}
+                handlePageSizeChange={handlePageSizeChange}
+                previewSort={previewSort}
+                setPreviewSort={setPreviewSort}
+                previewSortOrder={previewSortOrder}
+                setPreviewSortOrder={setPreviewSortOrder}
+                setDetailKeyword={setDetailKeyword}
+                handleClassifyIntents={handleClassifyIntents}
+                isClassifyingIntents={isClassifyingIntents}
+                selectedKeywordSet={selectedKeywordSet}
+                handleKeywordSelection={handleKeywordSelection}
+                setShowSerpCompare={setShowSerpCompare}
+                serpFeaturesData={serpFeaturesData}
+                analyzingSerpFeatures={analyzingSerpFeatures}
+                handleAnalyzeSerpFeatures={handleAnalyzeSerpFeatures}
+                personalDifficultyMap={personalDifficultyMap}
+                loadingPersonalDifficulty={loadingPersonalDifficulty}
+                hasDomain={hasDomain}
+                handleToggleTrends={handleToggleTrends}
+                formatRelativeLabel={formatRelativeLabel}
+                projectId={project.id}
+                addToast={addToast}
               />
-              {activeTab === 'preview' ? (
-                <>
-                  {/* ── Filter Toolbar ── */}
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                    {/* Search — full width on mobile */}
-                    <div className="relative w-full sm:flex-1 sm:min-w-[180px] sm:max-w-[320px]">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
-                      <input
-                        type="text"
-                        value={filterSearchQuery}
-                        onChange={(e) => {
-                          setFilterSearchQuery(e.target.value);
-                          handlePageChange(1);
-                        }}
-                        onFocus={() => {}}
-                        placeholder="Search keywords…"
-                        className="field-input pl-8 pr-14 text-sm h-9 w-full"
-                      />
-                      <div className="absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          className="rounded p-1 text-text-muted hover:text-amber-400 hover:bg-amber-400/10 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setShowSavedSearches(true);
-                            setTriggerSaveDialog(true);
-                          }}
-                          title="Save this search (Ctrl+Shift+S)"
-                        >
-                          <Star className="h-3.5 w-3.5" />
-                        </button>
-                        {filterSearchQuery && (
-                          <button
-                            type="button"
-                            className="rounded p-1 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-                            onClick={() => setFilterSearchQuery('')}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Intent filter chips — horizontally scrollable on mobile */}
-                    <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
-                      {(['Informational', 'Commercial', 'Transactional', 'Navigational'] as const).map((intent) => {
-                        const active = filterIntents.includes(intent);
-                        return (
-                          <button
-                            key={intent}
-                            type="button"
-                            onClick={() => {
-                              setFilterIntents((prev) =>
-                                active
-                                  ? prev.filter((i) => i !== intent)
-                                  : [...prev, intent],
-                              );
-                              handlePageChange(1);
-                            }}
-                            className={cn(
-                              'min-h-[32px] shrink-0 rounded-md border px-2.5 py-0.5 text-caption font-medium transition-colors',
-                              active
-                                ? 'border-accent/30 bg-accent/[0.08] text-accent'
-                                : 'border-transparent bg-surface-inset text-text-muted hover:text-text-primary',
-                            )}
-                          >
-                            {intent}
-                          </button>
-                        );
-                      })}
-                      {filterIntents.length > 0 && (
-                        <button
-                          type="button"
-                          className="shrink-0 rounded px-1.5 py-0.5 text-caption text-text-muted hover:text-red-500"
-                          onClick={() => setFilterIntents([])}
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Difficulty range — hidden on mobile */}
-                    <div className="hidden md:flex items-center gap-1">
-                      <span className="text-caption text-text-muted hidden lg:inline">KD</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={filterMinDifficulty}
-                        onChange={(e) => {
-                          setFilterMinDifficulty(Number(e.target.value));
-                          handlePageChange(1);
-                        }}
-                        className="field-input w-14 text-sm h-8 px-1.5 text-center"
-                        title="Min difficulty"
-                      />
-                      <span className="text-caption text-text-muted">–</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={filterMaxDifficulty}
-                        onChange={(e) => {
-                          setFilterMaxDifficulty(Number(e.target.value));
-                          handlePageChange(1);
-                        }}
-                        className="field-input w-14 text-sm h-8 px-1.5 text-center"
-                        title="Max difficulty"
-                      />
-                    </div>
-
-                    {/* Volume range — hidden on mobile */}
-                    <div className="hidden md:flex items-center gap-1">
-                      <span className="text-caption text-text-muted hidden lg:inline">Vol</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={1_000_000}
-                        step={10}
-                        value={filterMinVolume}
-                        onChange={(e) => {
-                          setFilterMinVolume(Number(e.target.value));
-                          handlePageChange(1);
-                        }}
-                        className="field-input w-16 text-sm h-8 px-1.5 text-center"
-                        title="Min volume"
-                      />
-                      <span className="text-caption text-text-muted">–</span>
-                      <input
-                        type="number"
-                        max={1_000_000}
-                        step={10}
-                        value={filterMaxVolume}
-                        onChange={(e) => {
-                          setFilterMaxVolume(Number(e.target.value));
-                          handlePageChange(1);
-                        }}
-                        className="field-input w-16 text-sm h-8 px-1.5 text-center"
-                        title="Max volume"
-                      />
-                    </div>
-
-                    {/* FilterPresets (save/load) */}
-                    <FilterPresets
-                      currentFilters={currentFilterState}
-                      onLoadPreset={handleLoadPreset}
-                    />
-
-                    {/* Saved Searches trigger */}
-                    <button
-                      type="button"
-                      className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-surface-raised px-2.5 py-1.5 text-caption font-medium text-text-muted hover:text-text-primary hover:border-accent/30 transition-colors cursor-pointer"
-                      onClick={() => setShowSavedSearches(true)}
-                      title="Search history & saved searches"
-                    >
-                      <Bookmark className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Saved</span>
-                    </button>
-
-                    {/* Active filter count badge */}
-                    {(filterIntents.length > 0 ||
-                      filterMinDifficulty > 0 ||
-                      filterMaxDifficulty < 100 ||
-                      filterMinVolume > 0 ||
-                      filterMaxVolume < 1_000_000 ||
-                      filterSearchQuery) && (
-                      <button
-                        type="button"
-                        className="rounded-md border border-border/50 px-2 py-0.5 text-caption text-text-muted hover:text-red-500 hover:border-red-500/30"
-                        onClick={() => {
-                          setFilterIntents([]);
-                          setFilterMinDifficulty(0);
-                          setFilterMaxDifficulty(100);
-                          setFilterMinVolume(0);
-                          setFilterMaxVolume(1_000_000);
-                          setFilterSearchQuery('');
-                          handlePageChange(1);
-                        }}
-                      >
-                        Reset filters
-                      </button>
-                    )}
-
-                    {/* Filter result count */}
-                    {filteredPreviewRows.length !== previewRows.length && (
-                      <span className="text-caption text-text-muted whitespace-nowrap">
-                        {filteredPreviewRows.length} of {previewRows.length}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Desktop: full table */}
-                  <div className="hidden md:block">
-                    {/* Volume Trends Panel */}
-                    {showTrends && (
-                      <div className="mb-3 rounded-lg border border-accent/20 bg-surface-raised/50 p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-accent" />
-                            <span className="text-body font-semibold text-text-primary">Search Volume Trends</span>
-                            <span className="text-caption text-text-muted">Last 12 months · AI-estimated</span>
-                          </div>
-                          <button
-                            type="button"
-                            className="rounded p-1 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-                            onClick={() => { setShowTrends(false); setTrendData(null); }}
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <VolumeTrendChart data={trendData ?? []} loading={trendLoading} width={640} height={200} />
-                      </div>
-                    )}
-                    <PreviewTable
-                      previewRows={filteredPreviewRows}
-                      rowCount={pagination.total}
-                      status={selectedRun.status}
-                      currentPage={previewPage}
-                      totalPages={pagination.totalPages}
-                      pageSize={previewPageSize}
-                      isLoading={isLoadingKeywords}
-                      onPageChange={handlePageChange}
-                      onPageSizeChange={handlePageSizeChange}
-                      sort={previewSort}
-                      sortOrder={previewSortOrder}
-                      onSortChange={(field) => {
-                        if (field === previewSort) {
-                          setPreviewSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
-                        } else {
-                          setPreviewSort(field);
-                          setPreviewSortOrder('desc');
-                        }
-                        handlePageChange(1);
-                      }}
-                      onKeywordClick={(row) => setDetailKeyword(row)}
-                      onClassifyIntents={handleClassifyIntents}
-                      classifyingIntents={isClassifyingIntents}
-                      selectedKeywords={selectedKeywordSet}
-                      onSelectionChange={handleKeywordSelection}
-                      onCompareSerp={() => setShowSerpCompare(true)}
-                      serpFeaturesData={serpFeaturesData}
-                      analyzingSerpFeatures={analyzingSerpFeatures}
-                      onAnalyzeSerpFeatures={handleAnalyzeSerpFeatures}
-                      personalDifficultyMap={personalDifficultyMap}
-                      loadingPersonalDifficulty={loadingPersonalDifficulty}
-                      hasDomain={hasDomain}
-                      onShowTrends={handleToggleTrends}
-                      showTrends={showTrends}
-                    />
-                  </div>
-                  {/* Mobile: card/table view */}
-                  <div className="md:hidden">
-                    <MobileKeywordView
-                      keywords={filteredPreviewRows}
-                      onSelectKeyword={(row) => setDetailKeyword(row)}
-                    />
-                  </div>
-                </>
-              ) : null}
-              {activeTab === 'logs' ? (
-                <RunLogs entries={selectedRun.logs} status={selectedRun.status} formatRelativeLabel={formatRelativeLabel} />
-              ) : null}
-              {activeTab === 'summary' ? (
-                selectedRun.synthesisSnapshot ? (
-                  <ReportSynthesisView synthesis={selectedRun.synthesisSnapshot} />
-                ) : (
-                  <div className="grid gap-2.5 md:grid-cols-2">
-                    <Metric label="Run status" value={selectedRun.status} helper={selectedRun.step || 'No step reported'} />
-                    <Metric label="Workbook" value={selectedRun.workbookName || 'Pending'} helper={selectedRun.completedAt ? `Completed ${formatRelativeLabel(selectedRun.completedAt)}` : 'Not finished yet'} />
-                    <Metric label="Rows" value={String(selectedRun.rows.length || 0)} helper="Generated research rows" />
-                    <Metric label="Mode" value={selectedRun.mode === 'expand' ? 'Expand existing' : 'Fresh research'} helper={`Target ${selectedRun.targetRows} rows`} />
-                  </div>
-                )
-              ) : null}
-              {activeTab === 'questions' ? (
-                <div className="space-y-4">
-                  {!questionSeedKeyword && selectedRun ? (
-                    <div className="rounded-xl border border-border/40 bg-surface-raised/50 p-4">
-                      <p className="text-body text-text-secondary mb-3">
-                        Enter a keyword to discover related search questions (People Also Ask).
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          className="field-input flex-1"
-                          placeholder={`e.g., "${selectedRun.brandName} marketing"`}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              setQuestionSeedKeyword((e.target as HTMLInputElement).value.trim());
-                            }
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="primary"
-                          size="md"
-                          icon={<Search className="h-4 w-4" />}
-                          onClick={() => {
-                            const input = document.querySelector<HTMLInputElement>('.field-input.flex-1');
-                            if (input) setQuestionSeedKeyword(input.value.trim());
-                          }}
-                        >
-                          Search
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                  <QuestionsTab
-                    seedKeyword={questionSeedKeyword}
-                    onAddKeyword={(keyword) => {
-                      addToast(`"${keyword}" ready — add it in a new research run.`, 'success');
-                    }}
-                  />
-                </div>
-              ) : null}
-              {activeTab === 'content-map' ? (
-                <ContentMap
-                  keywords={selectedRun?.rows ?? []}
-                  projectId={project.id}
-                />
-              ) : null}
-              {activeTab === 'clusters' ? (
-                <KeywordClusters
-                  keywords={selectedRun?.rows ?? []}
-                  onGenerateContentBrief={(clusterName, clusterKeywords) => {
-                    addToast(
-                      `Content brief requested for "${clusterName}" with ${clusterKeywords.length} keywords.`,
-                      'success',
-                    );
-                  }}
-                />
-              ) : null}
             </div>
           )}
 
@@ -1705,6 +1412,376 @@ function LoadingSkeleton() {
         </div>
       ))}
     </div>
+  );
+}
+
+function RunWorkspaceTabs({
+  activeTab,
+  setActiveTab,
+  selectedRun,
+  questionSeedKeyword,
+  setQuestionSeedKeyword,
+  filteredPreviewRows,
+  previewRows,
+  filterSearchQuery,
+  setFilterSearchQuery,
+  filterIntents,
+  setFilterIntents,
+  filterMinDifficulty,
+  setFilterMinDifficulty,
+  filterMaxDifficulty,
+  setFilterMaxDifficulty,
+  filterMinVolume,
+  setFilterMinVolume,
+  filterMaxVolume,
+  setFilterMaxVolume,
+  currentFilterState,
+  handleLoadPreset,
+  handlePageChange,
+  setShowSavedSearches,
+  setTriggerSaveDialog,
+  showTrends,
+  setShowTrends,
+  setTrendData,
+  trendData,
+  trendLoading,
+  pagination,
+  previewPage,
+  previewPageSize,
+  isLoadingKeywords,
+  handlePageSizeChange,
+  previewSort,
+  setPreviewSort,
+  previewSortOrder,
+  setPreviewSortOrder,
+  setDetailKeyword,
+  handleClassifyIntents,
+  isClassifyingIntents,
+  selectedKeywordSet,
+  handleKeywordSelection,
+  setShowSerpCompare,
+  serpFeaturesData,
+  analyzingSerpFeatures,
+  handleAnalyzeSerpFeatures,
+  personalDifficultyMap,
+  loadingPersonalDifficulty,
+  hasDomain,
+  handleToggleTrends,
+  formatRelativeLabel,
+  projectId,
+  addToast,
+}: {
+  activeTab: 'preview' | 'logs' | 'summary' | 'questions' | 'content-map' | 'clusters';
+  setActiveTab: (value: 'preview' | 'logs' | 'summary' | 'questions' | 'content-map' | 'clusters') => void;
+  selectedRun: ResearchRunDetail;
+  questionSeedKeyword: string;
+  setQuestionSeedKeyword: (value: string) => void;
+  filteredPreviewRows: ResearchRow[];
+  previewRows: ResearchRow[];
+  filterSearchQuery: string;
+  setFilterSearchQuery: (value: string) => void;
+  filterIntents: string[];
+  setFilterIntents: React.Dispatch<React.SetStateAction<string[]>>;
+  filterMinDifficulty: number;
+  setFilterMinDifficulty: (value: number) => void;
+  filterMaxDifficulty: number;
+  setFilterMaxDifficulty: (value: number) => void;
+  filterMinVolume: number;
+  setFilterMinVolume: (value: number) => void;
+  filterMaxVolume: number;
+  setFilterMaxVolume: (value: number) => void;
+  currentFilterState: CurrentFilters;
+  handleLoadPreset: (preset: CurrentFilters) => void;
+  handlePageChange: (page: number) => void;
+  setShowSavedSearches: (value: boolean) => void;
+  setTriggerSaveDialog: (value: boolean) => void;
+  showTrends: boolean;
+  setShowTrends: (value: boolean) => void;
+  setTrendData: (value: VolumeTrendData[] | null) => void;
+  trendData: VolumeTrendData[] | null;
+  trendLoading: boolean;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  previewPage: number;
+  previewPageSize: number;
+  isLoadingKeywords: boolean;
+  handlePageSizeChange: (size: number) => void;
+  previewSort: string;
+  setPreviewSort: (value: string) => void;
+  previewSortOrder: string;
+  setPreviewSortOrder: React.Dispatch<React.SetStateAction<string>>;
+  setDetailKeyword: (row: ResearchRow | null) => void;
+  handleClassifyIntents: () => void;
+  isClassifyingIntents: boolean;
+  selectedKeywordSet: Set<string>;
+  handleKeywordSelection: (keyword: string, selected: boolean) => void;
+  setShowSerpCompare: (value: boolean) => void;
+  serpFeaturesData: Map<string, SerpFeature[]> | undefined;
+  analyzingSerpFeatures: boolean;
+  handleAnalyzeSerpFeatures: () => void;
+  personalDifficultyMap: Map<string, PersonalDifficultyData>;
+  loadingPersonalDifficulty: boolean;
+  hasDomain: boolean;
+  handleToggleTrends: () => void;
+  formatRelativeLabel: (value: string | number | Date | null | undefined, fallback?: string) => string;
+  projectId: string;
+  addToast: (message: string, type: 'error' | 'success') => void;
+}) {
+  return (
+    <>
+      <Tabs
+        activeTab={activeTab}
+        onChange={(value) => {
+          setActiveTab(value as typeof activeTab);
+          if (value === 'questions' && !questionSeedKeyword) {
+            setQuestionSeedKeyword(selectedRun.brandName || '');
+          }
+        }}
+        tabs={[
+          { id: 'preview', label: 'Preview', hasContent: filteredPreviewRows.length > 0 },
+          { id: 'logs', label: 'Logs', hasContent: Boolean(selectedRun.logs.length) },
+          { id: 'summary', label: 'Summary', hasContent: Boolean(selectedRun.resultSummary) },
+          { id: 'questions', label: 'Questions', hasContent: questionSeedKeyword.length > 0 },
+          { id: 'content-map', label: 'Content Map', hasContent: Boolean(selectedRun.rows?.length) },
+          { id: 'clusters', label: 'Clusters', hasContent: Boolean(selectedRun.rows?.length) },
+        ]}
+      />
+
+      {activeTab === 'preview' ? (
+        <>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="relative w-full sm:flex-1 sm:min-w-[180px] sm:max-w-[320px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+              <input
+                type="text"
+                value={filterSearchQuery}
+                onChange={(e) => {
+                  setFilterSearchQuery(e.target.value);
+                  handlePageChange(1);
+                }}
+                placeholder="Search keywords…"
+                className="field-input pl-8 pr-14 text-sm h-9 w-full"
+              />
+              <div className="absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                <button
+                  type="button"
+                  className="rounded p-1 text-text-muted hover:text-amber-400 hover:bg-amber-400/10 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setShowSavedSearches(true);
+                    setTriggerSaveDialog(true);
+                  }}
+                  title="Save this search (Ctrl+Shift+S)"
+                >
+                  <Star className="h-3.5 w-3.5" />
+                </button>
+                {filterSearchQuery && (
+                  <button
+                    type="button"
+                    className="rounded p-1 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                    onClick={() => setFilterSearchQuery('')}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
+              {(['Informational', 'Commercial', 'Transactional', 'Navigational'] as const).map((intent) => {
+                const active = filterIntents.includes(intent);
+                return (
+                  <button
+                    key={intent}
+                    type="button"
+                    onClick={() => {
+                      setFilterIntents((prev) => (active ? prev.filter((i) => i !== intent) : [...prev, intent]));
+                      handlePageChange(1);
+                    }}
+                    className={cn(
+                      'min-h-[32px] shrink-0 rounded-md border px-2.5 py-0.5 text-caption font-medium transition-colors',
+                      active
+                        ? 'border-accent/30 bg-accent/[0.08] text-accent'
+                        : 'border-transparent bg-surface-inset text-text-muted hover:text-text-primary',
+                    )}
+                  >
+                    {intent}
+                  </button>
+                );
+              })}
+              {filterIntents.length > 0 && (
+                <button type="button" className="shrink-0 rounded px-1.5 py-0.5 text-caption text-text-muted hover:text-red-500" onClick={() => setFilterIntents([])}>
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="hidden md:flex items-center gap-1">
+              <span className="text-caption text-text-muted hidden lg:inline">KD</span>
+              <input type="number" min={0} max={100} value={filterMinDifficulty} onChange={(e) => { setFilterMinDifficulty(Number(e.target.value)); handlePageChange(1); }} className="field-input w-14 text-sm h-8 px-1.5 text-center" title="Min difficulty" />
+              <span className="text-caption text-text-muted">–</span>
+              <input type="number" min={0} max={100} value={filterMaxDifficulty} onChange={(e) => { setFilterMaxDifficulty(Number(e.target.value)); handlePageChange(1); }} className="field-input w-14 text-sm h-8 px-1.5 text-center" title="Max difficulty" />
+            </div>
+
+            <div className="hidden md:flex items-center gap-1">
+              <span className="text-caption text-text-muted hidden lg:inline">Vol</span>
+              <input type="number" min={0} max={1_000_000} step={10} value={filterMinVolume} onChange={(e) => { setFilterMinVolume(Number(e.target.value)); handlePageChange(1); }} className="field-input w-16 text-sm h-8 px-1.5 text-center" title="Min volume" />
+              <span className="text-caption text-text-muted">–</span>
+              <input type="number" max={1_000_000} step={10} value={filterMaxVolume} onChange={(e) => { setFilterMaxVolume(Number(e.target.value)); handlePageChange(1); }} className="field-input w-16 text-sm h-8 px-1.5 text-center" title="Max volume" />
+            </div>
+
+            <FilterPresets currentFilters={currentFilterState} onLoadPreset={handleLoadPreset} />
+
+            <button
+              type="button"
+              className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-surface-raised px-2.5 py-1.5 text-caption font-medium text-text-muted hover:text-text-primary hover:border-accent/30 transition-colors cursor-pointer"
+              onClick={() => setShowSavedSearches(true)}
+              title="Search history & saved searches"
+            >
+              <Bookmark className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Saved</span>
+            </button>
+
+            {(filterIntents.length > 0 || filterMinDifficulty > 0 || filterMaxDifficulty < 100 || filterMinVolume > 0 || filterMaxVolume < 1_000_000 || filterSearchQuery) && (
+              <button
+                type="button"
+                className="rounded-md border border-border/50 px-2 py-0.5 text-caption text-text-muted hover:text-red-500 hover:border-red-500/30"
+                onClick={() => {
+                  setFilterIntents([]);
+                  setFilterMinDifficulty(0);
+                  setFilterMaxDifficulty(100);
+                  setFilterMinVolume(0);
+                  setFilterMaxVolume(1_000_000);
+                  setFilterSearchQuery('');
+                  handlePageChange(1);
+                }}
+              >
+                Reset filters
+              </button>
+            )}
+
+            {filteredPreviewRows.length !== previewRows.length && (
+              <span className="text-caption text-text-muted whitespace-nowrap">{filteredPreviewRows.length} of {previewRows.length}</span>
+            )}
+          </div>
+
+          <div className="hidden md:block">
+            {showTrends && (
+              <div className="mb-3 rounded-lg border border-accent/20 bg-surface-raised/50 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-accent" />
+                    <span className="text-body font-semibold text-text-primary">Search Volume Trends</span>
+                    <span className="text-caption text-text-muted">Last 12 months · AI-estimated</span>
+                  </div>
+                  <button type="button" className="rounded p-1 text-text-muted hover:text-text-primary transition-colors cursor-pointer" onClick={() => { setShowTrends(false); setTrendData(null); }}>
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <VolumeTrendChart data={trendData ?? []} loading={trendLoading} width={640} height={200} />
+              </div>
+            )}
+            <PreviewTable
+              previewRows={filteredPreviewRows}
+              rowCount={pagination.total}
+              status={selectedRun.status}
+              currentPage={previewPage}
+              totalPages={pagination.totalPages}
+              pageSize={previewPageSize}
+              isLoading={isLoadingKeywords}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              sort={previewSort}
+              sortOrder={previewSortOrder}
+              onSortChange={(field) => {
+                if (field === previewSort) {
+                  setPreviewSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+                } else {
+                  setPreviewSort(field);
+                  setPreviewSortOrder('desc');
+                }
+                handlePageChange(1);
+              }}
+              onKeywordClick={(row) => setDetailKeyword(row)}
+              onClassifyIntents={handleClassifyIntents}
+              classifyingIntents={isClassifyingIntents}
+              selectedKeywords={selectedKeywordSet}
+              onSelectionChange={handleKeywordSelection}
+              onCompareSerp={() => setShowSerpCompare(true)}
+              serpFeaturesData={serpFeaturesData}
+              analyzingSerpFeatures={analyzingSerpFeatures}
+              onAnalyzeSerpFeatures={handleAnalyzeSerpFeatures}
+              personalDifficultyMap={personalDifficultyMap}
+              loadingPersonalDifficulty={loadingPersonalDifficulty}
+              hasDomain={hasDomain}
+              onShowTrends={handleToggleTrends}
+              showTrends={showTrends}
+            />
+          </div>
+
+          <div className="md:hidden">
+            <MobileKeywordView keywords={filteredPreviewRows} onSelectKeyword={(row) => setDetailKeyword(row)} />
+          </div>
+        </>
+      ) : null}
+
+      {activeTab === 'logs' ? <RunLogs entries={selectedRun.logs} status={selectedRun.status} formatRelativeLabel={formatRelativeLabel} /> : null}
+      {activeTab === 'summary' ? (
+        selectedRun.synthesisSnapshot ? (
+          <ReportSynthesisView synthesis={selectedRun.synthesisSnapshot} />
+        ) : (
+          <div className="grid gap-2.5 md:grid-cols-2">
+            <Metric label="Run status" value={selectedRun.status} helper={selectedRun.step || 'No step reported'} />
+            <Metric label="Workbook" value={selectedRun.workbookName || 'Pending'} helper={selectedRun.completedAt ? `Completed ${formatRelativeLabel(selectedRun.completedAt)}` : 'Not finished yet'} />
+            <Metric label="Rows" value={String(selectedRun.rows.length || 0)} helper="Generated research rows" />
+            <Metric label="Mode" value={selectedRun.mode === 'expand' ? 'Expand existing' : 'Fresh research'} helper={`Target ${selectedRun.targetRows} rows`} />
+          </div>
+        )
+      ) : null}
+
+      {activeTab === 'questions' ? (
+        <div className="space-y-4">
+          {!questionSeedKeyword ? (
+            <div className="rounded-xl border border-border/40 bg-surface-raised/50 p-4">
+              <p className="mb-3 text-body text-text-secondary">Enter a keyword to discover related search questions (People Also Ask).</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  className="field-input flex-1"
+                  placeholder={`e.g., \"${selectedRun.brandName} marketing\"`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setQuestionSeedKeyword((e.target as HTMLInputElement).value.trim());
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  icon={<Search className="h-4 w-4" />}
+                  onClick={() => {
+                    const input = document.querySelector<HTMLInputElement>('.field-input.flex-1');
+                    if (input) setQuestionSeedKeyword(input.value.trim());
+                  }}
+                >
+                  Search
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          <QuestionsTab seedKeyword={questionSeedKeyword} onAddKeyword={(keyword) => addToast(`\"${keyword}\" ready — add it in a new research run.`, 'success')} />
+        </div>
+      ) : null}
+
+      {activeTab === 'content-map' ? <ContentMap keywords={selectedRun.rows ?? []} projectId={projectId} /> : null}
+      {activeTab === 'clusters' ? (
+        <KeywordClusters
+          keywords={selectedRun.rows ?? []}
+          onGenerateContentBrief={(clusterName, clusterKeywords) => {
+            addToast(`Content brief requested for \"${clusterName}\" with ${clusterKeywords.length} keywords.`, 'success');
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 
