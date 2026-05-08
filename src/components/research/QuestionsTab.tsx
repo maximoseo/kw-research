@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Download, HelpCircle, Loader2, Plus, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Badge, Button, EmptyState, Field } from '@/components/ui';
@@ -73,7 +73,7 @@ export default function QuestionsTab({ seedKeyword, onAddKeyword }: QuestionsTab
     staleTime: 5 * 60 * 1000,
   });
 
-  const questions = questionsQuery.data?.questions ?? [];
+  const questions = useMemo(() => questionsQuery.data?.questions ?? [], [questionsQuery.data]);
   const isCached = questionsQuery.data?.cached ?? false;
   const isLoading = questionsQuery.isLoading;
   const error = questionsQuery.error;

@@ -255,7 +255,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
     placeholderData: (prev) => prev, // keep previous data while loading next page
   });
 
-  const previewRows = keywordsQuery.data?.data ?? [];
+  const previewRows = useMemo(() => keywordsQuery.data?.data ?? [], [keywordsQuery.data]);
   const pagination = keywordsQuery.data?.pagination ?? { page: 1, limit: previewPageSize, total: 0, totalPages: 1 };
   const isLoadingKeywords = keywordsQuery.isFetching && !keywordsQuery.isPending;
 
@@ -581,7 +581,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
     } finally {
       setIsCancelling(false);
     }
-  }, [selectedRun, selectedRun?.id, project.id, addToast, queryClient]);
+  }, [selectedRun, project.id, addToast, queryClient]);
 
   const handleRerun = useCallback(async () => {
     if (!selectedRun?.input) return;

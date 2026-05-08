@@ -251,7 +251,7 @@ export default function ContentMap({ keywords, projectId }: ContentMapProps) {
     },
   });
 
-  const mappings = mappingsQuery.data ?? [];
+  const mappings = useMemo(() => mappingsQuery.data ?? [], [mappingsQuery.data]);
   const isLoading = mappingsQuery.isLoading;
   const isError = mappingsQuery.isError;
 
