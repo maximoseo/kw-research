@@ -110,7 +110,7 @@ function TPTooltip({
         <p className="text-caption text-text-muted leading-relaxed">
           Traffic Potential estimates total organic traffic a top-ranking page
           gets from <strong>all</strong> keywords it ranks for, not just the
-          target keyword. A page ranking #1 for "{keyword}" typically also ranks
+          target keyword. A page ranking #1 for &quot;{keyword}&quot; typically also ranks
           for {relatedKeywordCount != null ? `~${relatedKeywordCount}` : 'many'}{' '}
           related long-tail variants.
         </p>

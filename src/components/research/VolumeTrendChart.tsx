@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Skeleton from '@/components/ui/Skeleton';
+import { chartTheme } from '@/lib/chart-theme';
 
 /* ─────────────────────────────────────────────
    Types
@@ -40,10 +41,10 @@ const TREND_ICONS: Record<TrendDirection, React.ReactNode> = {
 };
 
 const TREND_COLORS: Record<TrendDirection, string> = {
-  rising: '#16a34a',
-  falling: '#dc2626',
-  stable: '#6b7280',
-  seasonal: '#7c3aed',
+  rising: chartTheme.positive,
+  falling: chartTheme.negative,
+  stable: chartTheme.neutral,
+  seasonal: chartTheme.overlap,
 };
 
 const TREND_LABELS: Record<TrendDirection, string> = {
@@ -54,18 +55,7 @@ const TREND_LABELS: Record<TrendDirection, string> = {
 };
 
 /** Color palette for multiple keyword overlays */
-const PALETTE = [
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#8b5cf6', // violet
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
-  '#84cc16', // lime
-  '#6366f1', // indigo
-];
+const PALETTE = [...chartTheme.series, chartTheme.overlap, chartTheme.positive, chartTheme.negative, chartTheme.neutral];
 
 function formatMonthLabel(month: string): string {
   const parts = month.split('-');
@@ -295,7 +285,7 @@ export default function VolumeTrendChart({
       const volumes = coloredData.map((d) => ({
         keyword: d.keyword,
         volume: d.monthlyData[clamped]?.volume ?? 0,
-        color: d.color ?? '#6b7280',
+        color: d.color ?? chartTheme.neutral,
       }));
 
       setTooltip({
@@ -358,7 +348,7 @@ export default function VolumeTrendChart({
           </div>
           <span
             className="text-caption font-mono font-semibold"
-            style={{ color: firstTrend.changePercent > 0 ? '#16a34a' : firstTrend.changePercent < 0 ? '#dc2626' : '#6b7280' }}
+            style={{ color: firstTrend.changePercent > 0 ? chartTheme.positive : firstTrend.changePercent < 0 ? chartTheme.negative : chartTheme.neutral }}
           >
             {formatChange(firstTrend.changePercent, firstTrend.changePeriod)}
           </span>
@@ -394,7 +384,7 @@ export default function VolumeTrendChart({
               <span
                 className="font-mono text-[10px] font-semibold"
                 style={{
-                  color: d.changePercent > 0 ? '#16a34a' : d.changePercent < 0 ? '#dc2626' : '#6b7280',
+                  color: d.changePercent > 0 ? chartTheme.positive : d.changePercent < 0 ? chartTheme.negative : chartTheme.neutral,
                 }}
               >
                 {d.changePercent > 0 ? '+' : ''}{d.changePercent}%
@@ -613,7 +603,7 @@ export default function VolumeTrendChart({
                 <span
                   className="inline-flex items-center gap-0.5 font-mono font-semibold"
                   style={{
-                    color: d.changePercent > 0 ? '#16a34a' : d.changePercent < 0 ? '#dc2626' : '#6b7280',
+                    color: d.changePercent > 0 ? chartTheme.positive : d.changePercent < 0 ? chartTheme.negative : chartTheme.neutral,
                   }}
                 >
                   {d.changePercent > 0 ? '+' : ''}{d.changePercent}%
@@ -698,7 +688,7 @@ export function MiniTrendIndicator({
         <span
           className="font-mono text-[10px] font-semibold whitespace-nowrap"
           style={{
-            color: trend.changePercent > 0 ? '#16a34a' : trend.changePercent < 0 ? '#dc2626' : '#6b7280',
+            color: trend.changePercent > 0 ? chartTheme.positive : trend.changePercent < 0 ? chartTheme.negative : chartTheme.neutral,
           }}
         >
           {trend.changePercent > 0 ? '+' : ''}{trend.changePercent}%

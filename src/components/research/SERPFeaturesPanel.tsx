@@ -492,7 +492,7 @@ export function SerpFeaturesAnalysisPanel({
               <div>
                 <p className="text-body-sm text-text-secondary">
                   <span className="font-semibold text-text-primary">
-                    "{data.summary.keywordWithMostFeatures}"
+                    &quot;{data.summary.keywordWithMostFeatures}&quot;
                   </span>{' '}
                   has the most SERP features ({data.results.find((r) => r.keyword === data.summary.keywordWithMostFeatures)?.features.length ?? 0})
                 </p>

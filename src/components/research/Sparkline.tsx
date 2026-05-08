@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { chartTheme } from '@/lib/chart-theme';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -24,9 +25,9 @@ function detectTrend(data: number[]): TrendDirection {
 }
 
 const TREND_COLORS: Record<TrendDirection, string> = {
-  up: '#16a34a',
-  down: '#dc2626',
-  stable: '#6b7280',
+  up: chartTheme.positive,
+  down: chartTheme.negative,
+  stable: chartTheme.neutral,
 };
 
 const TREND_ICONS: Record<TrendDirection, string> = {

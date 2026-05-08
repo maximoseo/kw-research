@@ -634,17 +634,7 @@ function UnmappedView({
   onMapKeyword: (kw: ResearchRow) => void;
   getMappingForKeyword: (kw: ResearchRow) => ContentMapEntry | null;
 }) {
-  if (keywords.length === 0) {
-    return (
-      <EmptyState
-        icon={<Target className="h-8 w-8 text-success" />}
-        title="All keywords mapped!"
-        description="Every keyword in this project is assigned to a page. Great coverage!"
-      />
-    );
-  }
-
-  // Group unmapped by pillar for easier navigation
+  // Group unmapped by pillar for easier navigation — must be before any early return
   const byPillar = useMemo(() => {
     const map = new Map<string, ResearchRow[]>();
     for (const kw of keywords) {
@@ -658,6 +648,16 @@ function UnmappedView({
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [keywords]);
+
+  if (keywords.length === 0) {
+    return (
+      <EmptyState
+        icon={<Target className="h-8 w-8 text-success" />}
+        title="All keywords mapped!"
+        description="Every keyword in this project is assigned to a page. Great coverage!"
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

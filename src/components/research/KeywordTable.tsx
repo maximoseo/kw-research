@@ -1026,7 +1026,7 @@ export default function KeywordTable({
 
       {/* ── Table ── */}
       <div className="overflow-hidden rounded-lg border border-border/50 bg-surface-raised/60">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-none sm:scrollbar-auto">
           <div className="relative max-h-[70vh] overflow-y-auto">
             {loading && (
               <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface-raised/50">
@@ -1043,7 +1043,12 @@ export default function KeywordTable({
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className="relative px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5"
+                        className={cn(
+                          'relative px-2.5 py-2.5 text-caption font-semibold uppercase tracking-wider whitespace-nowrap sm:px-3.5',
+                          // Sticky first two columns on mobile
+                          header.column.id === 'select' && 'sticky left-0 z-[6] bg-surface-raised',
+                          header.column.id === 'primaryKeyword' && 'sticky left-[40px] z-[6] bg-surface-raised shadow-[1px_0_0_hsl(var(--border)/0.4)]',
+                        )}
                         style={{
                           width: header.getSize() !== 150 ? header.getSize() : undefined,
                         }}
@@ -1115,7 +1120,14 @@ export default function KeywordTable({
                       {row.getVisibleCells().map((cell) => (
                         <td
                           key={cell.id}
-                          className="px-2.5 py-2.5 sm:px-3.5"
+                          className={cn(
+                            'px-2.5 py-2.5 sm:px-3.5',
+                            // Sticky first two columns on mobile
+                            cell.column.id === 'select' && 'sticky left-0 z-[4] bg-surface-raised',
+                            cell.column.id === 'primaryKeyword' && 'sticky left-[40px] z-[4] bg-surface-raised shadow-[1px_0_0_hsl(var(--border)/0.4)]',
+                            // Selected row bg override for sticky cells
+                            row.getIsSelected() && (cell.column.id === 'select' || cell.column.id === 'primaryKeyword') && 'bg-accent/[0.06]',
+                          )}
                         >
                           {flexRender(
                             cell.column.columnDef.cell,

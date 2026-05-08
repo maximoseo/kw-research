@@ -17,6 +17,8 @@ const config: Config = {
           raised: 'hsl(var(--surface-raised))',
           overlay: 'hsl(var(--surface-overlay))',
           inset: 'hsl(var(--surface-inset))',
+          hover: 'hsl(var(--surface-hover))',
+          selected: 'hsl(var(--surface-selected))',
         },
         border: {
           DEFAULT: 'hsl(var(--border))',
@@ -58,6 +60,13 @@ const config: Config = {
           focus: 'hsl(var(--input-focus))',
         },
         ring: 'hsl(var(--ring))',
+        chart: {
+          1: 'hsl(var(--chart-1))',
+          2: 'hsl(var(--chart-2))',
+          3: 'hsl(var(--chart-3))',
+          4: 'hsl(var(--chart-4))',
+          overlap: 'hsl(var(--chart-overlap))',
+        },
         sidebar: {
           bg: 'hsl(var(--sidebar-bg))',
           active: 'hsl(var(--sidebar-active))',

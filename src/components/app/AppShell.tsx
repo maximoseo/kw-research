@@ -1,8 +1,9 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeftRight, Compass, FolderKanban, History, LayoutDashboard, SearchCheck } from 'lucide-react';
+import { ArrowLeftRight, Compass, FolderKanban, History, LayoutDashboard, Menu, SearchCheck, X } from 'lucide-react';
 import type { ResearchProjectDetail } from '@/lib/research';
 import { buildProjectDashboardPath } from '@/lib/project-context';
 import { cn } from '@/lib/utils';
@@ -20,7 +21,34 @@ export function AppShell({
   project: ResearchProjectDetail;
 }) {
   const pathname = usePathname();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const dashboardPath = buildProjectDashboardPath(project.id);
+
+  // Close drawer on route change
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  // Close drawer on Escape
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [drawerOpen]);
+
+  // Prevent body scroll when drawer is open
+  useEffect(() => {
+    if (drawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [drawerOpen]);
+
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, active: pathname === '/dashboard' },
     { href: dashboardPath, label: 'Overview', icon: Compass, active: pathname === dashboardPath || pathname.startsWith(`${dashboardPath}/`) },
@@ -30,8 +58,23 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-transparent">
-      {/* ── Sidebar ── */}
-      <aside className="hidden w-[260px] shrink-0 flex-col border-r border-border/40 bg-sidebar-bg px-4 py-5 text-sidebar-text xl:flex">
+      {/* ── Mobile drawer overlay ── */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-fade-in lg:hidden"
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ── Sidebar (desktop: static, mobile: drawer) ── */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex w-[280px] shrink-0 flex-col border-r border-border/40 bg-sidebar-bg px-4 py-5 text-sidebar-text transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:w-[260px] lg:translate-x-0 lg:flex',
+          drawerOpen ? 'translate-x-0 animate-slide-in-left' : '-translate-x-full lg:translate-x-0',
+        )}
+        aria-label="Sidebar navigation"
+      >
         <div className="rounded-lg border border-accent/12 bg-accent/[0.04] p-3.5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -57,6 +100,16 @@ export function AppShell({
             </span>
           </Link>
         </div>
+
+        {/* Mobile close button */}
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(false)}
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-text/50 hover:bg-white/[0.06] hover:text-white transition-colors lg:hidden"
+          aria-label="Close menu"
+        >
+          <X className="h-4 w-4" />
+        </button>
 
         <nav className="mt-5 space-y-0.5">
           {navItems.map((item) => (
@@ -88,7 +141,17 @@ export function AppShell({
         <header className="sticky top-0 z-20 border-b border-border/40 bg-surface/90 backdrop-blur-lg">
           <div className="page-shell flex min-w-0 flex-col gap-2.5 px-4 py-3 sm:px-6 sm:py-3.5">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {/* Hamburger — mobile only */}
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(true)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-surface-raised text-text-muted hover:border-border hover:text-text-primary transition-colors lg:hidden"
+                  aria-label="Open menu"
+                  aria-expanded={drawerOpen}
+                >
+                  <Menu className="h-4 w-4" />
+                </button>
                 <h1 className="text-heading-2 text-text-primary truncate">
                   {project.brandName}
                 </h1>
@@ -100,13 +163,13 @@ export function AppShell({
                     <span className="hidden sm:inline">Dashboard</span>
                   </Button>
                 </Link>
-                <div className="flex items-center gap-2 xl:hidden">
+                <div className="flex items-center gap-2 lg:hidden">
                   <ThemeToggle />
                   <LogoutButton />
                 </div>
               </div>
             </div>
-            <div className="flex gap-1 overflow-x-auto pb-0.5 xl:hidden" style={{ scrollbarWidth: 'none' }}>
+            <div className="flex gap-1 overflow-x-auto pb-0.5 lg:hidden" style={{ scrollbarWidth: 'none' }}>
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (

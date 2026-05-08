@@ -1087,9 +1087,9 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
               {activeTab === 'preview' ? (
                 <>
                   {/* ── Filter Toolbar ── */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Search */}
-                    <div className="relative flex-1 min-w-[180px] max-w-[320px]">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                    {/* Search — full width on mobile */}
+                    <div className="relative w-full sm:flex-1 sm:min-w-[180px] sm:max-w-[320px]">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
                       <input
                         type="text"
@@ -1100,7 +1100,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
                         }}
                         onFocus={() => {}}
                         placeholder="Search keywords…"
-                        className="field-input pl-8 pr-14 text-sm h-8"
+                        className="field-input pl-8 pr-14 text-sm h-9 w-full"
                       />
                       <div className="absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                         <button
@@ -1126,8 +1126,8 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
                       </div>
                     </div>
 
-                    {/* Intent filter chips */}
-                    <div className="flex items-center gap-1">
+                    {/* Intent filter chips — horizontally scrollable on mobile */}
+                    <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
                       {(['Informational', 'Commercial', 'Transactional', 'Navigational'] as const).map((intent) => {
                         const active = filterIntents.includes(intent);
                         return (
@@ -1143,7 +1143,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
                               handlePageChange(1);
                             }}
                             className={cn(
-                              'rounded-md border px-2 py-0.5 text-caption font-medium transition-colors',
+                              'min-h-[32px] shrink-0 rounded-md border px-2.5 py-0.5 text-caption font-medium transition-colors',
                               active
                                 ? 'border-accent/30 bg-accent/[0.08] text-accent'
                                 : 'border-transparent bg-surface-inset text-text-muted hover:text-text-primary',
@@ -1156,7 +1156,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
                       {filterIntents.length > 0 && (
                         <button
                           type="button"
-                          className="rounded px-1.5 py-0.5 text-caption text-text-muted hover:text-red-500"
+                          className="shrink-0 rounded px-1.5 py-0.5 text-caption text-text-muted hover:text-red-500"
                           onClick={() => setFilterIntents([])}
                         >
                           Clear
@@ -1164,8 +1164,8 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
                       )}
                     </div>
 
-                    {/* Difficulty range */}
-                    <div className="flex items-center gap-1">
+                    {/* Difficulty range — hidden on mobile */}
+                    <div className="hidden md:flex items-center gap-1">
                       <span className="text-caption text-text-muted hidden lg:inline">KD</span>
                       <input
                         type="number"
@@ -1194,8 +1194,8 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
                       />
                     </div>
 
-                    {/* Volume range */}
-                    <div className="flex items-center gap-1">
+                    {/* Volume range — hidden on mobile */}
+                    <div className="hidden md:flex items-center gap-1">
                       <span className="text-caption text-text-muted hidden lg:inline">Vol</span>
                       <input
                         type="number"
