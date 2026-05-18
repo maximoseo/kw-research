@@ -18,6 +18,14 @@ services:
         value: file:/var/data/kw-research.db
       - key: DATA_DIR
         value: /var/data
+      - key: SUPABASE_URL
+        value: https://wtpczvyupmavzrxisvcm.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: STORAGE_BACKEND
+        value: local
       - key: AI_REQUEST_TIMEOUT_MS
         value: 60000
       - key: AI_MAX_RETRIES
