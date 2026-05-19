@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { SELECTED_PROJECT_COOKIE_NAME, buildProjectDashboardPath } from '@/lib/project-context';

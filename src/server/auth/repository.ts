@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { db, ensureRuntimeDirectories } from '@/server/db/client';

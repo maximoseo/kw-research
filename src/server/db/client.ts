@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { mkdir } from 'fs/promises';
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';

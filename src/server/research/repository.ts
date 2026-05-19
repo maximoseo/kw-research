@@ -8,6 +8,7 @@ import type {
   ResearchProjectDetail,
   ResearchProjectSummary,
   ResearchInputSnapshot,
+  ResearchRow,
   ResearchRunDetail,
   ResearchRunLog,
   ResearchMode,
@@ -729,6 +730,28 @@ export async function failRun(runId: string, errorMessage: string) {
       updatedAt: Date.now(),
     })
     .where(eq(researchRuns.id, runId));
+}
+
+/**
+ * Lightweight fetch — only loads the keyword rows JSON column.
+ * Avoids loading the full run record (logs, snapshots, metadata)
+ * when the client just needs the keyword list for the dashboard.
+ */
+export async function getKeywordRows(
+  runId: string,
+  userId: string,
+): Promise<ResearchRow[] | null> {
+  const row = await db
+    .select({ resultRows: researchRuns.resultRows })
+    .from(researchRuns)
+    .where(and(eq(researchRuns.id, runId), eq(researchRuns.userId, userId)))
+    .get();
+
+  if (!row?.resultRows) {
+    return null;
+  }
+
+  return parseJson(row.resultRows, []);
 }
 
 export async function deleteRun(runId: string, userId: string): Promise<boolean> {

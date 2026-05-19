@@ -10,11 +10,11 @@ import {
 } from '@/server/research/repository';
 import { parseProjectRunInput, parseResearchInput, validateResearchSources } from '@/server/research/preflight';
 import { parseUploadedWorkbook } from '@/server/research/uploaded-workbook';
+import { log } from '@/server/log';
 import { startResearchWorker } from '@/server/research/worker';
 import { writeManagedUpload } from '@/server/files/storage';
 
 export async function GET(request: Request) {
-  startResearchWorker();
   const user = await getAuthenticatedUserOrNull();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -38,7 +38,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  startResearchWorker();
   const user = await getAuthenticatedUserOrNull();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -158,7 +157,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    console.error('[POST /api/runs] Failed to create research run:', detail, error);
+    log.error('[POST /api/runs] Failed to create research run:', detail, error);
     return NextResponse.json({ error: `Unable to create the research run: ${detail}` }, { status: 500 });
   }
 }

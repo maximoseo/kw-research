@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { cookies } from 'next/headers';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { and, eq, gt } from 'drizzle-orm';

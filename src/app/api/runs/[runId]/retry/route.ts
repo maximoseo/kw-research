@@ -10,7 +10,6 @@ export async function POST(
   _request: Request,
   { params }: { params: { runId: string } },
 ) {
-  startResearchWorker();
   const user = await getAuthenticatedUserOrNull();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

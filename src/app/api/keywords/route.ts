@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUserOrNull } from '@/server/auth/guards';
-import { getRunForUser } from '@/server/research/repository';
+import { getKeywordRows } from '@/server/research/repository';
 import type { ResearchRow } from '@/lib/research';
 
 type SortField = 'volume' | 'cpc' | 'primaryKeyword' | 'pillar' | 'cluster' | 'intent';
@@ -102,12 +102,12 @@ export async function GET(request: Request) {
 
   const { runId, page, limit, sort, order } = parsed.data;
 
-  const run = await getRunForUser(user.id, runId);
-  if (!run) {
+  // Lightweight fetch: only loads the keyword rows JSON, not the full run record
+  const allRows = await getKeywordRows(runId, user.id);
+  if (allRows === null) {
     return NextResponse.json({ error: 'Run not found.' }, { status: 404 });
   }
 
-  const allRows: ResearchRow[] = run.rows ?? [];
   const sorted = sortRows(allRows, sort, order);
 
   const total = sorted.length;

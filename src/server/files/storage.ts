@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { mkdir, readFile, stat, writeFile } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';

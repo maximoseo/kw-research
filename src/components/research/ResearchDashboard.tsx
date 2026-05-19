@@ -45,6 +45,7 @@ import { exportKeywordsToCsv } from '@/lib/export-csv';
 import FilterPresets, { type CurrentFilters } from './FilterPresets';
 import SavedSearches, { useSavedSearches, type SavedSearch, type SearchHistoryItem } from './SavedSearches';
 import VolumeTrendChart, { type VolumeTrendData } from './VolumeTrendChart';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 type CompetitorDiscoveryState = {
   status: 'idle' | 'success' | 'empty' | 'error';
@@ -215,7 +216,8 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
   const [filterMinVolume, setFilterMinVolume] = useState(0);
   const [filterMaxVolume, setFilterMaxVolume] = useState(1_000_000);
   const [filterIntents, setFilterIntents] = useState<string[]>([]);
-  const [filterSearchQuery, setFilterSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const filterSearchQuery = useDebouncedValue(searchInput, 300);
 
   // Saved searches & search history
   const savedSearches = useSavedSearches();
@@ -465,7 +467,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
       setFilterIntents(preset.intents);
       setPreviewSort(preset.sortBy);
       setPreviewSortOrder(preset.sortOrder);
-      setFilterSearchQuery(preset.searchQuery);
+      setSearchInput(preset.searchQuery);
       handlePageChange(1);
     },
     [handlePageChange],
@@ -501,7 +503,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
 
   const handleHistoryClick = useCallback(
     (item: SearchHistoryItem) => {
-      setFilterSearchQuery(item.query);
+      setSearchInput(item.query);
       handlePageChange(1);
       setShowSavedSearches(false);
     },
@@ -510,7 +512,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
 
   const handleSavedClick = useCallback(
     (item: SavedSearch) => {
-      setFilterSearchQuery(item.query);
+      setSearchInput(item.query);
       setFilterMinDifficulty(item.filters.minDifficulty);
       setFilterMaxDifficulty(item.filters.maxDifficulty);
       setFilterMinVolume(item.filters.minVolume);
@@ -1086,7 +1088,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
                 filteredPreviewRows={filteredPreviewRows}
                 previewRows={previewRows}
                 filterSearchQuery={filterSearchQuery}
-                setFilterSearchQuery={setFilterSearchQuery}
+                setSearchInput={setSearchInput}
                 filterIntents={filterIntents}
                 setFilterIntents={setFilterIntents}
                 filterMinDifficulty={filterMinDifficulty}
@@ -1435,7 +1437,7 @@ function RunWorkspaceTabs({
   filteredPreviewRows,
   previewRows,
   filterSearchQuery,
-  setFilterSearchQuery,
+  setSearchInput,
   filterIntents,
   setFilterIntents,
   filterMinDifficulty,
@@ -1490,7 +1492,7 @@ function RunWorkspaceTabs({
   filteredPreviewRows: ResearchRow[];
   previewRows: ResearchRow[];
   filterSearchQuery: string;
-  setFilterSearchQuery: (value: string) => void;
+  setSearchInput: (value: string) => void;
   filterIntents: string[];
   setFilterIntents: React.Dispatch<React.SetStateAction<string[]>>;
   filterMinDifficulty: number;
@@ -1564,9 +1566,9 @@ function RunWorkspaceTabs({
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
               <input
                 type="text"
-                value={filterSearchQuery}
+                value={searchInput}
                 onChange={(e) => {
-                  setFilterSearchQuery(e.target.value);
+                  setSearchInput(e.target.value);
                   handlePageChange(1);
                 }}
                 placeholder="Search keywords…"
@@ -1584,11 +1586,11 @@ function RunWorkspaceTabs({
                 >
                   <Star className="h-3.5 w-3.5" />
                 </button>
-                {filterSearchQuery && (
+                {searchInput && (
                   <button
                     type="button"
                     className="rounded p-1 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-                    onClick={() => setFilterSearchQuery('')}
+                    onClick={() => setSearchInput('')}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -1661,7 +1663,7 @@ function RunWorkspaceTabs({
                   setFilterMaxDifficulty(100);
                   setFilterMinVolume(0);
                   setFilterMaxVolume(1_000_000);
-                  setFilterSearchQuery('');
+                  setSearchInput('');
                   handlePageChange(1);
                 }}
               >

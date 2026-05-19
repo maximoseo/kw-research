@@ -1,3 +1,5 @@
+import 'server-only';
+
 import FirecrawlApp from '@mendable/firecrawl-js';
 import { getFirecrawlApiKey } from '@/lib/env';
 import { log } from '@/server/log';
