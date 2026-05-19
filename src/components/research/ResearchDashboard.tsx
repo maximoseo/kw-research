@@ -136,7 +136,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<'preview' | 'logs' | 'summary' | 'questions' | 'content-map' | 'clusters'>('preview');
   const [questionSeedKeyword, setQuestionSeedKeyword] = useState<string>('');
-  const [isPending, startTransition] = useTransition();
+  const [isSubmittingRun, setIsSubmittingRun] = useState(false);
   const [isDiscoveringCompetitors, startCompetitorDiscovery] = useTransition();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isRerunning, setIsRerunning] = useState(false);
@@ -736,8 +736,9 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
     }
   }, [showTrends, filteredPreviewRows, addToast]);
 
-  const handleSubmit = form.handleSubmit((values) => {
-    startTransition(async () => {
+  const handleSubmit = form.handleSubmit(async (values) => {
+    setIsSubmittingRun(true);
+    try {
       const payload = new FormData();
       payload.set('projectId', project.id);
       payload.set('competitorUrls', values.competitorUrls);
@@ -752,6 +753,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
       const result = await response.json().catch(() => null);
       if (!response.ok) {
         addToast(result?.error || 'Unable to start the research run.', 'error');
+        setIsSubmittingRun(false);
         return;
       }
 
@@ -761,7 +763,12 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
       setCompetitorDiscovery({ status: 'idle' });
       await queryClient.invalidateQueries({ queryKey: ['runs', project.id] });
       await queryClient.invalidateQueries({ queryKey: ['run', project.id, result.runId] });
-    });
+      setIsSubmittingRun(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to start run.';
+      addToast(message, 'error');
+      setIsSubmittingRun(false);
+    }
   });
 
   const handleAutoFindCompetitors = () => {
@@ -945,7 +952,7 @@ export default function ResearchDashboard({ project, initialRunId, userDomain = 
               </label>
             </Field>
             <div className="action-row border-t border-border/40 pt-4">
-              <Button type="submit" size="md" loading={isPending} className="w-full sm:w-auto">
+              <Button type="submit" size="md" loading={isSubmittingRun} className="w-full sm:w-auto">
                 Run research
               </Button>
               <Button

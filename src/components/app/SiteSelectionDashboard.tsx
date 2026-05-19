@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Layers3, Plus, Globe, Trash2 } from 'lucide-react';
@@ -51,7 +51,7 @@ export function SiteSelectionDashboard({
 }) {
   const { addToast } = useToast();
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [lastSelectedProjectId, setLastSelectedProjectId] = useState<string | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -80,8 +80,9 @@ export function SiteSelectionDashboard({
     });
   }, [lastSelectedProjectId, projects]);
 
-  const handleCreateProject = form.handleSubmit((values) => {
-    startTransition(async () => {
+  const handleCreateProject = form.handleSubmit(async (values) => {
+    setIsPending(true);
+    try {
       const payload = new FormData();
       payload.set('homepageUrl', values.homepageUrl);
       payload.set('aboutUrl', values.aboutUrl);
@@ -99,12 +100,17 @@ export function SiteSelectionDashboard({
       const result = await response.json().catch(() => null);
       if (!response.ok) {
         addToast(result?.error || 'Unable to create the website workspace.', 'error');
+        setIsPending(false);
         return;
       }
 
       const nextPath = buildProjectDashboardPath(result.projectId);
       window.location.assign(nextPath);
-    });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create workspace.';
+      addToast(message, 'error');
+      setIsPending(false);
+    }
   });
 
   const handleDeleteProject = async (projectId: string) => {
