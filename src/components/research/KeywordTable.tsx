@@ -48,7 +48,7 @@ import type { SerpFeature } from '@/lib/serp-features';
    Helpers
    ───────────────────────────────────────────── */
 
-const STORAGE_KEY = 'kw-research:table-columns';
+const STORAGE_KEY = 'kw-research:keyword-cols';
 
 type ColumnState = {
   id: string;
@@ -955,6 +955,11 @@ export default function KeywordTable({
     }
   }, [selectionCount, filteredCount, rows, selectedRows, onAddToList, onExport, handleClearSelection, table]);
 
+  /* ── CSV export ── */
+  const handleExportCsv = useCallback(() => {
+    exportKeywordsToCsv(rows);
+  }, [rows]);
+
 
 
   /* ── Pagination display ── */
@@ -964,11 +969,24 @@ export default function KeywordTable({
   return (
     <div className={cn('space-y-3', className)}>
       {/* ── Toolbar ── */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-body font-semibold text-text-primary">
-          <TableProperties className="h-4 w-4 text-accent" />
-          Keyword Results
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Search section: title + row count */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-body font-semibold text-text-primary">
+            <TableProperties className="h-4 w-4 text-accent" />
+            Keyword Results
+          </div>
+          <span className="text-caption text-text-muted">
+            {rowCount > 0
+              ? `Showing ${startRow}–${endRow} of ${rowCount} rows`
+              : '0 rows'}
+          </span>
         </div>
+
+        {/* Divider */}
+        <div className="h-5 w-px bg-border/60 hidden sm:block" />
+
+        {/* View section: ClassifyIntents + columns menu */}
         <div className="flex items-center gap-2">
           {onClassifyIntents && (
             <button
@@ -988,11 +1006,6 @@ export default function KeywordTable({
               )}
             </button>
           )}
-          <span className="text-caption text-text-muted">
-            {rowCount > 0
-              ? `Showing ${startRow}–${endRow} of ${rowCount} rows`
-              : '0 rows'}
-          </span>
           <div className="relative">
             <button
               type="button"
@@ -1011,6 +1024,20 @@ export default function KeywordTable({
             )}
           </div>
         </div>
+
+        {/* Divider */}
+        <div className="h-5 w-px bg-border/60 hidden sm:block" />
+
+        {/* Export section */}
+        <button
+          type="button"
+          className="rounded-md px-3 py-1.5 text-caption font-medium text-text-primary hover:bg-surface-inset transition-colors flex items-center gap-1.5 border border-border/40"
+          onClick={handleExportCsv}
+          title="Export all keywords to CSV"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export CSV
+        </button>
       </div>
 
       {/* ── Bulk Actions ── */}

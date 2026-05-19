@@ -250,6 +250,21 @@ function KeywordCard({
           )}
         </button>
 
+        {/* Bottom action row */}
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/30">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(keyword);
+            }}
+          >
+            View Details
+          </Button>
+        </div>
+
         {/* Expanded content */}
         {isExpanded && (
           <div className="space-y-2.5 pt-1 border-t border-border/30 animate-fade-in">

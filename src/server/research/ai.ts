@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { getAiMaxRetries, getAiRequestTimeoutMs, getConfiguredModels } from '@/lib/env';
+import { retry } from '@/server/retry';
 
 export type ModelTier = 'opus' | 'sonnet' | 'haiku';
 
@@ -61,25 +62,27 @@ async function callAnthropic<T>(params: {
   let lastError: Error | null = null;
   const candidates = buildAnthropicCandidates(params.modelTier);
   for (const model of candidates) {
-    for (let attempt = 0; attempt <= getAiMaxRetries(); attempt += 1) {
-      try {
-        const response = await client.messages.create({
-          model,
-          temperature: 0.3,
-          max_tokens: params.maxTokens ?? 4096,
-          system: `${params.system}\nReturn valid JSON only, with no prose before or after the JSON.`,
-          messages: [{ role: 'user', content: params.prompt }],
-        });
+    try {
+      const response = await retry(
+        () =>
+          client.messages.create({
+            model,
+            temperature: 0.3,
+            max_tokens: params.maxTokens ?? 4096,
+            system: `${params.system}\nReturn valid JSON only, with no prose before or after the JSON.`,
+            messages: [{ role: 'user', content: params.prompt }],
+          }),
+        { attempts: getAiMaxRetries() + 1, backoff: 'exp' },
+      );
 
-        const text = response.content
-          .filter((block) => block.type === 'text')
-          .map((block) => block.text)
-          .join('\n');
+      const text = response.content
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join('\n');
 
-        return parseJsonWithSchema(text, params.schema);
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error('Anthropic request failed.');
-      }
+      return parseJsonWithSchema(text, params.schema);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Anthropic request failed.');
     }
   }
 

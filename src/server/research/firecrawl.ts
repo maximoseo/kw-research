@@ -1,5 +1,6 @@
 import FirecrawlApp from '@mendable/firecrawl-js';
 import { getFirecrawlApiKey } from '@/lib/env';
+import { log } from '@/server/log';
 
 let client: InstanceType<typeof FirecrawlApp> | null = null;
 
@@ -27,7 +28,7 @@ export async function firecrawlScrape(
   }
 
   try {
-    console.log(`[firecrawl] Scraping: ${url}`);
+    log.info(`[firecrawl] Scraping: ${url}`);
     const app = getClient();
     const doc = await Promise.race([
       app.scrape(url),
@@ -36,7 +37,7 @@ export async function firecrawlScrape(
       ),
     ]);
 
-    console.log(
+    log.info(
       `[firecrawl] Scrape complete for ${url} — ` +
         `content: ${doc.markdown?.length ?? 0} chars`,
     );
@@ -59,7 +60,7 @@ export async function firecrawlMap(url: string): Promise<string[] | null> {
   }
 
   try {
-    console.log(`[firecrawl] Mapping: ${url}`);
+    log.info(`[firecrawl] Mapping: ${url}`);
     const app = getClient();
     const result = await Promise.race([
       app.map(url),
@@ -69,7 +70,7 @@ export async function firecrawlMap(url: string): Promise<string[] | null> {
     ]);
 
     const links = result.links?.map((entry) => entry.url) ?? [];
-    console.log(`[firecrawl] Map complete for ${url} — ${links.length} links found`);
+    log.info(`[firecrawl] Map complete for ${url} — ${links.length} links found`);
     return links;
   } catch (err) {
     console.warn(`[firecrawl] Map error for ${url}:`, err instanceof Error ? err.message : err);

@@ -1,5 +1,6 @@
 import pLimit from 'p-limit';
 import { z } from 'zod';
+import { log as logger } from '@/server/log';
 import type { ResearchInputSnapshot, ResearchIntent, ResearchRow, SiteLanguage } from '@/lib/research';
 import { sanitizeFilenameSegment } from '@/lib/utils';
 import { writeManagedReport } from '@/server/files/storage';
@@ -686,7 +687,7 @@ export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'home
       });
       resolvedSitemapUrl = discovered;
       sitemapSource = 'auto-discovered';
-      console.info(`[discovery] Sitemap auto-discovered: ${discovered} (${sitemapUrls.length} URLs)`);
+      logger.info(`[discovery] Sitemap auto-discovered: ${discovered} (${sitemapUrls.length} URLs)`);
     }
   }
 
@@ -712,7 +713,7 @@ export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'home
     if (discovered) {
       aboutUrl = discovered;
       aboutSource = 'auto-discovered';
-      console.info(`[discovery] About page auto-discovered: ${discovered}`);
+      logger.info(`[discovery] About page auto-discovered: ${discovered}`);
     }
   }
 
@@ -720,14 +721,14 @@ export async function buildSiteEvidence(input: Pick<ResearchInputSnapshot, 'home
     [input.homepageUrl, aboutUrl, ...sitemapUrls].filter(Boolean),
   ).slice(0, crawlLimits.maxPageFetches);
 
-  console.info(`[discovery] Fetching page snapshots for ${baseEvidenceUrls.length} URLs`);
+  logger.info(`[discovery] Fetching page snapshots for ${baseEvidenceUrls.length} URLs`);
   const pageSnapshots = (
     await Promise.all(baseEvidenceUrls.map((url) => concurrency(() => fetchPageSnapshot(url).catch((err) => {
       console.warn(`[discovery] Page snapshot failed for ${url}: ${err instanceof Error ? err.message : err}`);
       return null;
     }))))
   ).filter(keepPageSnapshot);
-  console.info(`[discovery] Collected ${pageSnapshots.length} page snapshots from ${baseEvidenceUrls.length} URLs`);
+  logger.info(`[discovery] Collected ${pageSnapshots.length} page snapshots from ${baseEvidenceUrls.length} URLs`);
 
   if (pageSnapshots.length === 0) {
     console.warn('[discovery] WARNING: Zero page snapshots collected. AI analysis will be severely degraded.');
@@ -906,12 +907,12 @@ export async function analyzeCompetitiveLandscape(params: {
     }
   }
   const competitorUrls = dedupedCompetitorUrls.slice(0, 10);
-  console.info(`[pipeline] Competitor URLs after domain-level dedup: ${competitorUrls.length} (from ${manualCompetitorUrls.length} manual + ${discoveredCompetitors.length} discovered)`);
+  logger.info(`[pipeline] Competitor URLs after domain-level dedup: ${competitorUrls.length} (from ${manualCompetitorUrls.length} manual + ${discoveredCompetitors.length} discovered)`);
 
   // --- Swarm Agent: Site Profile Discovery ---
   let siteProfile: SiteProfile | null = null;
   try {
-    console.info('[swarm] Running site-profile-agent (model: sonnet)');
+    logger.info('[swarm] Running site-profile-agent (model: sonnet)');
     siteProfile = await runSiteProfileAgent({
       homepage: params.input.homepageUrl,
       pageEvidence: params.pageSnapshots.map((s) => ({
@@ -921,7 +922,7 @@ export async function analyzeCompetitiveLandscape(params: {
         snippet: s.body?.slice(0, 500) ?? '',
       })),
     });
-    console.info('[swarm] Site profile extracted:', siteProfile.businessName, '/', siteProfile.niche);
+    logger.info('[swarm] Site profile extracted:', siteProfile.businessName, '/', siteProfile.niche);
   } catch (error) {
     console.warn('[swarm] Site profile agent failed, continuing without:', error instanceof Error ? error.message : error);
   }
@@ -929,7 +930,7 @@ export async function analyzeCompetitiveLandscape(params: {
   // --- Swarm Agent: AI Competitor Candidate Generation ---
   if (siteProfile) {
     try {
-      console.info('[swarm] Running competitor-generation-agent (model: opus)');
+      logger.info('[swarm] Running competitor-generation-agent (model: opus)');
       const existingDomains = new Set(discoveredCompetitors.map((c) => c.domain));
       const aiGenerated = await runCompetitorGenerationAgent({
         siteProfile: {
@@ -946,7 +947,7 @@ export async function analyzeCompetitiveLandscape(params: {
         language: params.input.language,
         existingCompetitorDomains: [...existingDomains],
       });
-      console.info(`[swarm] AI competitor generation: ${aiGenerated.competitors.length} candidates (strategy: ${aiGenerated.searchStrategy})`);
+      logger.info(`[swarm] AI competitor generation: ${aiGenerated.competitors.length} candidates (strategy: ${aiGenerated.searchStrategy})`);
 
       for (const gen of aiGenerated.competitors) {
         if (gen.confidence >= 0.4 && !existingDomains.has(gen.domain)) {
@@ -963,7 +964,7 @@ export async function analyzeCompetitiveLandscape(params: {
       }
       const accepted = aiGenerated.competitors.filter((g) => g.confidence >= 0.4 && existingDomains.has(g.domain)).length;
       const rejected = aiGenerated.competitors.length - accepted;
-      console.info(`[swarm] AI generation: ${accepted} accepted, ${rejected} rejected (low confidence or duplicate)`);
+      logger.info(`[swarm] AI generation: ${accepted} accepted, ${rejected} rejected (low confidence or duplicate)`);
     } catch (error) {
       console.warn('[swarm] AI competitor generation failed (non-fatal):', error instanceof Error ? error.message : error);
     }
@@ -973,7 +974,7 @@ export async function analyzeCompetitiveLandscape(params: {
   let validationResult: Awaited<ReturnType<typeof runCompetitorValidationAgent>> | null = null;
   if (siteProfile && discoveredCompetitors.length > 0) {
     try {
-      console.info(`[swarm] Running competitor-validation-agent (model: sonnet) on ${discoveredCompetitors.length} candidates`);
+      logger.info(`[swarm] Running competitor-validation-agent (model: sonnet) on ${discoveredCompetitors.length} candidates`);
       validationResult = await runCompetitorValidationAgent({
         siteProfile: {
           businessName: siteProfile.businessName,
@@ -989,18 +990,18 @@ export async function analyzeCompetitiveLandscape(params: {
           snippet: c.snippet,
         })),
       });
-      console.info('[swarm] Competitor validation:', validationResult.overallQuality, `(${validationResult.validatedCompetitors.filter((v) => v.isRelevant).length} relevant)`);
+      logger.info('[swarm] Competitor validation:', validationResult.overallQuality, `(${validationResult.validatedCompetitors.filter((v) => v.isRelevant).length} relevant)`);
       // Log rejected candidates summary
       const rejected = validationResult.validatedCompetitors.filter((v) => !v.isRelevant);
       if (rejected.length > 0) {
-        console.info(`[swarm] Rejected ${rejected.length} candidates: ${rejected.map((v) => `${v.domain} (${v.reasoning.slice(0, 60)})`).join('; ')}`);
+        logger.info(`[swarm] Rejected ${rejected.length} candidates: ${rejected.map((v) => `${v.domain} (${v.reasoning.slice(0, 60)})`).join('; ')}`);
       }
 
       // --- Swarm Agent: SERP Intent Similarity ---
       try {
         const relevantCompetitors = validationResult.validatedCompetitors.filter((v) => v.isRelevant);
         if (relevantCompetitors.length > 0) {
-          console.info(`[swarm] Running serp-intent-agent (model: sonnet) on ${relevantCompetitors.length} relevant competitors`);
+          logger.info(`[swarm] Running serp-intent-agent (model: sonnet) on ${relevantCompetitors.length} relevant competitors`);
           const serpAnalysis = await runSerpIntentAgent({
             targetBusiness: {
               businessName: siteProfile.businessName,
@@ -1016,7 +1017,7 @@ export async function analyzeCompetitiveLandscape(params: {
             market: params.input.market,
             language: params.input.language,
           });
-          console.info(`[swarm] SERP intent analysis: ${serpAnalysis.topKeywordThemes.length} contested themes`);
+          logger.info(`[swarm] SERP intent analysis: ${serpAnalysis.topKeywordThemes.length} contested themes`);
 
           // Boost confidence of competitors with high search intent overlap
           for (const scored of serpAnalysis.scoredCompetitors) {
@@ -1033,7 +1034,7 @@ export async function analyzeCompetitiveLandscape(params: {
       // --- Swarm Agent: Judge / Quality Control ---
       let shouldRetryDiscovery = false;
       try {
-        console.info('[swarm] Running judge-agent (model: sonnet)');
+        logger.info('[swarm] Running judge-agent (model: sonnet)');
         const judgment = await runJudgeAgent({
           siteProfile: {
             businessName: siteProfile.businessName,
@@ -1048,9 +1049,9 @@ export async function analyzeCompetitiveLandscape(params: {
           })),
           totalCandidatesBeforeFiltering: discoveredCompetitors.length,
         });
-        console.info('[swarm] Judge verdict:', judgment.competitorQuality, `score=${judgment.overallScore}/10, passesGate=${judgment.passesQualityGate}`);
+        logger.info('[swarm] Judge verdict:', judgment.competitorQuality, `score=${judgment.overallScore}/10, passesGate=${judgment.passesQualityGate}`);
         if (judgment.issues.length > 0) {
-          console.info(`[swarm] Judge issues: ${judgment.issues.join('; ')}`);
+          logger.info(`[swarm] Judge issues: ${judgment.issues.join('; ')}`);
         }
         shouldRetryDiscovery = judgment.shouldRetry === true && !judgment.passesQualityGate;
       } catch (error) {
@@ -1059,7 +1060,7 @@ export async function analyzeCompetitiveLandscape(params: {
 
       // --- Retry: broader discovery when judge says quality is poor ---
       if (shouldRetryDiscovery) {
-        console.info('[swarm] Judge triggered retry — running broader fallback discovery');
+        logger.info('[swarm] Judge triggered retry — running broader fallback discovery');
         try {
           const fallbackQueries = [
             ...siteUnderstanding.offerings.map((o) => `best ${o} ${params.input.market}`),
@@ -1076,7 +1077,7 @@ export async function analyzeCompetitiveLandscape(params: {
           }).then((r) => r.candidates).catch(() => [] as CompetitorCandidate[]);
 
           if (retryResults.length > 0) {
-            console.info(`[swarm] Fallback discovery found ${retryResults.length} additional candidates`);
+            logger.info(`[swarm] Fallback discovery found ${retryResults.length} additional candidates`);
             discoveredCompetitors.push(...retryResults);
 
             // Re-run validation on new candidates
@@ -1136,7 +1137,7 @@ export async function analyzeCompetitiveLandscape(params: {
   } else {
     filteredCompetitorUrls = competitorUrls;
   }
-  console.info(`[pipeline] Final competitor URLs for page evidence: ${filteredCompetitorUrls.length}`);
+  logger.info(`[pipeline] Final competitor URLs for page evidence: ${filteredCompetitorUrls.length}`);
 
   const concurrency = pLimit(4);
   const competitorPageEvidence = (
@@ -1166,7 +1167,7 @@ export async function analyzeCompetitiveLandscape(params: {
   );
 
   const pipelineDuration = ((Date.now() - pipelineStart) / 1000).toFixed(1);
-  console.info(`[pipeline] Competitive landscape analysis complete in ${pipelineDuration}s — ${filteredCompetitorUrls.length} competitors, ${competitorIntelligence.competitors.length} intelligence entries`);
+  logger.info(`[pipeline] Competitive landscape analysis complete in ${pipelineDuration}s — ${filteredCompetitorUrls.length} competitors, ${competitorIntelligence.competitors.length} intelligence entries`);
 
   return {
     siteUnderstanding,

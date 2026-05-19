@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import {
   AlertTriangle,
   ArrowDownAZ,
@@ -44,6 +44,9 @@ interface SegmentInfo {
   color: string;
 }
 
+type VisualizationMode = 'venn' | 'matrix';
+type MatrixTab = 'pairwise' | 'triadic';
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -53,6 +56,91 @@ const COLORS = {
   domain2: { fill: chartTheme.negative.replace(')', ' / 0.28)'), stroke: chartTheme.negative, label: 'Red' },
   domain3: { fill: chartTheme.positive.replace(')', ' / 0.28)'), stroke: chartTheme.positive, label: 'Green' },
 };
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Convert a `hsl(var(--x) / 0.xx)` color to opaque: `hsl(var(--x) / 1)` */
+function toOpaqueHSL(color: string): string {
+  const lastSlash = color.lastIndexOf('/');
+  if (lastSlash === -1) return color;
+  return color.slice(0, lastSlash + 1) + ' 1)';
+}
+
+/** Build a pairwise overlap matrix: cell[i][j] = overlap count between domain i & j */
+function buildPairwiseMatrix(stats: OverlapStats, sets: OverlapSets, domains: string[]): number[][] {
+  const n = domains.length;
+  const matrix: number[][] = Array.from({ length: n }, () => Array<number>(n).fill(0));
+
+  for (let i = 0; i < n; i++) {
+    // Diagonal: total keywords for the domain
+    if (i === 0) matrix[i][i] = stats.totalDomain1;
+    else if (i === 1) matrix[i][i] = stats.totalDomain2;
+    else if (i === 2) matrix[i][i] = stats.totalDomain3 ?? 0;
+  }
+
+  // Off-diagonal pairwise overlaps
+  if (n >= 2) {
+    const d0d1 = stats.sharedCount; // for 3 domains this is only d1∩d2 not d3
+    if (n === 2) {
+      matrix[0][1] = matrix[1][0] = stats.sharedCount;
+    } else {
+      // 3 domains: shared = domain1 ∩ domain2 (no domain3)
+      matrix[0][1] = matrix[1][0] =
+        (sets.domain1SharedWith3?.length ?? 0) + (sets.all3?.length ?? 0) + sets.shared.length;
+      // domain1 ∩ domain2 total = shared + all3
+      // Actually we need: domain1∩domain2 = (shared) + (all3)
+      // domain1∩domain3 = (domain1SharedWith3) + (all3)
+      // domain2∩domain3 = (domain2SharedWith3) + (all3)
+      const d1d2 = sets.shared.length + (sets.all3?.length ?? 0);
+      const d1d3 = (sets.domain1SharedWith3?.length ?? 0) + (sets.all3?.length ?? 0);
+      const d2d3 = (sets.domain2SharedWith3?.length ?? 0) + (sets.all3?.length ?? 0);
+      matrix[0][1] = matrix[1][0] = d1d2;
+      matrix[0][2] = matrix[2][0] = d1d3;
+      matrix[1][2] = matrix[2][1] = d2d3;
+    }
+  }
+
+  return matrix;
+}
+
+/** Generate CSV content for the matrix data */
+function generateMatrixCSV(sets: OverlapSets, stats: OverlapStats, domains: string[]): string {
+  const n = domains.length;
+  const lines: string[] = [];
+
+  // Header
+  lines.push(['Metric', ...domains].join(','));
+
+  // Total row per domain
+  const totals = [stats.totalDomain1, stats.totalDomain2, stats.totalDomain3 ?? 0].slice(0, n);
+  lines.push(['Total Keywords', ...totals.map(String)].join(','));
+
+  // Pairwise overlaps
+  const matrix = buildPairwiseMatrix(stats, sets, domains);
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      lines.push([`${domains[i]} ∩ ${domains[j]}`, String(matrix[i][j])].join(','));
+    }
+  }
+
+  // Unique per domain
+  lines.push([`Unique to ${domains[0]}`, String(stats.domain1OnlyCount)].join(','));
+  lines.push([`Unique to ${domains[1]}`, String(stats.domain2OnlyCount)].join(','));
+  if (n >= 3) {
+    lines.push([`Unique to ${domains[2]}`, String(stats.domain3OnlyCount ?? 0)].join(','));
+  }
+
+  // 3-way if applicable
+  if (n >= 3 && (sets.all3?.length ?? 0) > 0) {
+    lines.push(['Shared by all 3', String(sets.all3?.length ?? 0)].join(','));
+  }
+
+  lines.push(['Total Unique', String(stats.totalUnique)].join(','));
+
+  return lines.join('\n');
+}
 
 // ---------------------------------------------------------------------------
 // Sub-component: Keyword list popover
@@ -86,7 +174,7 @@ function KeywordListPopover({
         <div className="flex items-center gap-2">
           <div
             className="h-3 w-3 rounded-full"
-            style={{ backgroundColor: segment.color.replace(/[\d.]+\)$/, '1)') }}
+            style={{ backgroundColor: toOpaqueHSL(segment.color) }}
           />
           <span className="text-body-sm font-semibold text-text-primary">
             {segment.label}
@@ -240,7 +328,7 @@ function TwoDomainVenn({
           cx={cx1}
           cy={cy}
           r={r}
-          fill="rgba(168, 85, 247, 0.3)"
+          fill="hsl(var(--chart-overlap) / 0.3)"
           clipPath="url(#clip-right)"
           stroke="none"
         />
@@ -475,14 +563,14 @@ function ThreeDomainVenn({
         <circle cx={cx3} cy={cy3} r={r} fill={COLORS.domain3.fill} stroke={COLORS.domain3.stroke} strokeWidth="2" />
 
         {/* Overlap: c1 ∩ c2 (purple) clipped by c1 & c2 */}
-        <circle cx={cx1} cy={cy1} r={r} fill="rgba(168, 85, 247, 0.35)" clipPath="url(#c3-clip-c2)" />
+        <circle cx={cx1} cy={cy1} r={r} fill="hsl(var(--chart-overlap) / 0.35)" clipPath="url(#c3-clip-c2)" />
         {/* Overlap: c1 ∩ c3 (cyan) clipped by c3 */}
-        <circle cx={cx1} cy={cy1} r={r} fill="rgba(6, 182, 212, 0.25)" clipPath="url(#c3-clip-c3)" />
+        <circle cx={cx1} cy={cy1} r={r} fill="hsl(var(--chart-5) / 0.25)" clipPath="url(#c3-clip-c3)" />
         {/* Overlap: c2 ∩ c3 (amber) clipped by c3 */}
-        <circle cx={cx2} cy={cy2} r={r} fill="rgba(245, 158, 11, 0.25)" clipPath="url(#c3-clip-c3)" />
+        <circle cx={cx2} cy={cy2} r={r} fill="hsl(var(--chart-4) / 0.25)" clipPath="url(#c3-clip-c3)" />
         {/* Overlap: all 3 clipped by c3 */}
         <g clipPath="url(#c3-clip-c3)">
-          <circle cx={cx1} cy={cy1} r={r} fill="rgba(236, 72, 153, 0.3)" clipPath="url(#c3-clip-c2)" />
+          <circle cx={cx1} cy={cy1} r={r} fill="hsl(var(--chart-6) / 0.3)" clipPath="url(#c3-clip-c2)" />
         </g>
 
         {/* Region labels (clickable) */}
@@ -593,6 +681,226 @@ function OverlapStatsSummary({
 }
 
 // ---------------------------------------------------------------------------
+// Sub-component: Overlap Matrix View (pairwise + triadic)
+// ---------------------------------------------------------------------------
+
+function MatrixView({
+  data,
+  domains,
+}: {
+  data: OverlapResponse;
+  domains: string[];
+}) {
+  const n = domains.length;
+  const matrix = useMemo(() => buildPairwiseMatrix(data.stats, data.sets, domains), [data, domains]);
+  const [activeTab, setActiveTab] = useState<MatrixTab>('pairwise');
+  const { addToast } = useToast();
+
+  const handleExportCSV = useCallback(() => {
+    try {
+      const csv = generateMatrixCSV(data.sets, data.stats, domains);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `keyword-overlap-matrix-${domains.join('-')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      addToast('Matrix exported as CSV.', 'success');
+    } catch {
+      addToast('Failed to export CSV.', 'error');
+    }
+  }, [data, domains, addToast]);
+
+  const all3Count = data.sets.all3?.length ?? 0;
+
+  return (
+    <div className="space-y-5">
+      {/* Tab bar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center rounded-lg border border-border/60 bg-surface-inset p-1 gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('pairwise')}
+            className={cn(
+              'px-3.5 py-1.5 rounded-md text-body-sm font-medium transition-colors',
+              activeTab === 'pairwise'
+                ? 'bg-surface text-text-primary shadow-elevation-1'
+                : 'text-text-muted hover:text-text-secondary',
+            )}
+          >
+            Pairwise
+          </button>
+          {n >= 3 && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('triadic')}
+              className={cn(
+                'px-3.5 py-1.5 rounded-md text-body-sm font-medium transition-colors',
+                activeTab === 'triadic'
+                  ? 'bg-surface text-text-primary shadow-elevation-1'
+                  : 'text-text-muted hover:text-text-secondary',
+              )}
+            >
+              Triadic
+            </button>
+          )}
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          icon={<Download className="h-3.5 w-3.5" />}
+          onClick={handleExportCSV}
+        >
+          Export CSV
+        </Button>
+      </div>
+
+      {/* Pairwise matrix */}
+      {activeTab === 'pairwise' && (
+        <div className="overflow-x-auto rounded-xl border border-border/60 bg-surface shadow-elevation-1">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th className="p-3 text-left text-caption font-semibold text-text-muted border-b border-border/60 bg-surface-raised">
+                  Domain
+                </th>
+                {domains.map((d, i) => (
+                  <th
+                    key={d}
+                    className="p-3 text-center text-caption font-semibold border-b border-border/60 bg-surface-raised"
+                    style={{ color: [COLORS.domain1, COLORS.domain2, COLORS.domain3][i].stroke }}
+                  >
+                    {d}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {domains.map((d, i) => (
+                <tr key={d}>
+                  <td
+                    className="p-3 text-caption font-semibold border-b border-border/40 bg-surface-raised/50"
+                    style={{ color: [COLORS.domain1, COLORS.domain2, COLORS.domain3][i].stroke }}
+                  >
+                    {d}
+                  </td>
+                  {domains.map((_, j) => (
+                    <td
+                      key={j}
+                      className={cn(
+                        'p-3 text-center text-body font-semibold border-b border-border/40',
+                        i === j
+                          ? 'bg-surface-inset text-text-secondary'
+                          : i < j
+                            ? 'text-text-primary'
+                            : 'text-text-muted',
+                      )}
+                    >
+                      {i === j ? (
+                        <span className="text-text-secondary">{matrix[i][j].toLocaleString()}</span>
+                      ) : i < j ? (
+                        <span className="text-text-primary font-bold">{matrix[i][j].toLocaleString()}</span>
+                      ) : (
+                        <span className="text-text-muted">—</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 p-3 border-t border-border/40">
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: chartTheme.neutral }} />
+              <span className="text-caption text-text-muted">Diagonal = total keywords</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: chartTheme.overlap }} />
+              <span className="text-caption text-text-muted">Off-diagonal = shared</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Triadic (3-way overlaps) */}
+      {activeTab === 'triadic' && n >= 3 && (
+        <div className="rounded-xl border border-border/60 bg-surface shadow-elevation-1 p-5">
+          <h4 className="text-body font-semibold text-text-primary mb-4">Three-way Keyword Overlap</h4>
+
+          {all3Count === 0 ? (
+            <div className="py-6 text-center">
+              <p className="text-body-sm text-text-muted">
+                No keywords are shared across all three domains.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {domains.map((d, i) => (
+                  <div
+                    key={d}
+                    className="flex flex-col items-center rounded-lg border border-border/40 bg-surface-inset p-4"
+                  >
+                    <span className="text-caption text-text-muted">{d}</span>
+                    <span
+                      className="text-heading-2 mt-1"
+                      style={{ color: [COLORS.domain1, COLORS.domain2, COLORS.domain3][i].stroke }}
+                    >
+                      {[data.stats.totalDomain1, data.stats.totalDomain2, data.stats.totalDomain3 ?? 0][i].toLocaleString()}
+                    </span>
+                    <span className="text-caption text-text-muted mt-0.5">total keywords</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col items-center rounded-lg border-2 p-5 text-center"
+                style={{ borderColor: chartTheme.series[0], backgroundColor: `hsl(var(--chart-1) / 0.06)` }}
+              >
+                <span className="text-caption text-text-muted">Keywords shared by all 3 domains</span>
+                <span className="text-heading-1 mt-1" style={{ color: chartTheme.series[0] }}>
+                  {all3Count.toLocaleString()}
+                </span>
+                <span className="text-caption text-text-muted mt-0.5">
+                  {((all3Count / data.stats.totalUnique) * 100).toFixed(1)}% of total unique keywords
+                </span>
+              </div>
+
+              {/* Keyword list preview */}
+              {data.sets.all3 && data.sets.all3.length > 0 && (
+                <div className="rounded-lg border border-border/40 bg-surface-inset p-3">
+                  <p className="text-caption text-text-muted mb-2 font-medium">
+                    Shared keywords ({all3Count} total)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.sets.all3.slice(0, 30).map((kw, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center rounded-md border border-border/40 bg-surface px-2 py-0.5 text-caption text-text-secondary"
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                    {all3Count > 30 && (
+                      <span className="text-caption text-text-muted self-center px-2">
+                        +{all3Count - 30} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -604,6 +912,7 @@ export default function KeywordOverlapViz({ projectId }: { projectId: string }) 
   const [vizState, setVizState] = useState<VizState>({ status: 'idle' });
   const [activeSegment, setActiveSegment] = useState<SegmentId | null>(null);
   const [activeSegmentInfo, setActiveSegmentInfo] = useState<SegmentInfo | null>(null);
+  const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('venn');
 
   const handleAddDomain = () => {
     if (domains.length >= 3) {
@@ -686,6 +995,7 @@ export default function KeywordOverlapViz({ projectId }: { projectId: string }) 
     setVizState({ status: 'idle' });
     setActiveSegment(null);
     setActiveSegmentInfo(null);
+    setVisualizationMode('venn');
   };
 
   // ---------------------------------------------------------------------------
@@ -821,48 +1131,88 @@ export default function KeywordOverlapViz({ projectId }: { projectId: string }) 
           {/* Stats summary */}
           <OverlapStatsSummary stats={vizState.data.stats} domains={vizState.data.domains} />
 
-          {/* Venn diagram */}
+          {/* Visualization card */}
           <Card className="relative">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-body font-semibold text-text-primary">Keyword Overlap Visualization</h3>
+              <h3 className="text-body font-semibold text-text-primary">
+                {visualizationMode === 'venn' ? 'Keyword Overlap Visualization' : 'Overlap Matrix'}
+              </h3>
               <div className="flex items-center gap-3">
-                {vizState.data.domains.map((d, i) => {
-                  const colors = [COLORS.domain1, COLORS.domain2, COLORS.domain3];
-                  return (
-                    <div key={d} className="flex items-center gap-1.5">
-                      <div
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: colors[i].stroke }}
-                      />
-                      <span className="text-caption text-text-muted">{d}</span>
-                    </div>
-                  );
-                })}
+                {/* Mode toggle */}
+                <div className="flex items-center rounded-lg border border-border/60 bg-surface-inset p-1 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setVisualizationMode('venn')}
+                    className={cn(
+                      'px-3 py-1.5 rounded-md text-caption font-medium transition-colors',
+                      visualizationMode === 'venn'
+                        ? 'bg-surface text-text-primary shadow-elevation-1'
+                        : 'text-text-muted hover:text-text-secondary',
+                    )}
+                  >
+                    Venn
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVisualizationMode('matrix')}
+                    className={cn(
+                      'px-3 py-1.5 rounded-md text-caption font-medium transition-colors',
+                      visualizationMode === 'matrix'
+                        ? 'bg-surface text-text-primary shadow-elevation-1'
+                        : 'text-text-muted hover:text-text-secondary',
+                    )}
+                  >
+                    Matrix
+                  </button>
+                </div>
+
+                {/* Domain legend dots (Venn mode only) */}
+                {visualizationMode === 'venn' && (
+                  <div className="flex items-center gap-3">
+                    {vizState.data.domains.map((d, i) => {
+                      const colors = [COLORS.domain1, COLORS.domain2, COLORS.domain3];
+                      return (
+                        <div key={d} className="flex items-center gap-1.5">
+                          <div
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: colors[i].stroke }}
+                          />
+                          <span className="text-caption text-text-muted">{d}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex justify-center">
-              {vizState.data.domains.length === 3 ? (
-                <ThreeDomainVenn
-                  sets={vizState.data.sets}
-                  stats={vizState.data.stats}
-                  domains={vizState.data.domains}
-                  onSegmentClick={handleSegmentClick}
-                  activeSegment={activeSegment}
-                />
-              ) : (
-                <TwoDomainVenn
-                  sets={vizState.data.sets}
-                  stats={vizState.data.stats}
-                  domains={vizState.data.domains}
-                  onSegmentClick={handleSegmentClick}
-                  activeSegment={activeSegment}
-                />
-              )}
-            </div>
+            {/* Conditional rendering: Venn or Matrix */}
+            {visualizationMode === 'venn' ? (
+              <div className="flex justify-center">
+                {vizState.data.domains.length === 3 ? (
+                  <ThreeDomainVenn
+                    sets={vizState.data.sets}
+                    stats={vizState.data.stats}
+                    domains={vizState.data.domains}
+                    onSegmentClick={handleSegmentClick}
+                    activeSegment={activeSegment}
+                  />
+                ) : (
+                  <TwoDomainVenn
+                    sets={vizState.data.sets}
+                    stats={vizState.data.stats}
+                    domains={vizState.data.domains}
+                    onSegmentClick={handleSegmentClick}
+                    activeSegment={activeSegment}
+                  />
+                )}
+              </div>
+            ) : (
+              <MatrixView data={vizState.data} domains={vizState.data.domains} />
+            )}
 
-            {/* Active segment popover */}
-            {activeSegmentInfo && (
+            {/* Active segment popover (Venn mode only) */}
+            {visualizationMode === 'venn' && activeSegmentInfo && (
               <div className="flex justify-center">
                 <KeywordListPopover
                   segment={activeSegmentInfo}
@@ -876,8 +1226,8 @@ export default function KeywordOverlapViz({ projectId }: { projectId: string }) 
               </div>
             )}
 
-            {/* Click hint */}
-            {!activeSegmentInfo && (
+            {/* Click hint (Venn mode only) */}
+            {visualizationMode === 'venn' && !activeSegmentInfo && (
               <p className="text-center text-caption text-text-muted mt-4">
                 Click a numbered region to see the keyword list
               </p>

@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { FileText, GanttChart, GitMerge, Globe, Radar, Settings2, ShieldAlert } from 'lucide-react';
+import { FileText, GanttChart, GitMerge, Globe, Radar, ShieldAlert } from 'lucide-react';
 import type { ResearchProjectDetail } from '@/lib/research';
+import { cn } from '@/lib/utils';
 import { Button, Card, Tabs } from '@/components/ui';
 import ResearchDashboard from './ResearchDashboard';
 import ContentGapAnalysis from './ContentGapAnalysis';
@@ -44,6 +45,7 @@ export default function ProjectDashboardView({ project }: { project: ResearchPro
   const [activeTab, setActiveTab] = useState<DashboardTab>('research');
   const [userDomain, setUserDomain] = useState('');
   const [domainInputValue, setDomainInputValue] = useState('');
+  const [domainOpen, setDomainOpen] = useState(false);
 
   // Load saved domain on mount
   useEffect(() => {
@@ -81,41 +83,67 @@ export default function ProjectDashboardView({ project }: { project: ResearchPro
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/50 bg-surface-raised/50 px-4 py-3 lg:min-w-[340px]">
-            <div className="mb-2 flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-text-muted" />
-              <p className="text-caption font-medium text-text-secondary">Personal difficulty domain</p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-                <input
-                  type="text"
-                  className="field-input min-w-0 w-full pl-9 text-body-sm"
-                  placeholder="e.g. example.com"
-                  value={domainInputValue}
-                  onChange={(e) => setDomainInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleDomainSave();
-                  }}
-                />
-              </div>
-              <Button type="button" size="sm" onClick={handleDomainSave}>Set</Button>
-              {userDomain && (
-                <Button type="button" size="sm" variant="ghost" onClick={handleDomainClear}>Clear</Button>
+          <div className="flex items-center gap-3">
+            {/* Domain toolbar popover */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setDomainOpen(!domainOpen)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-body-sm font-medium transition-all min-h-[34px]',
+                  userDomain
+                    ? 'border-accent/25 bg-accent/[0.06] text-accent'
+                    : 'border-border/40 bg-surface-raised/60 text-text-muted hover:border-accent/20 hover:text-text-secondary',
+                )}
+                aria-label="Set personal domain"
+              >
+                <Globe className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline max-w-[140px] truncate">
+                  {userDomain || 'Domain'}
+                </span>
+              </button>
+              {domainOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setDomainOpen(false)} />
+                  <div className="absolute right-0 top-full z-20 mt-1.5 w-[280px] rounded-xl border border-border/60 bg-surface p-3 shadow-elevation-2 animate-fade-in">
+                    <p className="text-caption font-medium text-text-secondary mb-2">Personal difficulty domain</p>
+                    <div className="flex gap-1.5">
+                      <div className="relative flex-1">
+                        <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
+                        <input
+                          type="text"
+                          className="field-input min-w-0 w-full pl-8 text-body-sm"
+                          placeholder="example.com"
+                          value={domainInputValue}
+                          onChange={(e) => setDomainInputValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { handleDomainSave(); setDomainOpen(false); }
+                          }}
+                        />
+                      </div>
+                      <Button type="button" size="sm" onClick={() => { handleDomainSave(); setDomainOpen(false); }}>Set</Button>
+                    </div>
+                    {userDomain && (
+                      <button
+                        type="button"
+                        onClick={() => { handleDomainClear(); setDomainOpen(false); }}
+                        className="mt-1.5 text-caption text-text-muted hover:text-destructive transition-colors"
+                      >
+                        Clear domain
+                      </button>
+                    )}
+                  </div>
+                </>
               )}
             </div>
-            <p className="mt-2 text-caption text-text-muted">
-              {userDomain ? `Active domain: ${userDomain}` : 'Set your domain to unlock personal difficulty insights.'}
-            </p>
+
+            <Tabs
+              tabs={tabs.map(t => ({ id: t.id, label: t.label, icon: t.icon }))}
+              activeTab={activeTab}
+              onChange={(id) => setActiveTab(id as DashboardTab)}
+            />
           </div>
         </div>
-
-        <Tabs
-          tabs={tabs.map(t => ({ id: t.id, label: t.label, icon: t.icon }))}
-          activeTab={activeTab}
-          onChange={(id) => setActiveTab(id as DashboardTab)}
-        />
       </Card>
 
       {/* Tab content */}

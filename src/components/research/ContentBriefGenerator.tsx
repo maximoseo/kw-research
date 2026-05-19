@@ -359,7 +359,7 @@ export default function ContentBriefGenerator({ projectId }: { projectId?: strin
             onClick={() => setActiveView(tab.id)}
             className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-body-sm font-semibold transition-all duration-150 ${
               activeView === tab.id
-                ? 'bg-surface text-text-primary shadow-[0_1px_3px_rgba(0,0,0,0.08)] ring-1 ring-border/30'
+                ? 'bg-surface text-text-primary shadow-elevation-1 ring-1 ring-border/30'
                 : 'text-text-muted hover:text-text-secondary hover:bg-surface-raised'
             }`}
           >

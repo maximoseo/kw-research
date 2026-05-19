@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { fetchWithTimeout } from './http';
+import { log } from '@/server/log';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -320,7 +321,7 @@ export async function discoverCompetitors(params: {
   // Enrich with diverse query templates for better coverage
   const enriched = enrichQueries(params.suggestedQueries, params.market, params.brandName);
   const queries = enriched.slice(0, MAX_QUERIES);
-  console.info(`[competitors] Running ${queries.length} discovery queries (${params.suggestedQueries.length} suggested, ${enriched.length} after enrichment)`);
+  log.info(`[competitors] Running ${queries.length} discovery queries (${params.suggestedQueries.length} suggested, ${enriched.length} after enrichment)`);
 
   const diagnostics: DiscoveryDiagnostics = {
     queriesAttempted: queries.length,

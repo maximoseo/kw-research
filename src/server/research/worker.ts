@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { safeJsonParse } from '@/lib/utils';
+import { log } from '@/server/log';
 import { getRunnerPollIntervalMs, getRunnerStaleLockMs } from '@/lib/env';
 import { addResearchLog, claimNextQueuedRun, failRun, getRunRecord, updateRunState, attachWorkbookToRun } from './repository';
 import { runResearchPipeline } from './pipeline';
@@ -30,7 +31,7 @@ export function startResearchWorker() {
   deleteExpiredEntries()
     .then((deleted) => {
       if (deleted > 0) {
-        console.info(`[cache-cleanup] Deleted ${deleted} expired cache entries on startup.`);
+        log.info(`[cache-cleanup] Deleted ${deleted} expired cache entries on startup.`);
       }
     })
     .catch((err) => {
@@ -43,7 +44,7 @@ export function startResearchWorker() {
       deleteExpiredEntries()
         .then((deleted) => {
           if (deleted > 0) {
-            console.info(`[cache-cleanup] Daily cleanup: deleted ${deleted} expired cache entries.`);
+            log.info(`[cache-cleanup] Daily cleanup: deleted ${deleted} expired cache entries.`);
           }
         })
         .catch((err) => {
@@ -114,7 +115,7 @@ export function startResearchWorker() {
             message: 'Results served from cache (identical parameters).',
             metadata: { queryHash, cacheHit: true },
           });
-          console.info(`[worker:${workerId}] Cache hit for run ${claimed.id}, skipping pipeline`);
+          log.info(`[worker:${workerId}] Cache hit for run ${claimed.id}, skipping pipeline`);
           return;
         }
       }
@@ -139,7 +140,7 @@ export function startResearchWorker() {
           competitorSnapshot: completedRun.competitorSnapshot,
           synthesisSnapshot: completedRun.synthesisSnapshot,
         }));
-        console.info(`[worker:${workerId}] Cached results for hash ${queryHash}`);
+        log.info(`[worker:${workerId}] Cached results for hash ${queryHash}`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Research pipeline failed.';

@@ -13,14 +13,18 @@ export default function ThemeToggle() {
     return <div className="h-11 w-11 rounded-lg border border-border/60 bg-surface-raised/60" />;
   }
 
+  const isDark = theme === 'dark';
+  const nextLabel = isDark ? 'Light' : 'Dark';
+
   return (
     <button
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-border/70 bg-surface-raised/[0.74] text-text-secondary transition-all hover:border-accent/25 hover:bg-surface hover:text-text-primary"
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border border-border/70 bg-surface-raised/[0.74] px-3 text-sm font-medium text-text-secondary transition-all hover:border-accent/25 hover:bg-surface hover:text-text-primary"
+      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+      aria-pressed={isDark}
     >
-      {theme === 'dark' ? (
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {isDark ? (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
           <circle cx="12" cy="12" r="5" />
           <line x1="12" y1="1" x2="12" y2="3" />
           <line x1="12" y1="21" x2="12" y2="23" />
@@ -32,10 +36,11 @@ export default function ThemeToggle() {
           <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
         </svg>
       ) : (
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
       )}
+      <span className="hidden sm:inline">{nextLabel}</span>
     </button>
   );
 }

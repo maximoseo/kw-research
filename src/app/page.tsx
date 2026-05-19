@@ -18,52 +18,53 @@ export default async function HomePage() {
 
   return (
     <main className="page-shell min-h-screen px-4 py-10 sm:py-14">
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
-        <section className="space-y-6">
-          <span className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.06] px-4 py-1.5 text-xs font-semibold text-accent">
-            <Sparkles className="h-3.5 w-3.5" />
-            Maximo SEO · authenticated workspace
-          </span>
-          <div className="space-y-4 max-w-2xl">
+      <div className="mx-auto max-w-6xl space-y-8">
+        {/* ── Hero section ── */}
+        <section className="page-hero">
+          <div className="page-hero-inner">
+            <span className="eyebrow">
+              Maximo SEO · authenticated workspace
+            </span>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               Keyword research, built as a real dashboard.
             </h1>
-            <p className="text-base leading-7 text-text-secondary sm:text-lg">
+            <p className="section-copy sm:text-lg">
               Sign in to access project dashboards, run history, overlap analysis,
               cannibalization checks, content mapping, and export-ready research workbooks.
             </p>
-          </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link href="/auth/login">
-              <Button size="lg" icon={<ArrowRight className="h-4 w-4" />}>
-                Sign in to dashboard
-              </Button>
-            </Link>
-            <Link href="/auth/register">
-              <Button size="lg" variant="secondary">
-                Create account
-              </Button>
-            </Link>
-          </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/auth/login">
+                <Button size="lg" icon={<ArrowRight className="h-4 w-4" />}>
+                  Sign in to dashboard
+                </Button>
+              </Link>
+              <Link href="/auth/register">
+                <Button size="lg" variant="secondary">
+                  Create account
+                </Button>
+              </Link>
+            </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              { title: 'Research runs', desc: 'Track progress, compare results, export workbooks.', icon: BarChart3 },
-              { title: 'AI workflows', desc: 'Questions, briefs, overlap, intent and content mapping.', icon: BrainCircuit },
-              { title: 'Live dashboards', desc: 'Authenticated views built for repeatable SEO work.', icon: Sparkles },
-            ].map((item) => (
-              <Card key={item.title} padding="sm" className="space-y-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/15 bg-accent/[0.06]">
-                  <item.icon className="h-4 w-4 text-accent" />
-                </div>
-                <h2 className="text-sm font-semibold text-text-primary">{item.title}</h2>
-                <p className="text-xs leading-5 text-text-muted">{item.desc}</p>
-              </Card>
-            ))}
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                { title: 'Research runs', desc: 'Track progress, compare results, export workbooks.', icon: BarChart3 },
+                { title: 'AI workflows', desc: 'Questions, briefs, overlap, intent and content mapping.', icon: BrainCircuit },
+                { title: 'Live dashboards', desc: 'Authenticated views built for repeatable SEO work.', icon: Sparkles },
+              ].map((item) => (
+                <Card key={item.title} padding="sm" className="space-y-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/15 bg-accent/[0.06]">
+                    <item.icon className="h-4 w-4 text-accent" />
+                  </div>
+                  <h2 className="text-sm font-semibold text-text-primary">{item.title}</h2>
+                  <p className="text-xs leading-5 text-text-muted">{item.desc}</p>
+                </Card>
+              ))}
+            </div>
           </div>
         </section>
 
+        {/* ── Dashboard path card ── */}
         <Card variant="hero" padding="lg" className="space-y-5">
           <div className="flex items-center justify-between gap-3">
             <div>

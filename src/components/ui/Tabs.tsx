@@ -14,9 +14,10 @@ interface TabsProps {
   tabs: Tab[];
   activeTab: string;
   onChange: (id: string) => void;
+  variant?: 'pill' | 'underline';
 }
 
-export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
+export default function Tabs({ tabs, activeTab, onChange, variant = 'pill' }: TabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showFadeRight, setShowFadeRight] = useState(false);
   const [showFadeLeft, setShowFadeLeft] = useState(false);
@@ -41,6 +42,8 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
     };
   }, []);
 
+  const isPill = variant === 'pill';
+
   return (
     <div className="relative">
       {showFadeLeft && (
@@ -48,7 +51,12 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
       )}
       <div
         ref={containerRef}
-        className="flex overflow-x-auto rounded-lg border border-border/50 bg-surface-inset/60 p-1 scrollbar-none"
+        className={cn(
+          'flex overflow-x-auto scrollbar-none',
+          isPill
+            ? 'rounded-lg border border-border/50 bg-surface-inset/60 p-1'
+            : 'gap-0',
+        )}
         style={{ scrollbarWidth: 'none' }}
       >
         {tabs.map((tab) => (
@@ -56,10 +64,15 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'relative flex min-h-[40px] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-body-sm font-semibold transition-all sm:px-4',
-              activeTab === tab.id
-                ? 'bg-surface text-accent shadow-elevation-1'
-                : 'text-text-muted hover:bg-surface/50 hover:text-text-primary',
+              'relative flex min-h-[40px] cursor-pointer items-center gap-1.5 whitespace-nowrap px-3 py-2 text-body-sm font-semibold transition-all sm:px-4',
+              isPill && 'rounded-md',
+              isPill
+                ? activeTab === tab.id
+                  ? 'bg-surface text-accent shadow-elevation-1'
+                  : 'text-text-muted hover:bg-surface/50 hover:text-text-primary'
+                : activeTab === tab.id
+                  ? 'text-accent'
+                  : 'text-text-muted hover:text-text-primary',
             )}
           >
             {tab.icon && (
@@ -76,6 +89,10 @@ export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
             </span>
             {tab.hasContent && (
               <span className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+            )}
+            {/* Underline indicator for underline variant */}
+            {!isPill && activeTab === tab.id && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
             )}
           </button>
         ))}

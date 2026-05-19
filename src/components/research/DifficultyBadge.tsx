@@ -162,7 +162,7 @@ function BarVariant({
             backgroundColor: level.colorVar,
             ...(colorblind
               ? {
-                  backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(0,0,0,0.15) 4px, rgba(0,0,0,0.15) 8px)`,
+                  backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 4px, hsl(var(--text-primary) / 0.15) 4px, hsl(var(--text-primary) / 0.15) 8px)`,
                 }
               : {}),
           }}

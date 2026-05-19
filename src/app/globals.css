@@ -49,7 +49,10 @@
     --chart-2: 217 92% 62%;
     --chart-3: 152 72% 34%;
     --chart-4: 35 92% 52%;
+    --chart-5: 189 72% 42%;
+    --chart-6: 326 78% 52%;
     --chart-overlap: 274 76% 58%;
+    --focus-ring: 254 100% 64%;
     --surface-hover: 240 24% 96%;
     --surface-selected: 254 80% 96%;
     --input-bg: 0 0% 100%;
@@ -108,7 +111,10 @@
     --chart-2: 217 92% 68%;
     --chart-3: 152 72% 44%;
     --chart-4: 36 96% 60%;
+    --chart-5: 189 82% 52%;
+    --chart-6: 326 88% 64%;
     --chart-overlap: 274 76% 66%;
+    --focus-ring: 254 100% 72%;
     --surface-hover: 228 28% 15%;
     --surface-selected: 254 44% 16%;
     --input-bg: 228 32% 11%;
