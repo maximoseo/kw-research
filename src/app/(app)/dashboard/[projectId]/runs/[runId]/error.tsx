@@ -10,9 +10,9 @@ interface ErrorProps {
   reset: () => void;
 }
 
-export default function ProjectDashboardError({ error, reset }: ErrorProps) {
+export default function RunDetailError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error('Project dashboard error:', error);
+    console.error('Run detail error:', error);
   }, [error]);
 
   return (
@@ -22,9 +22,9 @@ export default function ProjectDashboardError({ error, reset }: ErrorProps) {
           <AlertTriangle className="h-5 w-5 text-destructive" />
         </div>
         <div>
-          <h2 className="text-heading-3 text-text-primary">Failed to load project</h2>
+          <h2 className="text-heading-3 text-text-primary">Failed to load run</h2>
           <p className="mt-1 text-body-sm text-text-secondary leading-relaxed">
-            The project dashboard couldn&apos;t load. The workspace may be unavailable right now.
+            This research run may have been deleted or is temporarily unavailable.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -38,7 +38,7 @@ export default function ProjectDashboardError({ error, reset }: ErrorProps) {
           </Button>
           <Link href="/dashboard">
             <Button size="sm" variant="ghost">
-              Back to workspaces
+              Back to dashboard
             </Button>
           </Link>
         </div>
