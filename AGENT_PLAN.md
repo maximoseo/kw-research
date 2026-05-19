@@ -263,12 +263,12 @@ Format: `[ID] · Phase · Estimate · Title`. Mark `[x]` here when shipped.
 [x] T-011 · P4 · M · Sidebar visibility already at `lg:` in AppShell.tsx (verified)
 [x] T-012 · P4 · M · Shared `Tabs` already in use in ProjectDashboardView.tsx (verified)
 [x] T-013 · P4 · S · Demote domain input to toolbar popover
-[ ] T-014 · P5 · L · Extract `ResearchDashboardHeader` component
-[ ] T-015 · P5 · L · Extract `RunCreationPanel` component
-[ ] T-016 · P5 · L · Extract `RunHistoryPanel` component
-[ ] T-017 · P5 · L · Extract `ResearchSummaryPanel` component
-[ ] T-018 · P5 · L · Extract `ResearchResultsTabs` component
-[ ] T-019 · P5 · L · Extract `ResearchExecutiveSummary` component
+[x] T-014 · P5 · L · Extract `ResearchDashboardHeader` component
+[x] T-015 · P5 · L · Extract `RunCreationPanel` component
+[x] T-016 · P5 · L · Extract `RunHistoryPanel` component
+[x] T-017 · P5 · L · Extract `ResearchSummaryPanel` component
+[x] T-018 · P5 · L · Extract `ResearchResultsTabs` component
+[x] T-019 · P5 · L · Extract `ResearchExecutiveSummary` component
 [x] T-020 · P6 · M · Group `KeywordTable` toolbar into (search · view · export)
 [x] T-021 · P6 · M · Make `MobileKeywordView` card-first; move actions to bottom row
 [x] T-022 · P6 · S · Persist column visibility in `localStorage` (`kw-research:keyword-cols`)
@@ -282,24 +282,24 @@ Format: `[ID] · Phase · Estimate · Title`. Mark `[x]` here when shipped.
 [x] T-030 · P9 · M · Add `src/server/log.ts`; replace `console.*` in `src/server/**`
 [x] T-031 · P9 · M · Token-bucket rate limiter per-user for AI calls
 [x] T-032 · P10 · L · Implement Overlap Matrix v2 (pairwise + triadic + export)
-[ ] T-033 · P11 · L · PR 2: Extract ResearchDashboardHeader from ResearchDashboard.tsx
-[ ] T-034 · P11 · L · PR 3: Extract RunCreationPanel with competitor discovery hook
-[ ] T-035 · P11 · L · PR 4: Extract RunHistoryPanel + RunStatusPanel with hooks
-[ ] T-036 · P11 · L · PR 5: Extract ResultsTabs + Summary + ExecutiveSummary panels
-[ ] T-037 · P11 · M · PR 6: Add ProjectOverview tab with next actions + opportunity highlights
-[ ] T-038 · P12 · M · PR 7: Add project_activity table + activity feed component
-[ ] T-039 · P12 · M · PR 7: Add run_reviews table + RunReviewStatus component
-[ ] T-040 · P12 · M · PR 8: Add keyword_actions table + KeywordActionButton/Drawer/List
-[ ] T-041 · P12 · M · PR 9: Add saved_views table + SavedViewsMenu + useSavedViews hook
-[ ] T-042 · P13 · L · PR 10: Persist run step state; add retry-policy.ts; resume after restart
-[ ] T-043 · P13 · M · PR 11: Add export_records table + ExportCenter component
-[ ] T-044 · P13 · M · PR 12: Add notifications table + NotificationsMenu + AppShell integration
+[x] T-033 · P11 · L · PR 2: Extract ResearchDashboardHeader from ResearchDashboard.tsx
+[x] T-034 · P11 · L · PR 3: Extract RunCreationPanel with competitor discovery hook
+[x] T-035 · P11 · L · PR 4: Extract RunHistoryPanel + RunStatusPanel with hooks
+[x] T-036 · P11 · L · PR 5: Extract ResultsTabs + Summary + ExecutiveSummary panels
+[x] T-037 · P11 · M · PR 6: Add ProjectOverview tab with next actions + opportunity highlights
+[x] T-038 · P12 · M · PR 7: Add project_activity table + activity feed component
+[x] T-039 · P12 · M · PR 7: Add run_reviews table + RunReviewStatus component
+[x] T-040 · P12 · M · PR 8: Add keyword_actions table + KeywordActionButton/Drawer/List
+[x] T-041 · P12 · M · PR 9: Add saved_views table + SavedViewsMenu + useSavedViews hook
+[x] T-042 · P13 · L · PR 10: Persist run step state; add retry-policy.ts; resume after restart
+[x] T-043 · P13 · M · PR 11: Add export_records table + ExportCenter component
+[x] T-044 · P13 · M · PR 12: Add notifications table + NotificationsMenu + AppShell integration
 [ ] T-045 · P14 · M · Add workspace summary header with stats to /dashboard page
 [ ] T-046 · P14 · M · Add workspace cards with states (status, last run, next action) to SiteSelectionDashboard
 [ ] T-047 · P14 · S · Add workspace search + sort to SiteSelectionDashboard
-[ ] T-048 · P15 · M · Add route loading states (loading.tsx) for dashboard and project routes
-[ ] T-049 · P15 · M · Add route error boundaries (error.tsx) for dashboard and project routes
-[ ] T-050 · P15 · S · Add project not-found handling (not-found.tsx)
+[x] T-048 · P15 · M · Add route loading states (loading.tsx) for dashboard and project routes
+[x] T-049 · P15 · M · Add route error boundaries (error.tsx) for dashboard and project routes
+[x] T-050 · P15 · S · Add project not-found handling (not-found.tsx)
 [ ] T-051 · P16 · M · Add FirstRunWizard component (4-step guided flow)
 [ ] T-052 · P16 · M · Add opportunity scoring function (volume+difficulty+relevance+intent+gap+overlap)
 [ ] T-053 · P16 · M · Add content_brief_versions table + brief diffing UI
