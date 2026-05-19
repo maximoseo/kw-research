@@ -15,7 +15,6 @@ export function getSupabase() {
     
     supabaseClient = createClient(url, key, {
       auth: { persistSession: false },
-      db: { schema: 'public' },
     });
   }
   return supabaseClient;

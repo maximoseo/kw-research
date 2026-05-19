@@ -1,13 +1,7 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-
-// Supabase client (server-side, service role)
-const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://wtpczvyupmavzrxisvcm.supabase.co',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  { auth: { persistSession: false } }
-);
+import { getSupabase } from '@/server/db/supabase';
 
 /**
  * POST /api/research/trigger
@@ -16,6 +10,7 @@ const supabase = createClient(
  */
 export async function POST(req: NextRequest) {
   try {
+    const supabase = getSupabase();
     const { projectId, agent = 'auto' } = await req.json();
     
     if (!projectId) {
@@ -79,6 +74,7 @@ export async function POST(req: NextRequest) {
  * Get real-time progress of a research run
  */
 export async function GET(req: NextRequest) {
+  const supabase = getSupabase();
   const runId = req.nextUrl.searchParams.get('runId');
   if (!runId) {
     return NextResponse.json({ error: 'runId is required' }, { status: 400 });

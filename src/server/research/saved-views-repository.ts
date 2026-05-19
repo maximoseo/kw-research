@@ -1,4 +1,5 @@
 import 'server-only';
+import { sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getDb } from '@/server/db';
 
@@ -26,11 +27,10 @@ export async function createView(input: CreateViewInput): Promise<SavedView> {
   const id = randomUUID();
   const now = new Date().toISOString();
 
-  await db.run(
-    `INSERT INTO saved_views (id, user_id, project_id, name, view_type, state_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, input.userId, input.projectId, input.name, input.viewType, JSON.stringify(input.state), now, now],
-  );
+  await db.run(sql`
+    INSERT INTO saved_views (id, user_id, project_id, name, view_type, state_json, created_at, updated_at)
+    VALUES (${id}, ${input.userId}, ${input.projectId}, ${input.name}, ${input.viewType}, ${JSON.stringify(input.state)}, ${now}, ${now})
+  `);
 
   return {
     id,
@@ -46,17 +46,16 @@ export async function createView(input: CreateViewInput): Promise<SavedView> {
 
 export async function getUserViews(userId: string, projectId: string): Promise<SavedView[]> {
   const db = getDb();
-  return db.all(
-    `SELECT * FROM saved_views WHERE user_id = ? AND project_id = ? ORDER BY updated_at DESC`,
-    [userId, projectId],
-  ) as Promise<SavedView[]>;
+  const rows = await db.all(sql`
+    SELECT * FROM saved_views WHERE user_id = ${userId} AND project_id = ${projectId} ORDER BY updated_at DESC
+  `);
+  return rows as SavedView[];
 }
 
 export async function deleteView(id: string, userId: string): Promise<boolean> {
   const db = getDb();
-  const result = await db.run(
-    `DELETE FROM saved_views WHERE id = ? AND user_id = ?`,
-    [id, userId],
-  );
-  return result.changes > 0;
+  const result = await db.run(sql`
+    DELETE FROM saved_views WHERE id = ${id} AND user_id = ${userId}
+  `);
+  return result.rowsAffected > 0;
 }

@@ -1,4 +1,5 @@
 import 'server-only';
+import { sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getDb } from '@/server/db';
 
@@ -34,23 +35,22 @@ export async function createAction(params: {
 }) {
   const db = getDb();
   const id = randomUUID();
-  await db.run(
-    `INSERT INTO keyword_actions (id, project_id, run_id, keyword, cluster, action_type, status, owner_label, due_at, notes, created_by_user_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-    [id, params.projectId, params.runId || null, params.keyword, params.cluster || null, params.actionType, params.ownerLabel || null, params.dueAt || null, params.notes || null, params.userId],
-  );
+  await db.run(sql`
+    INSERT INTO keyword_actions (id, project_id, run_id, keyword, cluster, action_type, status, owner_label, due_at, notes, created_by_user_id, created_at, updated_at)
+    VALUES (${id}, ${params.projectId}, ${params.runId || null}, ${params.keyword}, ${params.cluster || null}, ${params.actionType}, 'new', ${params.ownerLabel || null}, ${params.dueAt || null}, ${params.notes || null}, ${params.userId}, datetime('now'), datetime('now'))
+  `);
   return id;
 }
 
 export async function getProjectActions(projectId: string, status?: ActionStatus) {
   const db = getDb();
   if (status) {
-    return db.all('SELECT * FROM keyword_actions WHERE project_id = ? AND status = ? ORDER BY created_at DESC', [projectId, status]);
+    return db.all(sql`SELECT * FROM keyword_actions WHERE project_id = ${projectId} AND status = ${status} ORDER BY created_at DESC`);
   }
-  return db.all('SELECT * FROM keyword_actions WHERE project_id = ? ORDER BY created_at DESC', [projectId]);
+  return db.all(sql`SELECT * FROM keyword_actions WHERE project_id = ${projectId} ORDER BY created_at DESC`);
 }
 
 export async function updateActionStatus(actionId: string, status: ActionStatus) {
   const db = getDb();
-  await db.run('UPDATE keyword_actions SET status = ?, updated_at = datetime(\'now\') WHERE id = ?', [status, actionId]);
+  await db.run(sql`UPDATE keyword_actions SET status = ${status}, updated_at = datetime('now') WHERE id = ${actionId}`);
 }
