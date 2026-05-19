@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { FileText, GanttChart, GitMerge, Globe, Radar, ShieldAlert } from 'lucide-react';
+import { FileText, GanttChart, GitMerge, Globe, LayoutDashboard, Radar, ShieldAlert } from 'lucide-react';
 import type { ResearchProjectDetail } from '@/lib/research';
 import { cn } from '@/lib/utils';
 import { Button, Card, Tabs } from '@/components/ui';
 import ResearchDashboard from './ResearchDashboard';
+import ProjectOverview from './project/ProjectOverview';
 import ContentGapAnalysis from './ContentGapAnalysis';
 import ContentBriefGenerator from './ContentBriefGenerator';
 import KeywordOverlapViz from './KeywordOverlapViz';
@@ -31,9 +32,10 @@ function saveDomain(domain: string) {
   }
 }
 
-type DashboardTab = 'research' | 'gap-analysis' | 'overlap' | 'cannibalization' | 'briefs';
+type DashboardTab = 'overview' | 'research' | 'gap-analysis' | 'overlap' | 'cannibalization' | 'briefs';
 
 const tabs: { id: DashboardTab; label: string; icon: React.ReactNode }[] = [
+  { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
   { id: 'research', label: 'Research', icon: <Radar className="h-4 w-4" /> },
   { id: 'gap-analysis', label: 'Gap Analysis', icon: <GanttChart className="h-4 w-4" /> },
   { id: 'overlap', label: 'Overlap', icon: <GitMerge className="h-4 w-4" /> },
@@ -42,7 +44,7 @@ const tabs: { id: DashboardTab; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function ProjectDashboardView({ project }: { project: ResearchProjectDetail }) {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('research');
+  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
   const [userDomain, setUserDomain] = useState('');
   const [domainInputValue, setDomainInputValue] = useState('');
   const [domainOpen, setDomainOpen] = useState(false);
@@ -147,6 +149,20 @@ export default function ProjectDashboardView({ project }: { project: ResearchPro
       </Card>
 
       {/* Tab content */}
+      {activeTab === 'overview' && (
+        <ProjectOverview
+          project={project}
+          onCreateRun={() => setActiveTab('research')}
+          onSelectRun={(runId) => {
+            setActiveTab('research');
+            // Set initial run via search params
+            const url = new URL(window.location.href);
+            url.searchParams.set('runId', runId);
+            window.history.replaceState({}, '', url.toString());
+            window.location.reload();
+          }}
+        />
+      )}
       {activeTab === 'research' && <ResearchDashboard project={project} userDomain={userDomain} />}
       {activeTab === 'gap-analysis' && (
         <ContentGapAnalysis

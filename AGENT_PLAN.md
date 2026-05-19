@@ -282,6 +282,31 @@ Format: `[ID] · Phase · Estimate · Title`. Mark `[x]` here when shipped.
 [x] T-030 · P9 · M · Add `src/server/log.ts`; replace `console.*` in `src/server/**`
 [x] T-031 · P9 · M · Token-bucket rate limiter per-user for AI calls
 [x] T-032 · P10 · L · Implement Overlap Matrix v2 (pairwise + triadic + export)
+[ ] T-033 · P11 · L · PR 2: Extract ResearchDashboardHeader from ResearchDashboard.tsx
+[ ] T-034 · P11 · L · PR 3: Extract RunCreationPanel with competitor discovery hook
+[ ] T-035 · P11 · L · PR 4: Extract RunHistoryPanel + RunStatusPanel with hooks
+[ ] T-036 · P11 · L · PR 5: Extract ResultsTabs + Summary + ExecutiveSummary panels
+[ ] T-037 · P11 · M · PR 6: Add ProjectOverview tab with next actions + opportunity highlights
+[ ] T-038 · P12 · M · PR 7: Add project_activity table + activity feed component
+[ ] T-039 · P12 · M · PR 7: Add run_reviews table + RunReviewStatus component
+[ ] T-040 · P12 · M · PR 8: Add keyword_actions table + KeywordActionButton/Drawer/List
+[ ] T-041 · P12 · M · PR 9: Add saved_views table + SavedViewsMenu + useSavedViews hook
+[ ] T-042 · P13 · L · PR 10: Persist run step state; add retry-policy.ts; resume after restart
+[ ] T-043 · P13 · M · PR 11: Add export_records table + ExportCenter component
+[ ] T-044 · P13 · M · PR 12: Add notifications table + NotificationsMenu + AppShell integration
+[ ] T-045 · P14 · M · Add workspace summary header with stats to /dashboard page
+[ ] T-046 · P14 · M · Add workspace cards with states (status, last run, next action) to SiteSelectionDashboard
+[ ] T-047 · P14 · S · Add workspace search + sort to SiteSelectionDashboard
+[ ] T-048 · P15 · M · Add route loading states (loading.tsx) for dashboard and project routes
+[ ] T-049 · P15 · M · Add route error boundaries (error.tsx) for dashboard and project routes
+[ ] T-050 · P15 · S · Add project not-found handling (not-found.tsx)
+[ ] T-051 · P16 · M · Add FirstRunWizard component (4-step guided flow)
+[ ] T-052 · P16 · M · Add opportunity scoring function (volume+difficulty+relevance+intent+gap+overlap)
+[ ] T-053 · P16 · M · Add content_brief_versions table + brief diffing UI
+[ ] T-054 · P17 · M · Formalize run state machine (queued→processing→completed/failed/cancelled/recovered)
+[ ] T-055 · P17 · M · Add run_step_events table for per-step progress tracking
+[ ] T-056 · P17 · M · Make worker idempotent; add heartbeat visibility; fix stale lock recovery
+
 ```
 
 ---
