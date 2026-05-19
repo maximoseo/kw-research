@@ -10,9 +10,10 @@ Live: <https://kw-research.maximo-seo.ai/> · Auth gates `/dashboard` and `/runs
 
 ## Authoritative documents (read in this order)
 
-1. `AGENT_PLAN.md` — the master plan, phases, backlog, DoD.
-2. `CLAUDE.md` — short-form coding rules and conventions.
-3. `OVERHAUL-PLAN.md` — existing UX/architecture roadmap (8 phases). Trust it over assumptions.
+1. `.agent/README.md` — agent setup, personality, rules, memory system, skills catalog.
+2. `AGENT_PLAN.md` — the master plan, phases, backlog, DoD.
+3. `CLAUDE.md` — short-form coding rules and conventions.
+4. `OVERHAUL-PLAN.md` — existing UX/architecture roadmap (8 phases). Trust it over assumptions.
 4. `UI_IMPROVEMENT_PLAN.md` — what is already shipped (don't redo).
 5. `.codex/instructions.md` — Codex-specific overrides (if any).
 
