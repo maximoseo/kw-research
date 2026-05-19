@@ -7,8 +7,8 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: { projectId: string } },
 ) {
-  const user = await requireAuthenticatedUser();
-  await requireProjectAccess(params.projectId, user.id);
+  await requireAuthenticatedUser();
+  await requireProjectAccess(params.projectId);
 
   const limit = _request.nextUrl.searchParams.get('limit');
   const activities = await getProjectActivity(params.projectId, limit ? parseInt(limit, 10) : 20);
