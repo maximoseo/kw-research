@@ -20,7 +20,7 @@ export default function ProjectOverview({ project, onCreateRun, onSelectRun }: P
   const failedRuns = runs.filter((r) => r.status === 'failed');
   const processingRuns = runs.filter((r) => r.status === 'queued' || r.status === 'processing');
 
-  const totalKeywords = completedRuns.reduce((sum, r) => sum + (r.keywordsGenerated || 0), 0);
+  const totalKeywords = completedRuns.reduce((sum, r) => sum + (r.targetRows || 0), 0);
 
   return (
     <div className="min-w-0 space-y-5">
@@ -28,11 +28,11 @@ export default function ProjectOverview({ project, onCreateRun, onSelectRun }: P
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card padding="md" className="space-y-1">
           <p className="text-caption text-text-muted">Total runs</p>
-          <Metric value={runs.length} />
+          <Metric value={String(runs.length)} />
         </Card>
         <Card padding="md" className="space-y-1">
           <p className="text-caption text-text-muted">Keywords found</p>
-          <Metric value={totalKeywords} />
+          <Metric value={String(totalKeywords)} />
         </Card>
         <Card padding="md" className="space-y-1">
           <p className="text-caption text-text-muted">Completed</p>
@@ -45,7 +45,7 @@ export default function ProjectOverview({ project, onCreateRun, onSelectRun }: P
         </Card>
         <Card padding="md" className="space-y-1">
           <p className="text-caption text-text-muted">In progress</p>
-          <Metric value={processingRuns.length} />
+          <Metric value={String(processingRuns.length)} />
         </Card>
       </div>
 
@@ -96,7 +96,7 @@ export default function ProjectOverview({ project, onCreateRun, onSelectRun }: P
                 Latest run: {latestRun.status}
               </p>
               <p className="text-caption text-text-muted">
-                {latestRun.keywordsGenerated || 0} keywords · {project.brandName}
+                {latestRun.targetRows || 0} keywords · {project.brandName}
               </p>
             </div>
             <Button

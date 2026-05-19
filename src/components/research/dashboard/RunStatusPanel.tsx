@@ -56,7 +56,7 @@ export default function RunStatusPanel({ run, isLoading, onCancel, isCancelling 
                'Run cancelled'}
             </p>
             <p className="text-caption text-text-muted">
-              Started {formatRelative(run.createdAt)} · {run.keywordsGenerated ?? 0} keywords
+              Started {formatRelative(run.queuedAt)} · target {run.targetRows} keywords
             </p>
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function RunStatusPanel({ run, isLoading, onCancel, isCancelling 
 
       {run.status === 'failed' && (
         <div className="mt-3 rounded-lg border border-destructive/15 bg-destructive/[0.04] px-3 py-2">
-          <p className="text-body-sm text-destructive">{run.error || 'An unknown error occurred.'}</p>
+          <p className="text-body-sm text-destructive">{run.errorMessage || 'An unknown error occurred.'}</p>
         </div>
       )}
 
